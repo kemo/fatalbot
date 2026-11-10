@@ -68,6 +68,11 @@ read the sums. The weakest spots are de_train as T (19 of 36) and de_dust2 as CT
 
 ## 3. Gate G7, the human feel: not met
 
+**Corrected later:** the column of the players in this section is cut short. A recorded player leaves its
+recording at the first contact with fatalbot, so its numbers hold only the time before a fight. The players' own
+numbers over whole rounds, and the aim, are in docs/measures/2026-11-10-plans-and-feel.md, section 6: they jump 4.4
+to 8.0 times a minute and fire 7 to 13% of their rifle shots on the run.
+
 The players alone, while they are on their own recording (`rails`), against fatalbot in their opponents' places
 (`--hands demo`), and the reference bot against fatalbot in the arena:
 
