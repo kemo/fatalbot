@@ -7,7 +7,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { csbihMissing, loadCore, loadLevel, loadMapData } from '../hosts/csbih/load.js';
-import { referenceKind, runMatch, summarize } from '../hosts/csbih/arena.js';
+import { measureLine, referenceKind, runMatch, summarize } from '../hosts/csbih/arena.js';
 
 const args = { a: 'fatal', b: 'ref', maps: 'de_dust2', rounds: '12', seeds: '1', sides: 'both', json: null };
 const argv = process.argv.slice(2);
@@ -65,7 +65,5 @@ console.log(`\n${s.matches} matches, ${s.rounds} rounds, ${(s.seconds / s.rounds
 console.log(`G2 sides: T ${pct(s.bySide.T, s.rounds)}  CT ${pct(s.bySide.CT, s.rounds)}`);
 if (Object.keys(s.byKind).length > 1 || args.a !== args.b) console.log(`G1 kinds: ${Object.entries(s.byKind).map(([k, n]) => `${k} ${pct(n, s.rounds)}`).join('  ')}`);
 console.log(`G4 rounds: plants ${pct(s.plants, s.rounds)}; ${Object.entries(s.reasons).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ${n}`).join(', ')}; on the clock with no kill ${s.noKillTimeouts}`);
-for (const [kind, m] of Object.entries(s.measure)) {
-  console.log(`${kind.padEnd(8)} G3 wall ${pct(m.wall, m.alive)}  stuck ${pct(m.stuck, m.alive)}  |  G5 ${((m.ms / Math.max(1, m.commands)) * 10).toFixed(3)} ms for ten bots a tick  |  kills ${m.kills} deaths ${m.deaths} headshots ${pct(m.headshots, m.kills)}`);
-}
+for (const [kind, m] of Object.entries(s.measure)) console.log(measureLine(kind, m));
 if (args.json) writeFileSync(args.json, JSON.stringify({ args, summary: s, matches }, null, 1));

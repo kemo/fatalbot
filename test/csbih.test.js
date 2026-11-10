@@ -67,3 +67,23 @@ test('the same seed gives the same match', { skip }, () => {
   assert.deepEqual(play(5), play(5));
   assert.notDeepEqual(play(5).rounds, play(6).rounds);
 });
+
+// A recorded match: csbih-player's timelines hold the play of real people and are never part of this repository.
+const { loadMapData, loadProfiles, loadTimeline, timelineIds } = await import('../hosts/csbih/load.js');
+const { playDemoRound } = await import('../hosts/csbih/demo.js');
+const demoId = skip ? null : timelineIds().find((id) => id.includes('de-dust2')) ?? null;
+const skipDemo = skip || (demoId ? false : 'no built timeline of de_dust2 in csbih-player');
+
+test('fatalbot takes a side of a recorded round: the round ends, and the same seed gives the same round', { skip: skipDemo }, () => {
+  const timeline = loadTimeline(demoId);
+  const demoLevel = loadLevel(core, timeline.map, { v16: (timeline.source?.netProtocol ?? 0) >= 47 });
+  const round = core.demoRound.demoRounds(timeline).find((r) => !r.empty && r.winner);
+  const play = (side, seed) => playDemoRound({ core, level: demoLevel, timeline, round, side, seed, profiles: loadProfiles(demoId), mapData: loadMapData(timeline.map) });
+  for (const side of ['T', 'CT']) {
+    const r = play(side, 3);
+    assert.ok(r.winner === 'T' || r.winner === 'CT', `the round ends (${r.reason})`);
+    assert.ok(r.measure.fatal.commands > 0 && r.measure.demo.alive > 0);
+    const again = play(side, 3);
+    assert.deepEqual({ ...again, measure: null }, { ...r, measure: null });
+  }
+});
