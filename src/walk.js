@@ -54,6 +54,8 @@ const LADDER_FOOT = 48;
 // A bot that hangs within this far over a ladder's foot line for this long jumps off it.
 const FOOT_BAND = 16;
 const FOOT_HANG = 0.5;
+// The feet of a bot that steps off a ladder sideways are this far over the floor it steps onto.
+const LADDER_CLEAR = 2;
 // A bot left on a ladder climbs on toward a point this far up or down: past either end.
 const LADDER_LEAVE = 400;
 
@@ -407,10 +409,22 @@ export function climb(c, cmd, target) {
   // At the top: toward the floor it climbs to. Out of the ladder's volume the climb's speed carries the feet over
   // the edge and the forward key moves the bot onto the floor.
   const top = up && (o[2] >= target[2] - 24 || o[2] > ladder.maxs[2] - 8);
-  cmd.yaw = me.onLadder && top ? (atan2(target[1] - o[1], target[0] - o[0]) * 180) / PI : yaw;
+  // A floor on the open side of the face (a ladder beside its platform): a view turned to it turns the climb into
+  // a descent, because the game moves along the view.
+  const beside = me.onLadder && top && (target[0] - o[0]) * n[0] + (target[1] - o[1]) * n[1] > 0;
+  cmd.yaw = me.onLadder && top && !beside ? (atan2(target[1] - o[1], target[0] - o[0]) * 180) / PI : yaw;
   cmd.pitch = up ? LADDER_UP_PITCH : LADDER_DOWN_PITCH;
   cmd.forward = 1;
   cmd.side = 0;
+  // So it climbs on with its face to the ladder until its feet clear that floor, then steps off to the floor's
+  // side; a floor straight behind its back takes a jump off the ladder.
+  if (beside && o[2] >= target[2] + LADDER_CLEAR) {
+    const yr = cmd.yaw * RAD;
+    const along = (target[0] - o[0]) * sin(yr) - (target[1] - o[1]) * cos(yr);
+    cmd.forward = 0;
+    if (abs(along) > LADDER_EDGE) cmd.side = sign(along);
+    else cmd.jump = true;
+  }
   // Near a side edge of the ladder the box catches on the frame above it: back toward the middle.
   if (me.onLadder && !top) {
     const across = [-n[1], n[0]];

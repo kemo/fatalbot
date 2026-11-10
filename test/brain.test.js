@@ -106,3 +106,35 @@ test('a bot that hangs at the foot of a ladder on its way down jumps off, also w
   assert.ok(!commands.slice(0, 40).some((c) => c.jump), 'not at once: first it tries the ladder');
   assert.ok(commands.some((c) => c.jump), 'after a moment it jumps off');
 });
+
+test('a bot at the top of a ladder beside its floor keeps its face to the ladder, then steps off sideways', () => {
+  // The ladder hangs on a wall that faces +x; the bot's way goes on to the open side of the face (+x) and to +y.
+  const sites = [{ mins: [-150, 150, 0], maxs: [-50, 250, 72] }];
+  const map = { ...flatMap({ sites }), ladders: [{ mins: [-204, -16, -400], maxs: [-200, 16, 80], normal: [1, 0, 0] }] };
+  const hang = (z) => () => [player(1, 'T', [-183, 0, z], { own: true, onLadder: true, onGround: false }), player(2, 'CT', [600, 0, 36])];
+  const play = (z) => {
+    const brain = createBrain({ map, ports: flatPorts({ half: 5000 }), seed: 7 });
+    brain.join(1);
+    return run(brain, 1, 60, hang(z)).slice(20);
+  };
+  // Under the floor's height (a floor's origin is at 36): it climbs on. A view turned to the floor would send it down.
+  for (const c of play(20)) {
+    assert.ok(Math.abs(turn(c.yaw - 180)) < 1, `the view stays on the ladder (yaw ${c.yaw.toFixed(0)})`);
+    assert.ok(c.forward > 0.9 && c.pitch < 0 && !c.side && !c.jump, 'it climbs');
+  }
+  // Its feet over the floor: it steps to the floor's side with no climb. Facing -x, +y is to its right.
+  for (const c of play(40)) {
+    assert.ok(Math.abs(turn(c.yaw - 180)) < 1, 'the view stays on the ladder');
+    assert.ok(c.forward === 0 && c.side === 1 && !c.jump, 'it steps off to the right');
+  }
+});
+
+test('a bot at the top of a ladder with its floor straight behind it jumps off the ladder', () => {
+  // A site as narrow as one row of floors, in line with the ladder.
+  const sites = [{ mins: [150, -10, 0], maxs: [250, 10, 72] }];
+  const map = { ...flatMap({ sites }), ladders: [{ mins: [-204, -16, -400], maxs: [-200, 16, 80], normal: [1, 0, 0] }] };
+  const brain = createBrain({ map, ports: flatPorts({ half: 5000 }), seed: 7 });
+  brain.join(1);
+  const commands = run(brain, 1, 60, () => [player(1, 'T', [-183, 0, 40], { own: true, onLadder: true, onGround: false }), player(2, 'CT', [600, 0, 36])]);
+  assert.ok(commands.slice(20).every((c) => c.jump && c.forward === 0), 'the jump takes it off the face');
+});
