@@ -100,3 +100,16 @@ export async function loadAnim() {
   if (!file) throw new Error(`No player model in ${root}/assets: run tools/fetch-assets.sh of csbih-player.`);
   return { anim, mdl: readMdl(buffer(file)) };
 }
+
+/**
+ * The aim measure of csbih-player (tools/aim-stats.js): `engagements(level, tracks, shots, kills)` gives, for each
+ * kill, the crosshair error at the killer's first sight of the victim, the time to the first shot and the turn of
+ * the view between them. The arenas use it so that a bot and a player are measured the same way.
+ */
+export async function loadAimStats() {
+  // The tool moves the process into its own folder when it loads: back out again.
+  const cwd = process.cwd();
+  const stats = await import(pathToFileURL(join(csbihRoot(), 'tools', 'aim-stats.js')).href);
+  process.chdir(cwd);
+  return stats;
+}

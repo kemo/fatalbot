@@ -13,10 +13,11 @@ const PAST_CLOCK = 60;
 /**
  * Plays `round` (one of demoRounds(timeline)) with fatalbot as `side`. `profiles` are the demo's players by entity
  * (load.js loadProfiles); `mapData` is {views, lineups} for the route bots. `hands: 'demo'` gives each fatalbot the
- * motor profile of the player it replaces; `'default'` the default one. `record` (record.js Recorder) takes the round
+ * motor profile of the player it replaces; `'default'` the default one. With no `side` nobody is replaced: the
+ * round is the demo, and the measures are the players' own. `record` (record.js Recorder) takes the round
  * for the player's TV page: the round then runs `tail` seconds past its end, and `gap` seconds pass before the next.
  */
-export function playDemoRound({ core, level, timeline, round, side, seed = 1, profiles = {}, mapData = {}, hands = 'demo', record = null, tail = 0, gap = 0 }) {
+export function playDemoRound({ core, level, timeline, round, side, seed = 1, profiles = {}, mapData = {}, hands = 'demo', record = null, tail = 0, gap = 0, aimStats = null, nades = false }) {
   const { World } = core.world;
   const { Rails, railsFor } = core.rails;
   const scenario = core.demoRound.demoRound(timeline, round, { spawns: level.rules.spawns ?? null });
@@ -24,7 +25,8 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
   world.plan = core.match.planFor(world, scenario.plantedAt);
   world.knifeRound = scenario.knives;
   world.bodyOf = body;
-  const host = csbihHost(core, world, level, { seed });
+  // fatalbot takes the map's grenade lineups only with `nades` (they cost rounds until a team plan times them).
+  const host = csbihHost(core, world, level, { seed, lineups: nades ? mapData.lineups ?? [] : [] });
   host.clock = () => round.seconds - world.time;
   const story = core.demoMatch.demoStory(scenario);
   const routeBots = new Map();
@@ -62,7 +64,7 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
   // The other side counts apart while it is its recording ('rails': the players themselves) and once it plays on
   // as the reference bot ('standin').
   const kindNow = (id) => (kind.get(id) === 'fatal' ? 'fatal' : world.players.get(id)?.controller?.rails ? 'rails' : 'standin');
-  const g = gauge(core, world, kindNow, ['fatal', 'rails', 'standin']);
+  const g = gauge(core, world, kindNow, ['fatal', 'rails', 'standin'], aimStats);
   for (const p of world.players.values()) g.time(p);
   const timed = new Set([...world.players.values()].map((p) => p.controller));
   let result = null;
@@ -101,7 +103,7 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
   return {
     number: round.number, side, winner: result?.winner ?? null, reason: result?.reason ?? 'no end', seconds: ended.seconds, planted,
     demo: { winner: round.winner, reason: round.reason, seconds: round.end - round.t0 },
-    alive: { T: ended.T, CT: ended.CT }, derails: rails.derails.length, firstDerail: rails.derails[0]?.t ?? null, why: whyOf(rails.derails), measure: g.measure,
+    alive: { T: ended.T, CT: ended.CT }, derails: rails.derails.length, firstDerail: rails.derails[0]?.t ?? null, why: whyOf(rails.derails), measure: g.measure, aim: g.engagements(),
   };
 }
 

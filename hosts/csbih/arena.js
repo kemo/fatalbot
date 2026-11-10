@@ -24,17 +24,19 @@ const JUMP_RISE = 200;
 const ROUND_LIMIT = 240;
 
 const now = () => globalThis.performance.now();
-const blank = () => ({ alive: 0, wall: 0, stuck: 0, ms: 0, commands: 0, kills: 0, deaths: 0, headshots: 0, jumps: 0, hops: 0, shots: 0, shotsMoving: 0, rifleShots: 0, rifleShotsMoving: 0 });
+const blank = () => ({ alive: 0, wall: 0, stuck: 0, ms: 0, commands: 0, kills: 0, deaths: 0, headshots: 0, jumps: 0, hops: 0, shots: 0, shotsMoving: 0, rifleShots: 0, rifleShotsMoving: 0, throws: 0, blinded: 0 });
 // The guns that spread wide over 140 units a second (the game's weapon code): a shot on the run with one is a choice.
 const RIFLES = new Set(['ak47', 'm4a1', 'galil', 'famas', 'aug', 'sg552', 'm249']);
 // A jump this soon after a landing is a hop of a chain (ticks).
 const HOP_TICKS = 3;
+// The tracks of the aim measure: a sample this often (20 a second, as a good demo).
+const AIM_TICKS = 5;
 
 /**
  * The measures of a world by kind of bot. `kindOf(id)` names the kind of a player. Call `events(list)` with the
  * events of each step, `sample(live)` after each step, and `time(player)` once a controller is set.
  */
-export function gauge(core, world, kindOf, names) {
+export function gauge(core, world, kindOf, names, aimStats = null) {
   const { HULL_POINT, newTrace, traceBox } = core.hull;
   const tr = newTrace();
   const measure = Object.fromEntries(names.map((n) => [n, blank()]));
@@ -46,6 +48,11 @@ export function gauge(core, world, kindOf, names) {
   };
   const timed = new WeakSet();
   let ticks = 0;
+  // For the aim measure (load.js loadAimStats): each player's track 20 times a second, the shots, and the kills
+  // with the kind of the killer at that moment.
+  const tracks = new Map();
+  const shots = [];
+  const kills = [];
   // The spells that counted, for a look at where a kind stands or stares: {kind, type, seconds, at, goal}.
   const spells = [];
   const end = (type, p, since, goal) => {
@@ -73,6 +80,7 @@ export function gauge(core, world, kindOf, names) {
       for (const e of events) {
         if (e.type === 'shot') {
           of(e.player).fightAt = world.time;
+          if (aimStats) shots.push([world.time, e.player]);
           const p = world.players.get(e.player);
           const m = measure[kindOf(e.player)];
           if (p && m && !e.stab && e.weapon !== 'knife') {
@@ -85,9 +93,18 @@ export function gauge(core, world, kindOf, names) {
             }
           }
         } else if (e.type === 'hurt') of(e.player).fightAt = world.time;
+        else if (e.type === 'throw') {
+          if (measure[kindOf(e.player)]) measure[kindOf(e.player)].throws++;
+        } else if (e.type === 'blind') {
+          // A white-out of a second or more, of an enemy's flashbang.
+          const by = world.players.get(e.by);
+          const p = world.players.get(e.player);
+          if (by && p && by.team !== p.team && e.hold >= 1 && measure[kindOf(by.id)]) measure[kindOf(by.id)].blinded++;
+        }
         else if (e.type === 'kill') {
           const victim = world.players.get(e.victim);
           const killer = world.players.get(e.killer);
+          if (aimStats && killer && victim && killer.team !== victim.team) kills.push({ t: world.time, killer: killer.id, victim: victim.id, kind: kindOf(killer.id) });
           if (victim && measure[kindOf(victim.id)]) measure[kindOf(victim.id)].deaths++;
           if (killer && victim && killer.team !== victim.team && measure[kindOf(killer.id)]) {
             measure[kindOf(killer.id)].kills++;
@@ -96,8 +113,27 @@ export function gauge(core, world, kindOf, names) {
         }
       }
     },
+    /** The engagements of the kills so far, by the kind of the killer: {kind: [engagement]} (tools/aim-stats.js). */
+    engagements() {
+      const out = {};
+      if (!aimStats) return out;
+      for (const name of names) {
+        const own = kills.filter((k) => k.kind === name);
+        if (own.length) out[name] = aimStats.engagements(world.level, tracks, shots, own);
+      }
+      return out;
+    },
     sample(live) {
       ticks++;
+      if (aimStats && ticks % AIM_TICKS === 0) {
+        for (const p of world.players.values()) {
+          if (p.team !== 'T' && p.team !== 'CT') continue;
+          const o = p.body.origin;
+          let track = tracks.get(p.id);
+          if (!track) tracks.set(p.id, (track = []));
+          track.push([world.time, { x: o[0], y: o[1], z: o[2], yaw: p.yaw, pitch: p.pitch, dead: !p.alive, duck: Boolean(p.body.ducked) }]);
+        }
+      }
       for (const p of world.players.values()) {
         const m = measure[kindOf(p.id)];
         if (!m || !p.alive) continue;
@@ -266,5 +302,17 @@ const pct = (n, of) => (of ? `${((n / of) * 100).toFixed(1)}%` : '-');
 /** One line of the measures of a kind, for a tool's report. */
 export function measureLine(kind, m) {
   const minutes = Math.max(1, m.alive / 60);
-  return `${kind.padEnd(8)} G3 wall ${pct(m.wall, m.alive)}  stuck ${pct(m.stuck, m.alive)}  |  G5 ${((m.ms / Math.max(1, m.commands)) * 10).toFixed(3)} ms for ten bots a tick  |  kills ${m.kills} deaths ${m.deaths} headshots ${pct(m.headshots, m.kills)}  |  G7 jumps a minute ${(m.jumps / minutes).toFixed(1)} (in a chain ${(m.hops / minutes).toFixed(2)})  shots on the run ${pct(m.shotsMoving, m.shots)} (rifles ${pct(m.rifleShotsMoving, m.rifleShots)})`;
+  return `${kind.padEnd(8)} G3 wall ${pct(m.wall, m.alive)}  stuck ${pct(m.stuck, m.alive)}  |  G5 ${((m.ms / Math.max(1, m.commands)) * 10).toFixed(3)} ms for ten bots a tick  |  kills ${m.kills} deaths ${m.deaths} headshots ${pct(m.headshots, m.kills)}  |  G7 jumps a minute ${(m.jumps / minutes).toFixed(1)} (in a chain ${(m.hops / minutes).toFixed(2)})  shots on the run ${pct(m.shotsMoving, m.shots)} (rifles ${pct(m.rifleShotsMoving, m.rifleShots)})  grenades a minute ${(m.throws / minutes).toFixed(2)} (enemies blinded ${m.blinded})`;
+}
+
+const quantile = (list, p) => {
+  const v = list.filter((x) => x !== null && Number.isFinite(x)).sort((a, b) => a - b);
+  return v.length ? v[Math.min(v.length - 1, Math.floor(v.length * p))] : NaN;
+};
+
+/** One line of the aim of a kind, from its engagements (tools/aim-stats.js of csbih-player). */
+export function aimLine(kind, list) {
+  const f = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '-');
+  const col = (pick, d) => `${f(quantile(list.map(pick), 0.5), d)} / ${f(quantile(list.map(pick), 0.9), d)}`;
+  return `${kind.padEnd(8)} G7 aim, p50 / p90 of ${String(list.length).padStart(4)} kills:  error at first sight ${col((e) => e.e0)} deg  |  sight to first shot ${col((e) => e.toShot, 2)} s  |  peak turn ${col((e) => e.peak, 0)} deg/s  |  error at first shot ${col((e) => e.shotErr)} deg`;
 }
