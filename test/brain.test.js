@@ -139,18 +139,23 @@ test('a bot at the top of a ladder with its floor straight behind it jumps off t
   assert.ok(commands.slice(20).every((c) => c.jump && c.forward === 0), 'the jump takes it off the face');
 });
 
-/** The flat map with the floors that `lone(x, y)` picks cut off: no way leaves them and none comes to them. */
-function withIsland(lone, options) {
+/**
+ * The flat map with its ways chosen again: `kind(a, b)` gives the kind of the way from floor a to floor b (each
+ * [x, y]), or null for no way.
+ */
+function rewired(kind, options) {
   const map = flatMap(options);
   const { count, xyz, offsets, to } = map.nav;
-  const cut = (n) => lone(xyz[n * 3], xyz[n * 3 + 1]);
+  const at = (n) => [xyz[n * 3], xyz[n * 3 + 1]];
   const edges = [];
-  for (let n = 0; n < count; n++) edges.push(cut(n) ? [] : [...to.subarray(offsets[n], offsets[n + 1])].filter((k) => !cut(k)));
+  for (let n = 0; n < count; n++) edges.push([...to.subarray(offsets[n], offsets[n + 1])].map((k) => [k, kind(at(n), at(k))]).filter((e) => e[1] !== null));
   const next = new Int32Array(count + 1);
   for (let n = 0; n < count; n++) next[n + 1] = next[n] + edges[n].length;
-  const flat = new Int32Array(edges.flat());
-  return { ...map, nav: { count, xyz, offsets: next, to: flat, kinds: new Uint8Array(flat.length) } };
+  return { ...map, nav: { count, xyz, offsets: next, to: new Int32Array(edges.flat().map((e) => e[0])), kinds: new Uint8Array(edges.flat().map((e) => e[1])) } };
 }
+
+/** The flat map with the floors that `lone(x, y)` picks cut off: no way leaves them and none comes to them. */
+const withIsland = (lone, options) => rewired((a, b) => (lone(...a) || lone(...b) ? null : 0), options);
 
 test('a bot on an island of the graph starts its way from the joined floor that it stands at', () => {
   // The floor nearest to the bot (32, 0) is of the island; the joined floor (64, 0) is within a step of it.
@@ -172,4 +177,24 @@ test('a bot on an island of the graph leaves it toward a floor that a straight w
   brain.join(1);
   run(brain, 1, 30, () => [player(1, 'T', [310, 0, 36], { own: true }), player(2, 'CT', [-600, 0, 36])]);
   assert.deepEqual(brain.debug(1).escape, [256, 0, 36]);
+});
+
+test('a bot that gives up at a ladder that it cannot take finds a way without that ladder', () => {
+  // Two halves of the map, the east one 100 units higher. A ladder joins them at y = 0, a walk far to the north.
+  const LADDER = 3;
+  const cross = (a, b) => a[0] < 0 !== b[0] < 0;
+  const map = rewired((a, b) => (!cross(a, b) ? 0 : a[1] === 0 && b[1] === 0 ? LADDER : Math.min(a[1], b[1]) >= 288 ? 0 : null), { sites: [{ mins: [200, -50, 100], maxs: [300, 50, 172] }] });
+  for (let n = 0; n < map.nav.count; n++) if (map.nav.xyz[n * 3] >= 0) map.nav.xyz[n * 3 + 2] = 136;
+  map.ladders = [{ mins: [-20, -16, -400], maxs: [-16, 16, 150], normal: [-1, 0, 0] }];
+  const brain = createBrain({ map, ports: flatPorts({ half: 5000 }), seed: 7 });
+  brain.join(1);
+  // The frames hold the bot at the ladder's foot: it does not get up the ladder.
+  const stand = () => [player(1, 'T', [-32, 0, 36], { own: true }), player(2, 'CT', [600, 0, 36])];
+  const overLadder = () => (brain.debug(1).path ?? []).some((p, i, path) => i > 0 && p[0] === 0 && p[1] === 0 && path[i - 1][0] === -32 && path[i - 1][1] === 0);
+  const players = (tick) => {
+    if (tick === 200) assert.ok(overLadder(), 'first its way goes up the ladder');
+    return stand();
+  };
+  run(brain, 1, 700, players);
+  assert.ok(brain.debug(1).path?.length > 0 && !overLadder(), 'after it gave up, its way leaves the ladder out');
 });

@@ -195,12 +195,7 @@ function findWay(c, point, key) {
   const { me, s, time, brain, mates } = c;
   const nav = brain.nav;
   const o = me.origin;
-  // Stuck on the way with nobody in it: the edge the bot was on is one it cannot walk (a jump too high for it); the
-  // next ways leave it out, or the bot tries it again and again.
-  const crowd = mates.some((p) => p !== me && p.alive && hypot(p.origin[0] - o[0], p.origin[1] - o[1]) < 64);
-  const failed = s.path && !crowd && s.stuckSince !== null && time - s.stuckSince > 1 ? s.path[s.pathIndex] : null;
-  const before = failed && s.path[s.pathIndex - 1];
-  if (failed && before) (s.avoid ??= new Set()).add(before.node * nav.count + failed.node);
+  if (s.stuckSince !== null && time - s.stuckSince > 1) failedStep(c);
   const to = nearestNode(nav, point, 4, 64);
   // From a floor at the bot's own height: a ledge narrower than the grid has none, and the bot walks straight
   // until it reaches the graph (the floor below a catwalk is not its way).
@@ -226,6 +221,19 @@ function findWay(c, point, key) {
   s.pathIndex = 0;
   s.pullTo = undefined;
   s.stuckSince = null;
+}
+
+/**
+ * Stuck on the way with nobody in it: the step of the way that the bot is on is one it cannot take (a jump too high
+ * for it, a ladder in a hatch that it does not fit). The next ways leave it out, or the bot tries it again and again.
+ */
+function failedStep(c) {
+  const { me, s, mates, brain } = c;
+  const o = me.origin;
+  const at = s.path?.[s.pathIndex];
+  const before = s.path?.[s.pathIndex - 1];
+  if (!at || !before || mates.some((p) => p !== me && p.alive && hypot(p.origin[0] - o[0], p.origin[1] - o[1]) < 64)) return;
+  (s.avoid ??= new Set()).add(before.node * brain.nav.count + at.node);
 }
 
 /**
@@ -358,6 +366,8 @@ export function giveUp(c, fighting) {
   }
   const far = hypot(wants[0] - o[0], wants[1] - o[1]) > GIVE_UP_GAP || abs(wants[2] - o[2]) > GIVE_UP_CIRCLE;
   if (!far || time - s.goneSince < GIVE_UP_SECONDS) return false;
+  // A ladder holds no stuck clock (climb), so a ladder that the bot cannot take shows only here.
+  failedStep(c);
   s.path = null;
   s.pathKey = null;
   s.goneFrom = null;
