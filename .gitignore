@@ -1,0 +1,9 @@
+node_modules/
+# Arena results of a local run. The measures that count are written into docs/measures/.
+out/
+# Fetched SDK headers and game files (Valve's): never committed.
+vendor/
+assets/
+# Superpowers plans are local working files. Only specs belong in the repository.
+docs/superpowers/plans/
+.DS_Store

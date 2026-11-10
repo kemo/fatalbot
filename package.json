@@ -1,0 +1,18 @@
+{
+  "name": "fatalbot",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A bot for Counter-Strike 1.6: one brain for a real server and for the game core of csbih-player.",
+  "exports": {
+    ".": "./src/brain.js",
+    "./hosts/csbih": "./hosts/csbih/adapter.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "arena": "node tools/arena.js"
+  }
+}
