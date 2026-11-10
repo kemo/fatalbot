@@ -93,7 +93,10 @@ A claim that a bot is better needs a number. Spec 01 holds the gates. In short:
    them. Nothing of this is fetched or built yet.
 2. **The licence** of this repository. None is set.
 3. **How csbih-player takes the brain**: a copy at a pinned commit, a git submodule, or a path. Its own `bot.js`
-   stays the bot of `/igraj` until the owner decides.
+   stays the bot of `/igraj` until the owner decides. fatalbot is measured as the bot that takes over in a replay
+   (docs/measures/2026-11-10-replay-takeover.md). The change itself is in `demo-match.js` and `match.js` of
+   csbih-player, which is read-only from here. Also open: if the bot of a replay must follow the route and the
+   grenades of the player that it plays on for. fatalbot does not.
 4. **The data of the maps.** The plans and the lineups come from the recorded matches. They name no player, and
    they are places on Valve's maps. They are made into `out/` and are not committed. A host on a real server needs
    them as files: the owner decides if they enter this repository.

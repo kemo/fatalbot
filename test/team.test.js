@@ -90,3 +90,21 @@ test('the CTs rotate to the site where the team sees the attack', () => {
   assert.ok(flat(d.point, siteInfo(brain, 0).mid) <= 800, 'to a post of the attacked site');
   assert.ok(flat(d.point, siteInfo(brain, 1).mid) > 400, 'away from its own site');
 });
+
+test('a CT that comes into a round after its start takes a post at the site nearer to it', () => {
+  // The bot of a replay: it takes over for a player in the middle of a round, with no post of the round's plan.
+  const brain = createBrain({ map: map(), ports: flatPorts({ half: -1 }), seed: 5 });
+  brain.join(1);
+  const frame = (tick, list) => brain.frame(frameAt(tick, list));
+  const first = player(1, 'CT', [600, 0, 36], { own: true });
+  frame(1, [first, player(2, 'CT', [500, -300, 36]), player(9, 'T', [-800, 0, 36])]);
+  brain.think(1);
+  assert.equal(brain.teams.CT.plan.posts.has(2), false, 'the plan of the round knows only the bots of its start');
+  brain.join(2);
+  frame(300, [first, player(2, 'CT', [500, -300, 36], { own: true }), player(9, 'T', [-800, 0, 36])]);
+  brain.think(2);
+  const post = brain.teams.CT.plan.posts.get(2);
+  assert.ok(post?.point, 'it has a post now');
+  assert.equal(post.site, 1, 'at the site nearer to it');
+  assert.equal(brain.debug(2).goal, 'site');
+});

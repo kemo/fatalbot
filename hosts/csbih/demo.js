@@ -17,7 +17,7 @@ const PAST_CLOCK = 60;
  * round is the demo, and the measures are the players' own. `record` (record.js Recorder) takes the round
  * for the player's TV page: the round then runs `tail` seconds past its end, and `gap` seconds pass before the next.
  */
-export function playDemoRound({ core, level, timeline, round, side, seed = 1, profiles = {}, mapData = {}, hands = 'demo', record = null, tail = 0, gap = 0, aimStats = null, nades = false, plans = null }) {
+export function playDemoRound({ core, level, timeline, round, side, seed = 1, profiles = {}, mapData = {}, hands = 'demo', record = null, tail = 0, gap = 0, aimStats = null, nades = false, plans = null, standins = 'ref' }) {
   const { World } = core.world;
   const { Rails, railsFor } = core.rails;
   const scenario = core.demoRound.demoRound(timeline, round, { spawns: level.rules.spawns ?? null });
@@ -30,7 +30,10 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
   host.clock = () => round.seconds - world.time;
   const story = core.demoMatch.demoStory(scenario);
   const routeBots = new Map();
-  const rails = new Rails(world, { timeline, scenario, handoff: (me) => routeBots.get(me.id)(world.time) });
+  // The bot that plays on for a player who left its recording: the reference bot with that player's route, as the
+  // replay page of csbih-player has it, or fatalbot with that player's hand (`standins: 'fatal'`).
+  const handoff = (me) => (standins === 'fatal' ? host.controller(me.id, { profile: hands === 'demo' && profiles[me.id]?.profile ? motorOf(profiles[me.id].profile) : {}, person: true }) : routeBots.get(me.id)(world.time));
+  const rails = new Rails(world, { timeline, scenario, handoff });
   world.rails = rails;
   const kind = new Map();
   for (const p of scenario.players) {

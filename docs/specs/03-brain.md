@@ -97,6 +97,8 @@ New. The reference bots have no team plan.
 - Each CT takes a post of its site: first a way in that nobody watches, then a crossfire on one.
 - A CT with a post holds it on a contact, and watches where the enemy comes into sight.
 - The CTs rotate to a site when the team saw 60% of the living Ts near it within 6 s.
+- A CT that comes into a round after its start (the bot of a replay takes over for a player) takes a post at the
+  site nearer to it.
 - The Ts take one site together, chosen at the round's start.
 
 ### 6.1 The plans of a map (an option)

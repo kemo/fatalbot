@@ -116,7 +116,18 @@ function postOf(c) {
   const { me, bot, s, team, random, brain } = c;
   const plan = team.plan;
   if (me.team !== 'CT' || !plan?.posts) return null;
-  const own = plan.posts.get(bot.id) ?? null;
+  let own = plan.posts.get(bot.id) ?? null;
+  // A bot that came into the round after its start (it took over for a player) has no post of the plan. It takes
+  // one now, at the site nearer to it.
+  if (!own && brain.map.bombSites.length) {
+    let site = 0;
+    brain.map.bombSites.forEach((b, k) => {
+      if (flat(siteMid(b), me.origin) < flat(siteMid(brain.map.bombSites[site]), me.origin)) site = k;
+    });
+    own = choosePost(brain, site, team.takenBy('post', bot.id), random()) ?? { point: null, watch: null, site };
+    plan.posts.set(bot.id, own);
+    if (own.point) team.take('post', bot.id, own.point);
+  }
   if (!plan.rotate || !own || own.site === plan.rotate.site) return own;
   if (s.rotate?.at !== plan.rotate.at) {
     const post = choosePost(brain, plan.rotate.site, team.takenBy('post', bot.id), random());

@@ -2,6 +2,8 @@
 // side, and the other side plays its recording until the round leaves it.
 // Usage: node tools/demo-arena.js [--demos id,id] [--map de_dust2] [--count 4] [--rounds 10] [--sides both|T|CT|none]
 //                                 [--seed 1] [--hands demo|default] [--nades] [--plans] [--json file]
+// `--standins fatal` lets fatalbot play on for a player who left its recording, in the place of the reference bot:
+// the bots of a replay of csbih-player.
 // `--nades` gives fatalbot the map's grenade lineups. `--plans` gives it the plans that tools/strategies.js mined
 // for the map (they come from the same recorded matches).
 // Without --demos it takes `count` HLTV demos of `map`, the same ones for the same seed. A report names no player.
@@ -11,12 +13,12 @@ import { csbihMissing, loadAimStats, loadBody, loadCore, loadLevel, loadMapData,
 import { addMeasures, aimLine, burstLines, measureLine, turnLines, useBody } from '../hosts/csbih/arena.js';
 import { playDemoRound } from '../hosts/csbih/demo.js';
 
-const args = { demos: null, map: 'de_dust2', count: '4', rounds: '10', sides: 'both', seed: '1', hands: 'demo', json: null, nades: false, plans: false };
+const args = { demos: null, map: 'de_dust2', count: '4', rounds: '10', sides: 'both', seed: '1', hands: 'demo', json: null, nades: false, plans: false, standins: 'ref' };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const key = argv[i].replace(/^--/, '');
   if (key === 'help' || !(key in args)) {
-    console.log('node tools/demo-arena.js [--demos id,id] [--map de_dust2] [--count 4] [--rounds 10] [--sides both|T|CT|none] [--seed 1] [--hands demo|default] [--nades] [--plans] [--json file]');
+    console.log('node tools/demo-arena.js [--demos id,id] [--map de_dust2] [--count 4] [--rounds 10] [--sides both|T|CT|none] [--seed 1] [--hands demo|default] [--nades] [--plans] [--standins ref|fatal] [--json file]');
     process.exit(key === 'help' ? 0 : 1);
   }
   args[key] = typeof args[key] === 'boolean' ? true : argv[++i];
@@ -68,7 +70,7 @@ for (const id of wanted) {
   const line = { T: { n: 0, fatal: 0, demo: 0 }, CT: { n: 0, fatal: 0, demo: 0 }, null: { n: 0, fatal: 0, demo: 0 } };
   for (const round of rounds) {
     for (const side of sides) {
-      const r = playDemoRound({ core, level, timeline, round, side, seed, profiles, mapData, hands: args.hands, aimStats, nades: args.nades, plans });
+      const r = playDemoRound({ core, level, timeline, round, side, seed, profiles, mapData, hands: args.hands, aimStats, nades: args.nades, plans, standins: args.standins });
       for (const [kind, list] of Object.entries(r.aim)) (aim[kind] ??= []).push(...list);
       for (const [kind, list] of Object.entries(r.bursts)) (bursts[kind] ??= []).push(...list);
       row.rounds.push({ number: r.number, side, winner: r.winner, reason: r.reason, seconds: r.seconds, planted: r.planted, demo: r.demo, derails: r.derails, firstDerail: r.firstDerail });
@@ -100,7 +102,7 @@ for (const side of sides) {
 // How a player left the recording: 'hit' is a player that fatalbot hit before it saw or heard fatalbot.
 const left = Object.values(why).reduce((n, v) => n + v, 0);
 console.log(`The players left their recording ${left} times: ${Object.entries(why).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n} (${pct(n, left)})`).join(', ')}.`);
-console.log("Kinds: fatal; rails (the players' own recording); standin (the reference bot that plays on for a player).");
+console.log(`Kinds: fatal; rails (the players' own recording); standin (${args.standins === 'fatal' ? 'fatalbot' : 'the reference bot'} that plays on for a player).`);
 for (const [kind, m] of Object.entries(measure)) if (m.alive > 0) console.log(measureLine(kind, m));
 for (const [kind, list] of Object.entries(aim)) console.log(aimLine(kind, list));
 for (const [kind, list] of Object.entries(aim)) console.log(turnLines(kind, list));
