@@ -49,8 +49,28 @@ export function flatPorts({ half = WALL_HALF } = {}) {
     const t = (WALL_X - a[0]) / (b[0] - a[0]);
     return Math.abs(a[1] + (b[1] - a[1]) * t) <= half;
   };
+  // A line also stops at the floor (z = 0) and takes the hit's normal: enough for a grenade to fly and bounce.
+  const line = (a, b, out) => {
+    let fraction = 1;
+    let normal = [0, 0, 0];
+    if (blocked(a, b)) {
+      fraction = (WALL_X - a[0]) / (b[0] - a[0]);
+      normal = [a[0] < WALL_X ? -1 : 1, 0, 0];
+    }
+    if (a[2] > 0 && b[2] < 0) {
+      const f = a[2] / (a[2] - b[2]);
+      if (f < fraction) [fraction, normal] = [f, [0, 0, 1]];
+    }
+    if (out) {
+      out.fraction = fraction;
+      out.startSolid = false;
+      out.normal = normal;
+      for (let k = 0; k < 3; k++) out.end[k] = a[k] + (b[k] - a[k]) * fraction;
+    }
+    return fraction;
+  };
   return {
-    traceLine: (a, b) => (blocked(a, b) ? 0.5 : 1),
+    traceLine: line,
     traceHull(a, b, ducked, out) {
       const fraction = blocked(a, b) ? 0.5 : 1;
       if (out) {

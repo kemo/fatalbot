@@ -3,14 +3,14 @@
 
 import { csbihHost } from './adapter.js';
 
-/** `profile` overrides the default motor profile of every bot of this kind. */
-export function fatalKind(core, level, { profile = {}, name = 'fatal' } = {}) {
+/** `profile` overrides the default motor profile of every bot of this kind; `lineups` are the map's throws. */
+export function fatalKind(core, level, { profile = {}, name = 'fatal', lineups = [] } = {}) {
   let host = null;
   const controllers = new Map();
   return {
     name,
     attach(world, { seed = 1 } = {}) {
-      host = csbihHost(core, world, level, { seed });
+      host = csbihHost(core, world, level, { seed, lineups });
     },
     round(world, player, match) {
       if (match && !host.clock) {

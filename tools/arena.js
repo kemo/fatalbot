@@ -4,7 +4,8 @@
 // `--spells n` lists the n longest spells at a wall or stuck, with the place and the goal of the bot.
 // Team A plays T then CT on each map and seed (`--sides both`), so a side's bias and a team's strength come apart.
 // Kinds: `ref` (the bots of csbih-player, with the map's view field and lineups; `ref-bare` without them) and
-// `fatal` (this repository's brain).
+// `fatal` (this repository's brain; `fatal-nades` gives it the map's grenade lineups, which cost rounds until a
+// team plan times them: docs/measures).
 
 import { writeFileSync } from 'node:fs';
 import { csbihMissing, loadCore, loadLevel, loadMapData } from '../hosts/csbih/load.js';
@@ -32,9 +33,9 @@ const core = await loadCore();
 async function kindFor(name, level) {
   if (name === 'ref') return referenceKind(core, loadMapData(level.map));
   if (name === 'ref-bare') return { ...referenceKind(core), name: 'ref-bare' };
-  if (name === 'fatal') {
+  if (name === 'fatal' || name === 'fatal-nades') {
     const { fatalKind } = await import('../hosts/csbih/kind.js');
-    return fatalKind(core, level);
+    return fatalKind(core, level, { name, lineups: name === 'fatal-nades' ? loadMapData(level.map).lineups : [] });
   }
   throw new Error(`Unknown kind of bots: ${name}.`);
 }

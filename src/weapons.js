@@ -28,6 +28,7 @@ export const isPrimary = (name) => PRIMARY.has(kindOf(name));
 export const isPistol = (name) => kindOf(name) === 'pistol';
 export const isSniper = (name) => kindOf(name) === 'sniper';
 export const isMelee = (name) => kindOf(name) === 'knife';
+export const isGrenade = (name) => kindOf(name) === 'grenade';
 /** A weapon that fires rounds: a primary or a pistol. */
 export const isGun = (name) => isPrimary(name) || isPistol(name);
 

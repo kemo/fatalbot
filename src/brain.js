@@ -2,7 +2,7 @@
 // each tick, and takes a command for each bot (spec 02). The order of a tick follows the bot of csbih-player
 // (bot.js command): look, decide, fight or look about, walk, the hand's small rules, the bomb.
 
-import { eyeOf } from './geometry.js';
+import { eyeOf, yawTo } from './geometry.js';
 import { seeded } from './random.js';
 import { navOf } from './nav.js';
 import { placesOf } from './places.js';
@@ -14,9 +14,10 @@ import { giveUp, leaveLadder, restStuck, walkTo } from './walk.js';
 import { fight, startFight } from './fight.js';
 import { decide, forgetGoal } from './tactics.js';
 import { buyList } from './buy.js';
+import { flashToAvoid, lineupThrow } from './grenades.js';
 import { planRound, updatePlan } from './plan.js';
 import { idleCommand } from './contract.js';
-import { WEAPONS, bestGun, isMelee, isPistol } from './weapons.js';
+import { WEAPONS, bestGun, isGrenade, isMelee, isPistol } from './weapons.js';
 
 /** A player of no special skill: the motor profile of the reference bots (csbih-player bot.js DEFAULT_PROFILE). */
 export const DEFAULT_PROFILE = {
@@ -61,7 +62,7 @@ const RIFLE_BACK = 2;
 // An enemy heard or seen keeps the gun out for this long.
 const ALERT_SECONDS = 8;
 // The tasks that the round waits for, and the seconds of the round clock under which every run is one.
-const HURRY = new Set(['carry', 'fetch', 'search', 'escape', 'stop-defuse', 'guard', 'hunt']);
+const HURRY = new Set(['fetch', 'search', 'escape', 'stop-defuse', 'guard', 'lineup']);
 const HURRY_CLOCK = 30;
 // A bot buys this long after the round's start, as a hand goes through the menu.
 const BUY_AFTER = [0.4, 2.5];
@@ -177,6 +178,10 @@ function command(c) {
     s.fresh = false;
     if (s.target) startFight(c);
   }
+  // The bot's own jumps of the round, from the round's live start: the hop keeps its count to the profile's.
+  if (frame.round.phase !== 'freeze') s.liveAt ??= time;
+  if (s.onGround && !me.onGround && !me.onLadder && me.velocity[2] > 200) s.jumps = (s.jumps ?? 0) + 1;
+  s.onGround = me.onGround;
   const cmd = idleCommand(me.yaw, me.pitch);
   if (!s.bought && own.canBuy && time >= (s.buyAt ?? 0)) {
     s.bought = true;
@@ -185,6 +190,8 @@ function command(c) {
   const goal = decide(c);
   s.lastGoal = goal.task ?? goal.kind;
   s.lastPoint = goal.point ?? null;
+  // Where the bot goes when no grenade asks for a step aside (grenades.js lineupGoal).
+  if (goal.task !== 'lineup' && goal.point) s.goingTo = goal.point;
   const fighting = Boolean(s.target) && time - s.seenAt < MEMORY;
   if (giveUp(c, fighting)) {
     forgetGoal(c);
@@ -243,6 +250,17 @@ function command(c) {
     cmd.forward = 0;
     cmd.side = 0;
     cmd.jump = false;
+  }
+  // At the place of a lineup the throw takes the keys and the view.
+  const throwing = goal.task === 'lineup' && !fighting && lineupThrow(c, cmd);
+  // A grenade in the hand with no throw to make: back to the gun.
+  if (!throwing && !fighting && goal.kind !== 'plant' && isGrenade(cmd.weapon ?? me.weapon)) cmd.weapon = bestGun(own);
+  // A flashbang of the team is in the air and the eye sees where it goes off: the view turns away from it, as a
+  // player turns on the call. A fight goes on: there the enemy is the nearer danger.
+  if (!throwing && !fighting) {
+    const eye = eyeOf(me);
+    const flash = flashToAvoid(c, eye);
+    if (flash) lookAt(c, cmd, yawTo(flash, eye), 0);
   }
   leaveLadder(c, cmd);
   if (cmd.weapon === undefined) delete cmd.weapon;

@@ -29,6 +29,10 @@ export class Team {
     this.plan = null;
     // The places that the bots of the team took, so that two do not take the same: kind -> Map(bot id -> point).
     this.taken = new Map();
+    // The lineups of the map that a bot of the team took this round (grenades.js), by their index.
+    this.thrown = new Set();
+    // The flashbangs of the team in the air: [{point, until, by}] (grenades.js).
+    this.flashes = [];
   }
 
   /** A player of the team sees an enemy. */

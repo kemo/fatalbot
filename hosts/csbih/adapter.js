@@ -13,9 +13,11 @@ const TEAM = { 1: 'T', 2: 'CT' };
 const EVENTS = new Set(['shot', 'hurt', 'kill', 'reload', 'planted', 'dropped', 'picked', 'defusing', 'defused', 'exploded']);
 
 /** The map of the brain from a built level: {map, nav, rules} (load.js loadLevel, or the page's own load). */
-export function mapOf(core, level) {
+export function mapOf(core, level, { lineups = [] } = {}) {
   const { rules, nav } = level;
   return {
+    // The throws that csbih-player mined for the map from all its demos (out/profiles/throws-<map>.json).
+    lineups: lineups.map((l) => ({ team: l.side, kind: l.kind, from: [...l.from], velocity: [...l.velocity], at: l.s })),
     name: level.map,
     nav: { count: nav.count, xyz: nav.xyz, offsets: nav.offsets, to: nav.to, kinds: nav.kinds },
     bombSites: core.bomb.bombSites(rules).map((b) => ({ mins: [...b.mins], maxs: [...b.maxs] })),
@@ -26,19 +28,29 @@ export function mapOf(core, level) {
 }
 
 /**
- * The host of one world. `level` is {map, nav, rules}; `seed` gives the brain's random.
+ * The host of one world. `level` is {map, nav, rules}; `seed` gives the brain's random; `lineups` are the map's
+ * throws (load.js loadMapData).
  * Use: `host.controller(id)` as the controller of each bot's player. The host reads the world's events by itself.
  * A match tells the clock with `host.clock = () => secondsLeft` and its end with `host.over = () => boolean`, and
  * sets `host.round` at each round's start.
  */
-export function csbihHost(core, world, level, { seed = 1 } = {}) {
+export function csbihHost(core, world, level, { seed = 1, lineups = [] } = {}) {
   const { HULL_POINT, HULL_STAND, HULL_DUCK, newTrace, traceBox } = core.hull;
   const hulls = world.level;
   const tr = newTrace();
   const ports = {
-    traceLine(from, to) {
+    traceLine(from, to, out) {
       traceBox(hulls, HULL_POINT, from, to, tr);
-      return tr.startSolid ? 0 : tr.fraction;
+      const fraction = tr.startSolid ? 0 : tr.fraction;
+      if (out) {
+        out.fraction = fraction;
+        out.startSolid = tr.startSolid;
+        for (let k = 0; k < 3; k++) {
+          out.end[k] = tr.end[k];
+          out.normal[k] = tr.normal[k];
+        }
+      }
+      return fraction;
     },
     traceHull(from, to, ducked, out) {
       // The players stand in a box trace of the game core; the contract's trace is the level alone.
@@ -57,7 +69,7 @@ export function csbihHost(core, world, level, { seed = 1 } = {}) {
       return fraction;
     },
   };
-  const brain = createBrain({ map: mapOf(core, level), ports, seed });
+  const brain = createBrain({ map: mapOf(core, level, { lineups }), ports, seed });
   const mine = new Set();
   let pending = [];
   let built = -1;

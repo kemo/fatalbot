@@ -13,9 +13,13 @@
  * @property {{mins: Vec3, maxs: Vec3, team: 'T'|'CT'|null}[]} buyZones
  * @property {{team: 'T'|'CT', origin: Vec3, yaw: number}[]} spawns
  * @property {{mins: Vec3, maxs: Vec3, normal: Vec3}[]} ladders The normal points out of the face that is climbed.
+ * @property {{team: 'T'|'CT', kind: 'he'|'flash'|'smoke', from: Vec3, velocity: Vec3, at: number}[]} [lineups]
+ *   Throws of grenades that players of this map made: where the grenade started, its velocity, and the second of
+ *   the round. Optional; without them a bot throws no lineup.
  *
  * @typedef {Object} Ports Queries into the level, inside a tick. Players are never in a trace.
- * @property {(from: Vec3, to: Vec3) => number} traceLine The part of the line that is free, 0 to 1; 1 is clear.
+ * @property {(from: Vec3, to: Vec3, out?: {fraction: number, startSolid: boolean, end: Vec3, normal: Vec3}) => number} traceLine
+ *   The part of the line that is free, 0 to 1; 1 is clear. `out` takes the hit, with the normal of its surface.
  * @property {(from: Vec3, to: Vec3, ducked: boolean, out?: {fraction: number, startSolid: boolean, end: Vec3}) => number} traceHull
  *   The same for the box of a player (standing or ducked), its centre on the line. A start inside the level is 0.
  *
@@ -108,6 +112,7 @@ export function checkMap(map) {
   if (map?.buyZones?.some?.((z) => z.team !== null && !TEAMS.includes(z.team))) bad.push('map.buyZones.team');
   if (map?.ladders?.some?.((l) => !vec(l.normal))) bad.push('map.ladders.normal');
   if (!Array.isArray(map?.spawns) || !map.spawns.every((s) => TEAMS.includes(s.team) && vec(s.origin) && num(s.yaw))) bad.push('map.spawns');
+  if (map?.lineups !== undefined && !(Array.isArray(map.lineups) && map.lineups.every((l) => TEAMS.includes(l.team) && ['he', 'flash', 'smoke'].includes(l.kind) && vec(l.from) && vec(l.velocity) && num(l.at)))) bad.push('map.lineups');
   return bad;
 }
 

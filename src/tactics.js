@@ -10,6 +10,7 @@ import { approachPoint } from './watch.js';
 import { placeAt, placesOf } from './places.js';
 import { pointKey } from './walk.js';
 import { choosePost, inBombSite, siteMid, touches } from './sites.js';
+import { lineupGoal } from './grenades.js';
 
 // A defuser stops this near the bomb, from its body: the game takes the use key 64 from the player.
 const DEFUSE_NEAR = 56;
@@ -82,6 +83,9 @@ export function decide(c) {
   }
   if (bomb?.state === 'dropped' && me.team === 'T' && nearestMate(c.mates, bomb.point) === me) return { kind: 'goto', task: 'fetch', point: over(bomb.point) };
   c.post = postOf(c);
+  // A grenade of the map that is due about now and near: there, and the throw.
+  const lineup = lineupGoal(c);
+  if (lineup) return lineup;
   // An enemy known: hunt it, wait for it or fall back. Else a look around when nothing happens. Else the plan.
   return contactTask(c) ?? seek(c) ?? objective(c);
 }
