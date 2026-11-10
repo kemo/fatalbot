@@ -107,10 +107,10 @@ them to the brain as `map.plans` (spec 02). With them:
   its T the place of a teammate. On de_nuke 14 places of the CT setups lie on a platform that the graph of
   csbih-player has no walk edges on.
 - A T that comes no nearer to its place for 5 s gives it up and takes the place of the nearest teammate.
-- Measured (docs/measures/2026-11-10-plans-and-feel.md): in the places of recorded Ts the plans win more rounds
-  on three maps of four. Against the reference bots and against the plain fatalbot they win fewer: the five Ts
-  arrive at the same second by one way. So the plans are an option of the hosts (`fatal-plans`, `--plans`), not
-  the default.
+- Measured (docs/measures/2026-11-10-plans-and-feel.md): over all tests the plans give no sure gain and no sure
+  loss of rounds. On de_inferno the Ts with a plan lose to the plain fatalbot: the five arrive at the same second
+  by one way. The CT setups win fewer rounds than the posts of the level on de_dust2 and de_inferno. So the plans
+  are an option of the hosts (`fatal-plans`, `--plans`), not the default.
 - To come (csbih-player spec 12): the execute after the formation (the order of the entries, the trades, the
   grenades at its second), fakes, the retake together, the save, the buy of the team.
 
