@@ -7,6 +7,7 @@ the spec.
 |------|-------|
 | [01 Architecture](01-architecture.md) | The goal, the two hosts, the brain and its layers, the gates of "best", the order of work |
 | [02 Host contract](02-host-contract.md) | The map, the frame, the ports and the command, with the source of each field in each host |
+| [03 The brain as built](03-brain.md) | What each module does, what came from csbih-player's bot and what is new, and what is missing |
 
 ## Words used in all specs
 

@@ -144,10 +144,10 @@ The brain takes data as plain objects. The tools that mine the demos stay in csb
 1. Built: the contract, the csbih adapter, the arena, the baseline of the reference bots.
 2. Built: the motor, ported from `bot.js` of csbih-player behind the ports (the walk with its stuck and ladder
    rules, the hand, the fight), the senses, the team's knowledge, and the bomb (plant, defuse, guard, posts, escape).
-3. Built: the demo arena (section 4.1, test 1).
-4. In work: the feet (moves.js): the stop before the shots, the hops. To come: the peek, the jiggle at an angle.
-5. The team layer: the plan of the round and the roles (trades, crossfires, rotations, a retake together, saves, the
-   team's buy). First by rules, then from the mined plans.
+3. Built: the demo arena (section 4.1, test 1), and the watch of its rounds in the player (`tools/watch.js`).
+4. Built: the feet (moves.js): the stop before the shots, the hops. To come: the peek, the jiggle at an angle.
+5. Built: the first team layer for the CTs: posts, anchors, a rotation (spec 03, section 6). To come: the Ts'
+   plans, trades, a retake together, saves, the team's buy. First by rules, then from the mined plans.
 6. The data of the demos per map: lineups, the view field, the angles where enemies appear. The grenades.
 7. The goldsrc host, when the owner has decided section 5.
 
