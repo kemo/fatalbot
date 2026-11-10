@@ -262,8 +262,10 @@ function command(c) {
     const flash = flashToAvoid(c, eye);
     if (flash) lookAt(c, cmd, yawTo(flash, eye), 0);
   }
-  // A plant and a defuse hold the feet; any other stand makes way for a teammate that it holds up.
-  if (!fighting && goal.kind !== 'plant' && goal.kind !== 'defuse') makeWay(c, cmd);
+  // A bot that waits at its place (a T in the formation, a CT at its post) makes way for a teammate that it holds
+  // up. At a post of a fight (after the plant, an ambush, a cover) a bot keeps its cover.
+  const waits = goal.kind === 'hold' && (goal.task === 'stage' || (me.team === 'CT' && (goal.task === 'site' || goal.task === 'rotate')));
+  if (!fighting && waits) makeWay(c, cmd);
   leaveLadder(c, cmd);
   if (cmd.weapon === undefined) delete cmd.weapon;
   return cmd;

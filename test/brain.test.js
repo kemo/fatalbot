@@ -93,3 +93,16 @@ test('a dead bot and an unknown bot get an idle command', () => {
   assert.equal(brain.think(1).attack, false);
   assert.deepEqual(checkCommand(brain.think(99)), []);
 });
+
+test('a bot that hangs at the foot of a ladder on its way down jumps off, also when its point lies higher', () => {
+  // A ladder out of a pit. The bot hangs a step over the pit's floor; its way goes to the floor above the foot
+  // and under the ladder's middle, so the climb sends it down and it comes no lower.
+  const sites = [{ mins: [-350, 150, 0], maxs: [-250, 250, 72] }];
+  const map = { ...flatMap({ sites }), ladders: [{ mins: [-204, -16, -40], maxs: [-200, 16, 400], normal: [1, 0, 0] }] };
+  const brain = createBrain({ map, ports: flatPorts({ half: 5000 }), seed: 7 });
+  brain.join(1);
+  const hang = () => [player(1, 'T', [-183, 0, 0], { own: true, onLadder: true, onGround: false }), player(2, 'CT', [600, 0, 36])];
+  const commands = run(brain, 1, 120, hang);
+  assert.ok(!commands.slice(0, 40).some((c) => c.jump), 'not at once: first it tries the ladder');
+  assert.ok(commands.some((c) => c.jump), 'after a moment it jumps off');
+});

@@ -63,8 +63,9 @@ round a teammate, the jump of a stuck bot, the island of the graph.
   between two floors, or a teammate can stand on it.
 - **New:** a bot that a standing teammate holds up for 0.4 s asks for the way (`team.way`, a call on the radio).
   The teammate steps 72 units aside where it has room and a floor under the step, else on ahead, and stays out of
-  the way for 2.5 s (`makeWay`). A bot in a fight, at the plant or at the defuse keeps its feet. Near its own
-  point the held-up bot waits 4 s instead of pushing.
+  the way for 2.5 s (`makeWay`). Only a bot that waits makes way: a T at its place of the formation, a CT at its
+  post with no enemy in sight. At a post of a fight (after the plant, an ambush, a cover) a bot keeps its cover:
+  the step out of it cost the Ts rounds. Near its own point the held-up bot waits 4 s instead of pushing.
 - **New:** at the foot of a ladder on its way down, a bot that hangs there jumps off, also when its point lies
   higher than the foot. The ported rule let it hang there.
 - Gate G7 is not met yet: fatalbot jumps half as often as the players, and it makes 60% of its kills with a shot
