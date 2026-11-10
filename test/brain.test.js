@@ -138,3 +138,38 @@ test('a bot at the top of a ladder with its floor straight behind it jumps off t
   const commands = run(brain, 1, 60, () => [player(1, 'T', [-183, 0, 40], { own: true, onLadder: true, onGround: false }), player(2, 'CT', [600, 0, 36])]);
   assert.ok(commands.slice(20).every((c) => c.jump && c.forward === 0), 'the jump takes it off the face');
 });
+
+/** The flat map with the floors that `lone(x, y)` picks cut off: no way leaves them and none comes to them. */
+function withIsland(lone, options) {
+  const map = flatMap(options);
+  const { count, xyz, offsets, to } = map.nav;
+  const cut = (n) => lone(xyz[n * 3], xyz[n * 3 + 1]);
+  const edges = [];
+  for (let n = 0; n < count; n++) edges.push(cut(n) ? [] : [...to.subarray(offsets[n], offsets[n + 1])].filter((k) => !cut(k)));
+  const next = new Int32Array(count + 1);
+  for (let n = 0; n < count; n++) next[n + 1] = next[n] + edges[n].length;
+  const flat = new Int32Array(edges.flat());
+  return { ...map, nav: { count, xyz, offsets: next, to: flat, kinds: new Uint8Array(flat.length) } };
+}
+
+test('a bot on an island of the graph starts its way from the joined floor that it stands at', () => {
+  // The floor nearest to the bot (32, 0) is of the island; the joined floor (64, 0) is within a step of it.
+  const sites = [{ mins: [-350, -50, 0], maxs: [-250, 50, 72] }];
+  const map = withIsland((x, y) => Math.abs(x) <= 32 && Math.abs(y) <= 96, { sites });
+  const brain = createBrain({ map, ports: flatPorts({ half: 5000 }), seed: 7 });
+  brain.join(1);
+  run(brain, 1, 30, () => [player(1, 'T', [45, 0, 36], { own: true }), player(2, 'CT', [600, 0, 36])]);
+  const d = brain.debug(1);
+  assert.equal(d.escape, null, 'it is off the island');
+  assert.deepEqual(d.path?.[0], [64, 0, 36], 'its way starts at the joined floor');
+});
+
+test('a bot on an island of the graph leaves it toward a floor that a straight walk reaches, not one behind a wall', () => {
+  // The wall is the plane x = 320. The joined floor (352, 0) is the nearest and lies behind it; (256, 0) is open.
+  const sites = [{ mins: [-350, -50, 0], maxs: [-250, 50, 72] }];
+  const map = withIsland((x, y) => (x === 288 || x === 320) && Math.abs(y) <= 64, { sites });
+  const brain = createBrain({ map, ports: flatPorts(), seed: 7 });
+  brain.join(1);
+  run(brain, 1, 30, () => [player(1, 'T', [310, 0, 36], { own: true }), player(2, 'CT', [-600, 0, 36])]);
+  assert.deepEqual(brain.debug(1).escape, [256, 0, 36]);
+});

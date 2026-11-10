@@ -153,10 +153,10 @@ export function createBrain({ map, ports, seed = 1 }) {
       return command(c);
     },
 
-    /** What a bot is doing, for a tool or a log: {goal, point, target, path}. */
+    /** What a bot is doing, for a tool or a log: {goal, point, target, stuckFor, path (its floors), escape}. */
     debug(id) {
       const s = brain.bots.get(id)?.s;
-      return s ? { goal: s.lastGoal ?? null, point: s.lastPoint ?? null, target: s.target?.id ?? null, stuckFor: s.stuckFor ?? 0 } : null;
+      return s ? { goal: s.lastGoal ?? null, point: s.lastPoint ?? null, target: s.target?.id ?? null, stuckFor: s.stuckFor ?? 0, path: s.path ? s.path.map((n) => n.point) : null, escape: s.escape ?? null } : null;
     },
   };
   // The places are cut once a map, not in a tick of a round.

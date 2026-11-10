@@ -40,7 +40,7 @@ function index(raw) {
     if (list) list.push(i);
     else cells.set(key, [i]);
   }
-  return { count, xyz, offsets, to, kinds, cells, search: null, floods: null, floodStack: null, parts: null, places: null, sites: null };
+  return { count, xyz, offsets, to, kinds, cells, search: null, floods: null, floodStack: null, parts: null, main: null, places: null, sites: null };
 }
 
 const cellKey = (x, y) => Math.floor(x / CELL + 0.5) * 65536 + Math.floor(y / CELL + 0.5);
@@ -265,9 +265,24 @@ export function navParts(nav) {
   return parts;
 }
 
+/** The id of the largest part of the graph: the level itself, beside the islands that no way leaves (cached). */
+export function mainPart(nav) {
+  if (nav.main !== undefined && nav.main !== null) return nav.main;
+  const sizes = new Map();
+  let best = -1;
+  for (const id of navParts(nav)) {
+    const n = (sizes.get(id) ?? 0) + 1;
+    sizes.set(id, n);
+    if (best < 0 || n > sizes.get(best)) best = id;
+  }
+  nav.main = best;
+  return best;
+}
+
 /**
  * Whether the graph has a way from a player's floor to a point. Off the graph it cannot tell, and says yes: a bot
- * sent to a box top with no edge up to it walks into the box.
+ * sent to a box top with no edge up to it walks into the box. A player on an island of the graph (a floor that no
+ * way leaves) gets off it by a straight walk (walk.js), so it reaches a point of the level itself.
  */
 export function reaches(nav, origin, point) {
   if (!nav) return true;
@@ -275,5 +290,7 @@ export function reaches(nav, origin, point) {
   const to = nearestNode(nav, point, 4, 64);
   if (from < 0) return true;
   if (to < 0) return false;
+  const parts = navParts(nav);
+  if (parts[from] !== parts[to]) return parts[to] === mainPart(nav);
   return canReach(nav, from, to);
 }

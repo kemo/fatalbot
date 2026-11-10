@@ -3,7 +3,7 @@
 // which holds the fixes of many stuck bots; the traces go through the ports.
 
 import { PI, RAD, abs, atan2, cos, hypot, max, min, sign, sin } from './geometry.js';
-import { JUMP, LADDER, WALK, findPath, navParts, nearestNode } from './nav.js';
+import { JUMP, LADDER, WALK, canReach, findPath, navParts, nearestNode, nodePoint } from './nav.js';
 import { lookAt } from './aim.js';
 import { restLook } from './watch.js';
 import { bestGun, maxSpeedOf } from './weapons.js';
@@ -41,6 +41,8 @@ const GIVE_UP_SECONDS = 5;
 const GIVE_UP_GAP = 64;
 // How far an island's bot looks for a floor of the part of the graph it wants to reach.
 const ESCAPE_REACH = 640;
+// That many of the nearest floors are asked for a way to the point.
+const ESCAPE_TRIES = 32;
 // Off the ladder's line by more than this, the bot lines up this far in front of its face before it goes in.
 const LADDER_LINE = 6;
 const LADDER_FRONT = 48;
@@ -209,9 +211,16 @@ function findWay(c, point, key) {
     const low = nearestNode(nav, o, 8, STEP);
     if (low >= 0 && low !== from) s.path = findPath(nav, low, to, 20000, s.avoid ?? null);
   }
-  // Still none: the bot stands on an island of the graph. Straight to the nearest floor of the point's part of the
-  // graph, and on by the graph from there.
-  s.escape = !s.path && from >= 0 && to >= 0 ? escapeNode(nav, o, to) : null;
+  // Still none: the bot stands on an island of the graph. Straight to the nearest floor that has a way to the
+  // point, and on by the graph from there. At that floor already, the way starts from it: the floor nearest to
+  // the bot can still be one of the island.
+  const out = !s.path && from >= 0 && to >= 0 ? escapeNode(c, to) : -1;
+  s.escape = null;
+  if (out >= 0) {
+    const p = nodePoint(nav, out);
+    if (hypot(p[0] - o[0], p[1] - o[1]) < 24 && abs(p[2] - o[2]) < 40) s.path = findPath(nav, out, to, 20000, s.avoid ?? null);
+    if (!s.path) s.escape = p;
+  }
   s.pathKey = key;
   s.pathAt = time;
   s.pathIndex = 0;
@@ -219,24 +228,33 @@ function findWay(c, point, key) {
   s.stuckSince = null;
 }
 
-/** The nearest floor of the part of the graph that holds `to`, when the bot's own floor is in another; else null. */
-function escapeNode(nav, o, to) {
+/**
+ * The nearest floor with a way to `to`, when the bot's own floor is in another part of the graph; else -1. Of the
+ * nearest floors of the part of `to`, the first that a straight walk reaches (the nearest of all can lie behind a
+ * wall); else the nearest. A drop joins two floors one way only, so each is asked for its way.
+ */
+function escapeNode(c, to) {
+  const { nav, ports } = c.brain;
+  const o = c.me.origin;
   const parts = navParts(nav);
   const from = nearestNode(nav, o, 3, 48);
-  if (from >= 0 && parts[from] === parts[to]) return null;
-  let best = null;
-  let bestD = ESCAPE_REACH ** 2;
+  if (from >= 0 && parts[from] === parts[to]) return -1;
+  const near = [];
   for (let i = 0; i < nav.count; i++) {
     if (parts[i] !== parts[to]) continue;
     const dz = nav.xyz[i * 3 + 2] - o[2];
     if (dz > STEP * 3 || dz < -200) continue;
     const d = (nav.xyz[i * 3] - o[0]) ** 2 + (nav.xyz[i * 3 + 1] - o[1]) ** 2 + dz * dz;
-    if (d < bestD) {
-      bestD = d;
-      best = [nav.xyz[i * 3], nav.xyz[i * 3 + 1], nav.xyz[i * 3 + 2]];
-    }
+    if (d < ESCAPE_REACH ** 2) near.push([d, i]);
   }
-  return best;
+  near.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  let first = -1;
+  for (const [, i] of near.slice(0, ESCAPE_TRIES)) {
+    if (!canReach(nav, i, to)) continue;
+    if (first < 0) first = i;
+    if (ports.traceHull(o, [nav.xyz[i * 3], nav.xyz[i * 3 + 1], max(o[2], nav.xyz[i * 3 + 2])], c.me.ducked) >= 1) return i;
+  }
+  return first;
 }
 
 /** The furthest floor of the next PULL that the bot's box reaches in a straight line on its own level. */
