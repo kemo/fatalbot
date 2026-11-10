@@ -1,0 +1,95 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { createBrain } from '../src/brain.js';
+import { checkCommand, checkFrame, checkMap } from '../src/contract.js';
+import { turn } from '../src/geometry.js';
+import { WALL_X, flatMap, flatPorts, frameAt, player, run } from './support/flat-host.js';
+
+const fresh = (seed = 7, wall = {}) => {
+  const brain = createBrain({ map: flatMap(), ports: flatPorts(wall), seed });
+  brain.join(1);
+  return brain;
+};
+// The bot at the origin looks along x; the enemy stands in the open, 200 units ahead.
+const duel = (enemyAt) => () => [player(1, 'T', [0, 0, 36], { own: true }), player(2, 'CT', enemyAt)];
+
+test('the map and the frames of the test host hold the contract', () => {
+  assert.deepEqual(checkMap(flatMap()), []);
+  assert.deepEqual(checkFrame(frameAt(1, duel([200, 0, 36])())), []);
+});
+
+test('every command holds the contract', () => {
+  for (const cmd of run(fresh(), 1, 300, duel([200, 60, 36]))) assert.deepEqual(checkCommand(cmd), []);
+});
+
+test('the same frames and the same seed give the same commands', () => {
+  const a = run(fresh(3), 1, 400, duel([200, 60, 36]));
+  const b = run(fresh(3), 1, 400, duel([200, 60, 36]));
+  assert.deepEqual(a, b);
+  const other = run(fresh(4), 1, 400, duel([200, 60, 36]));
+  assert.notDeepEqual(a, other, 'another seed plays another hand');
+});
+
+test('a bot fires at an enemy before its crosshair, after its reaction time and not before', () => {
+  const commands = run(fresh(), 1, 300, duel([200, 0, 36]));
+  const first = commands.findIndex((c) => c.attack);
+  assert.ok(first >= 0, 'it fires');
+  // The default reaction is 0.28 s, drawn 0.8 to 1.25 times: no shot in the first 0.2 s.
+  assert.ok(first * 0.01 >= 0.2, `the first shot at ${first * 0.01} s is too early`);
+  assert.ok(Math.abs(turn(commands[first].yaw)) < 6, 'the view is on the enemy at the first shot');
+});
+
+test('a bot turns to an enemy that runs up at its side, and fires', () => {
+  // 80 degrees to the left, out of the view field of 70: the steps turn the head.
+  const runner = () => {
+    const e = player(2, 'CT', [35, 200, 36]);
+    e.velocity = [0, -250, 0];
+    return [player(1, 'T', [0, 0, 36], { own: true }), e];
+  };
+  const commands = run(fresh(), 1, 300, runner);
+  const first = commands.findIndex((c) => c.attack);
+  assert.ok(first >= 0, 'it fires');
+  assert.ok(Math.abs(turn(commands[first].yaw - 80)) < 8, `the view came round to the enemy (yaw ${commands[first].yaw.toFixed(0)})`);
+});
+
+test('a bot does not fire at a teammate', () => {
+  const commands = run(fresh(), 1, 300, () => [player(1, 'T', [0, 0, 36], { own: true }), player(2, 'T', [200, 0, 36])]);
+  assert.ok(commands.every((c) => !c.attack));
+});
+
+test('G6: an enemy that a bot cannot see or hear changes no command', () => {
+  // Behind the wall, standing: no line of sight, no sound. Two places there give the same play.
+  const behind = (y) => () => [player(1, 'T', [0, 0, 36], { own: true }), player(2, 'CT', [WALL_X + 200, y, 36])];
+  const a = run(fresh(5), 1, 600, behind(-80));
+  const b = run(fresh(5), 1, 600, behind(120));
+  assert.deepEqual(a, b);
+  assert.ok(a.every((c) => !c.attack), 'and it never fires through the wall');
+});
+
+test('G6: a slow enemy behind the wall is not heard; a running one turns the head', () => {
+  const moving = (speed) => (tick) => {
+    const e = player(2, 'CT', [WALL_X + 150, -150 + tick * speed * 0.01, 36]);
+    e.velocity = [0, speed, 0];
+    return [player(1, 'T', [0, 0, 36], { own: true, yaw: 180 }), e];
+  };
+  // A long wall: the enemy stays behind it all the way.
+  const long = { half: 5000 };
+  const still = run(fresh(9, long), 1, 300, () => [player(1, 'T', [0, 0, 36], { own: true, yaw: 180 }), player(2, 'CT', [WALL_X + 150, 0, 36])]);
+  const walk = run(fresh(9, long), 1, 300, moving(120));
+  assert.deepEqual(walk, still, 'a walk makes no sound');
+  const ran = run(fresh(9, long), 1, 300, moving(250));
+  // The bot looked away from the wall; the steps bring its view round toward them.
+  const last = ran[ran.length - 1];
+  assert.ok(Math.abs(turn(last.yaw)) < 60, `the view turned to the steps (yaw ${last.yaw.toFixed(0)})`);
+  assert.ok(ran.every((c) => !c.attack), 'heard is not seen: no shot');
+});
+
+test('a dead bot and an unknown bot get an idle command', () => {
+  const brain = fresh();
+  const dead = player(1, 'T', [0, 0, 36], { own: true });
+  dead.alive = false;
+  brain.frame(frameAt(1, [dead, player(2, 'CT', [200, 0, 36])]));
+  assert.deepEqual(checkCommand(brain.think(1)), []);
+  assert.equal(brain.think(1).attack, false);
+  assert.deepEqual(checkCommand(brain.think(99)), []);
+});
