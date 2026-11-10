@@ -1,6 +1,6 @@
 # 01 Architecture
 
-Status: decided on 2026-11-10. The brain and the csbih host are in work. The goldsrc host is not started.
+Status: decided on 2026-11-10. The brain and the csbih host play whole matches. The goldsrc host is not started.
 
 ## 1. Goal
 
@@ -15,7 +15,10 @@ The best bot for Counter-Strike 1.6, in two games:
    bots (the official CS bot, PODBot, YaPB) have no team plan: each bot rolls its own chances.
 2. **It plays like the players of the time.** csbih-player holds about 530 HLTV demos of 5 on 5. The places, the
    angles, the grenades and the pace of the bots come from that play.
-3. **It wins fair.** A bot knows what a player in its place can know, and its hand is a human hand.
+3. **It moves and aims like a player** (owner, 2026-11-10: "they must really feel like real players, both their
+   movement and aim"). The hand flicks, overshoots and corrects. The feet strafe in a fight, stop before the shots,
+   jump and bunny hop by habit.
+4. **It wins fair.** A bot knows what a player in its place can know, and its hand is a human hand.
 
 ## 2. One brain, two hosts
 
@@ -86,17 +89,32 @@ same maps, side orders and seeds before and after a change.
 | G5 Cost | Milliseconds of the brain for one tick of ten bots | under 1 ms in Node |
 | G6 Fair | The blindfold test: an enemy that a bot cannot see or hear changes no command | holds always |
 
+| G7 Human feel | Jumps a minute; share of the shots fired on the run (over 140 units a second); to come: turn rates, time to the first shot, crosshair error at the first sight | near the players of the demos |
+
 G1 alone is easy to cheat: a faster hand wins. So both sides take the same motor profile (the `DEFAULT_PROFILE`
 numbers of csbih-player), and G6 must hold.
 
-To come, with the demo data (section 6): the likeness to the players (time to the first contact, the places held,
-the crosshair error at the first sight, the turn rates), as `tools/compare-fights.js` and `tools/aim-stats.js` of
-csbih-player measure them.
+To come for G7, with the demo data (section 6): the likeness to the players as `tools/compare-fights.js` and
+`tools/aim-stats.js` of csbih-player measure it.
+
+### 4.1 The tests, in the owner's order (2026-11-10)
+
+1. **Against recorded matches, in the player.** `tools/demo-arena.js`: fatalbot takes the place of one side of a
+   demo round. The other side plays its recording on the rails of csbih-player until the round leaves the demo, then
+   plays on as the reference bot with that player's route and profile. The measure: the rounds that fatalbot wins
+   beside the rounds that the players in those places won.
+2. **Against the reference bots.** `tools/arena.js`: the gates of the table above.
+3. **On the CS 1.6 server.** One team of fatalbot against one team of the server's current bots (YaPB). This needs
+   the goldsrc host (section 5).
 
 ## 5. The goldsrc host (open)
 
 A CS 1.6 server loads a Metamod plugin: a 32-bit shared library. The plugin makes the fake clients, builds the
 frames, answers the ports with the engine's traces, and applies the commands (`hosts/goldsrc/README.md`).
+
+The first target is the server of gamerz.ba (`cs.gamerz.ba:27015`): HLDS or ReHLDS with ReGameDLL, Metamod-r and
+AMX Mod X, and YaPB as its bots (`../csbih/deploy/site/README.md`, and the CS 1.6 night spec of `../csbih`). Its
+admin runs it; no repository configures it. The test there is one team of fatalbot against one team of YaPB.
 
 It needs, and the owner has to decide:
 
@@ -123,13 +141,14 @@ The brain takes data as plain objects. The tools that mine the demos stay in csb
 
 ## 7. Order of work
 
-1. The contract, the csbih adapter, the arena, the baseline of the reference bots.
-2. The motor, ported from `bot.js` of csbih-player behind the ports: the walk with its stuck and ladder rules, the
-   hand, the fight.
-3. The senses and the team's knowledge.
-4. The objective: plant, defuse, guard, retake, save.
-5. The team layer: the plan of the round and the roles. First by rules, then from the mined plans.
-6. The data of the demos per map.
+1. Built: the contract, the csbih adapter, the arena, the baseline of the reference bots.
+2. Built: the motor, ported from `bot.js` of csbih-player behind the ports (the walk with its stuck and ladder
+   rules, the hand, the fight), the senses, the team's knowledge, and the bomb (plant, defuse, guard, posts, escape).
+3. Built: the demo arena (section 4.1, test 1).
+4. In work: the feet (moves.js): the stop before the shots, the hops. To come: the peek, the jiggle at an angle.
+5. The team layer: the plan of the round and the roles (trades, crossfires, rotations, a retake together, saves, the
+   team's buy). First by rules, then from the mined plans.
+6. The data of the demos per map: lineups, the view field, the angles where enemies appear. The grenades.
 7. The goldsrc host, when the owner has decided section 5.
 
 ## 8. Sources
