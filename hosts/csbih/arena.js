@@ -2,18 +2,32 @@
 // the level; each side is driven by a "kind" of bot. The measures read the players from outside (place, view, last
 // command, events), never the state of a bot, so they count the same for every kind.
 
+import { burstSteps, groupOf, shotsBy, shotsOfKill } from './players.js';
+
 const ID = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
-/** The body of a player for a bullet, as tools/check-stuck.js of csbih-player builds it: a head box and a body box. */
-export const body = (p) => ({
+/**
+ * The body of a player for a bullet with no model at hand, as tools/check-stuck.js of csbih-player builds it: a
+ * head box and a body box. The head box is larger than the head of the model, so it takes more shots.
+ */
+const boxBody = (p) => ({
   x: p.body.origin[0], y: p.body.origin[1], z: p.body.origin[2], yaw: p.yaw, matrices: [ID],
   boxes: [
     { bone: 0, group: 1, min: [-6, -6, p.body.ducked ? 6 : 16], max: [6, 6, p.body.ducked ? 18 : 30] },
     { bone: 0, group: 2, min: [-14, -14, -36], max: [14, 14, p.body.ducked ? 6 : 16] },
   ],
 });
+let bodyOf = boxBody;
+/** The body of a player for a bullet: the two boxes, or the hit boxes of the model once a tool gave them (useBody). */
+export const body = (p) => bodyOf(p);
+/** Takes the bodies of load.js loadBody for every match from now on; null goes back to the two boxes. */
+export function useBody(fn) {
+  bodyOf = fn ?? boxBody;
+}
 
 // G3 (spec 01): sampled this often; a spell counts from this length; a fight is a shot or a hurt this fresh.
 const SAMPLE_TICKS = 10;
+// The kills whose shots are measured: with a gun of these groups (a knife and a grenade have no burst).
+const GUN_GROUPS = new Set(['rifle', 'pistol', 'sniper', 'other']);
 const SPELL = 1.5;
 const FIGHT_MEMORY = 2.5;
 const WALL_GAP = 40;
@@ -104,7 +118,7 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
         else if (e.type === 'kill') {
           const victim = world.players.get(e.victim);
           const killer = world.players.get(e.killer);
-          if (aimStats && killer && victim && killer.team !== victim.team) kills.push({ t: world.time, killer: killer.id, victim: victim.id, kind: kindOf(killer.id) });
+          if (aimStats && killer && victim && killer.team !== victim.team) kills.push({ t: world.time, killer: killer.id, victim: victim.id, kind: kindOf(killer.id), weapon: e.weapon, head: Boolean(e.headshot) });
           if (victim && measure[kindOf(victim.id)]) measure[kindOf(victim.id)].deaths++;
           if (killer && victim && killer.team !== victim.team && measure[kindOf(killer.id)]) {
             measure[kindOf(killer.id)].kills++;
@@ -120,6 +134,18 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
       for (const name of names) {
         const own = kills.filter((k) => k.kind === name);
         if (own.length) out[name] = aimStats.engagements(world.level, tracks, shots, own);
+      }
+      return out;
+    },
+    /** The shots of the kills so far, by the kind of the killer: {kind: [{group, head, shots}]} (players.js). */
+    bursts() {
+      const out = {};
+      if (!aimStats) return out;
+      const byPlayer = shotsBy(shots);
+      for (const k of kills) {
+        if (!GUN_GROUPS.has(groupOf(k.weapon))) continue;
+        const burst = shotsOfKill(tracks, byPlayer, k);
+        if (burst.length) (out[k.kind] ??= []).push({ group: groupOf(k.weapon), head: k.head, shots: burst });
       }
       return out;
     },
@@ -315,4 +341,16 @@ export function aimLine(kind, list) {
   const f = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : '-');
   const col = (pick, d) => `${f(quantile(list.map(pick), 0.5), d)} / ${f(quantile(list.map(pick), 0.9), d)}`;
   return `${kind.padEnd(8)} G7 aim, p50 / p90 of ${String(list.length).padStart(4)} kills:  error at first sight ${col((e) => e.e0)} deg  |  sight to first shot ${col((e) => e.toShot, 2)} s  |  peak turn ${col((e) => e.peak, 0)} deg/s  |  error at first shot ${col((e) => e.shotErr)} deg`;
+}
+
+/**
+ * The shots of the kills of a kind with one group of guns, by their number: the middle of the crosshair's place
+ * under the head (units; p10 to p90), and the share of those kills with a shot to the head.
+ */
+export function burstLines(kind, bursts, group = 'rifle') {
+  const own = bursts.filter((b) => b.group === group);
+  if (own.length < 20) return `${kind.padEnd(8)} G7 shots of a kill with a ${group}: ${own.length} kills, too few`;
+  const steps = burstSteps(own).filter((b) => b.n >= 20);
+  const head = own.filter((b) => b.head).length / own.length;
+  return [`${kind.padEnd(8)} G7 shots of ${own.length} kills with a ${group} (${(head * 100).toFixed(1)}% to the head): the crosshair under the head, the middle (p10 to p90), and its error, p50 / p90`, ...steps.map((b) => `${''.padEnd(10)}${b.title.padEnd(14)} ${b.low.p50.toFixed(1).padStart(6)} (${b.low.p10.toFixed(0)} to ${b.low.p90.toFixed(0)}) units   ${b.error.p50.toFixed(2)} / ${b.error.p90.toFixed(1)} deg   n ${b.n}`)].join('\n');
 }

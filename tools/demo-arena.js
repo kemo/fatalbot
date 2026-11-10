@@ -7,8 +7,8 @@
 // Without --demos it takes `count` HLTV demos of `map`, the same ones for the same seed. A report names no player.
 
 import { writeFileSync } from 'node:fs';
-import { csbihMissing, loadAimStats, loadCore, loadLevel, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
-import { addMeasures, aimLine, measureLine } from '../hosts/csbih/arena.js';
+import { csbihMissing, loadAimStats, loadBody, loadCore, loadLevel, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
+import { addMeasures, aimLine, burstLines, measureLine, useBody } from '../hosts/csbih/arena.js';
 import { playDemoRound } from '../hosts/csbih/demo.js';
 
 const args = { demos: null, map: 'de_dust2', count: '4', rounds: '10', sides: 'both', seed: '1', hands: 'demo', json: null, nades: false, plans: false };
@@ -28,6 +28,8 @@ if (missing) {
 }
 const core = await loadCore();
 const aimStats = await loadAimStats();
+// The bullets meet the hit boxes of the player model, as in the real game.
+useBody(await loadBody());
 const seed = Number(args.seed);
 // A stable shuffle of the demos by the seed, so a second run with a change plays the same matches.
 const hash = (s) => [...s].reduce((h, ch) => Math.imul(h ^ ch.charCodeAt(0), 2654435761) >>> 0, seed);
@@ -38,6 +40,7 @@ const pct = (n, of) => (of ? `${((n / of) * 100).toFixed(0)}%` : '-');
 
 const total = { T: { n: 0, fatal: 0, demo: 0 }, CT: { n: 0, fatal: 0, demo: 0 }, null: { n: 0, fatal: 0, demo: 0 } };
 const aim = {};
+const bursts = {};
 const measure = {};
 const why = {};
 const report = [];
@@ -67,6 +70,7 @@ for (const id of wanted) {
     for (const side of sides) {
       const r = playDemoRound({ core, level, timeline, round, side, seed, profiles, mapData, hands: args.hands, aimStats, nades: args.nades, plans });
       for (const [kind, list] of Object.entries(r.aim)) (aim[kind] ??= []).push(...list);
+      for (const [kind, list] of Object.entries(r.bursts)) (bursts[kind] ??= []).push(...list);
       row.rounds.push({ number: r.number, side, winner: r.winner, reason: r.reason, seconds: r.seconds, planted: r.planted, demo: r.demo, derails: r.derails, firstDerail: r.firstDerail });
       addMeasures(measure, r.measure);
       for (const [k, n] of Object.entries(r.why)) why[k] = (why[k] ?? 0) + n;
@@ -99,4 +103,5 @@ console.log(`The players left their recording ${left} times: ${Object.entries(wh
 console.log("Kinds: fatal; rails (the players' own recording); standin (the reference bot that plays on for a player).");
 for (const [kind, m] of Object.entries(measure)) if (m.alive > 0) console.log(measureLine(kind, m));
 for (const [kind, list] of Object.entries(aim)) console.log(aimLine(kind, list));
+for (const [kind, list] of Object.entries(bursts)) for (const group of ['rifle', 'pistol', 'sniper']) console.log(burstLines(kind, list, group));
 if (args.json) writeFileSync(args.json, JSON.stringify({ args, total, measure, why, report }, null, 1));

@@ -15,8 +15,9 @@ import { existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { brotliCompressSync } from 'node:zlib';
-import { csbihMissing, csbihRoot, loadAnim, loadCore, loadLevel, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
+import { csbihMissing, csbihRoot, loadAnim, loadBody, loadCore, loadLevel, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
 import { playDemoRound } from '../hosts/csbih/demo.js';
+import { useBody } from '../hosts/csbih/arena.js';
 import { Recorder } from '../hosts/csbih/record.js';
 
 const args = { demo: null, map: 'de_dust2', side: 'T', rounds: '6', first: '1', seed: '1', hands: 'demo', port: '3038', 'no-serve': false, plans: false };
@@ -37,6 +38,7 @@ if (missing) {
 const side = args.side === 'CT' ? 'CT' : 'T';
 const seed = Number(args.seed);
 const core = await loadCore();
+useBody(await loadBody());
 
 // The demo: the one named, else the first HLTV demo of the map in the seed's order (as tools/demo-arena.js).
 const hash = (s) => [...s].reduce((h, ch) => Math.imul(h ^ ch.charCodeAt(0), 2654435761) >>> 0, seed);

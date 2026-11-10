@@ -102,6 +102,25 @@ export async function loadAnim() {
 }
 
 /**
+ * The body of a player for a bullet, with the hit boxes of the player model of csbih-player (hitboxes.js): the
+ * head, the chest, the stomach, the arms and the legs, in the aim pose of a rifle, standing and ducked. The real
+ * game poses the boxes by the animation of the moment. Gives `bodyOf(player)` for `world.bodyOf`.
+ */
+export async function loadBody() {
+  const root = csbihRoot();
+  const { mdl } = await loadAnim();
+  const { poseBlend, sequenceIndex } = await import(pathToFileURL(join(root, 'web', 'mdl.js')).href);
+  const { boneMatrices, readHitboxes } = await import(pathToFileURL(join(root, 'src', 'shared', 'game', 'hitboxes.js')).href);
+  const boxes = readHitboxes(mdl.buffer);
+  const parents = mdl.bones.map((b) => b.parent);
+  const pose = (name) => boneMatrices(parents, poseBlend(mdl, Math.max(0, sequenceIndex(mdl, name)), 0));
+  const stand = pose('ref_aim_rifle');
+  const duck = pose('crouch_aim_rifle');
+  // The model's own origin is the middle of the player's box, standing and ducked.
+  return (p) => ({ x: p.body.origin[0], y: p.body.origin[1], z: p.body.origin[2], yaw: p.yaw, matrices: p.body.ducked ? duck : stand, boxes });
+}
+
+/**
  * The aim measure of csbih-player (tools/aim-stats.js): `engagements(level, tracks, shots, kills)` gives, for each
  * kill, the crosshair error at the killer's first sight of the victim, the time to the first shot and the turn of
  * the view between them. The arenas use it so that a bot and a player are measured the same way.

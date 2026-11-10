@@ -8,8 +8,8 @@
 // from the demos; `fatal-nades` the map's grenade lineups; `fatal-plans-nades` both.
 
 import { writeFileSync } from 'node:fs';
-import { csbihMissing, loadCore, loadLevel, loadMapData, loadPlans } from '../hosts/csbih/load.js';
-import { measureLine, referenceKind, runMatch, summarize } from '../hosts/csbih/arena.js';
+import { csbihMissing, loadBody, loadCore, loadLevel, loadMapData, loadPlans } from '../hosts/csbih/load.js';
+import { measureLine, referenceKind, runMatch, summarize, useBody } from '../hosts/csbih/arena.js';
 
 const args = { a: 'fatal', b: 'ref', maps: 'de_dust2', rounds: '12', seeds: '1', sides: 'both', json: null, spells: '0' };
 const argv = process.argv.slice(2);
@@ -28,6 +28,8 @@ if (missing) {
   process.exit(1);
 }
 const core = await loadCore();
+// The bullets meet the hit boxes of the player model, as in the real game.
+useBody(await loadBody());
 
 /** The kind of bots named `name` for a level; each match gets its own. */
 async function kindFor(name, level) {

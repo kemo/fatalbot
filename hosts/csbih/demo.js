@@ -103,7 +103,7 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
   return {
     number: round.number, side, winner: result?.winner ?? null, reason: result?.reason ?? 'no end', seconds: ended.seconds, planted,
     demo: { winner: round.winner, reason: round.reason, seconds: round.end - round.t0 },
-    alive: { T: ended.T, CT: ended.CT }, derails: rails.derails.length, firstDerail: rails.derails[0]?.t ?? null, why: whyOf(rails.derails), measure: g.measure, aim: g.engagements(),
+    alive: { T: ended.T, CT: ended.CT }, derails: rails.derails.length, firstDerail: rails.derails[0]?.t ?? null, why: whyOf(rails.derails), measure: g.measure, aim: g.engagements(), bursts: g.bursts(),
   };
 }
 

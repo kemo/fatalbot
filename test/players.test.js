@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { aimOf, burstSteps, errorOf, median, shotsBy, shotsOfKill, spread, tracksOf } from '../hosts/csbih/players.js';
+import { csbihMissing, loadBody } from '../hosts/csbih/load.js';
 import { seeded } from '../src/random.js';
 
 test('the samples of a timeline become tracks, with the fine view angles of version 8', () => {
@@ -67,4 +68,20 @@ test('the aim of many demos: the share of the kills to the head, of all and of e
   assert.equal(aim.head.players.p50, 0.5);
   assert.ok(aim.head.error > 0);
   assert.equal(aimOf(demos, seeded(1), 'pistol').kills, 0);
+});
+
+const skip = csbihMissing() ?? false;
+test('the body of the model has a smaller head than the two boxes, and all the parts of a body', { skip }, async () => {
+  let bodyOf;
+  try {
+    bodyOf = await loadBody();
+  } catch {
+    return; // No player model in this checkout of csbih-player.
+  }
+  const body = bodyOf({ body: { origin: [0, 0, 36], ducked: false }, yaw: 0 });
+  assert.deepEqual([...new Set(body.boxes.map((b) => b.group))].sort(), [1, 2, 3, 4, 5, 6, 7]);
+  const head = body.boxes.find((b) => b.group === 1);
+  const size = head.max.map((v, k) => v - head.min[k]).sort((a, b) => a - b);
+  assert.ok(size[0] * size[1] < 12 * 14, 'the face of the head box is smaller than 12 by 14 units');
+  assert.notEqual(bodyOf({ body: { origin: [0, 0, 18], ducked: true }, yaw: 0 }).matrices, body.matrices, 'a ducked body has its own pose');
 });
