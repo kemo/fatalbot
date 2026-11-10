@@ -87,3 +87,37 @@ test('fatalbot takes a side of a recorded round: the round ends, and the same se
     assert.deepEqual({ ...again, measure: null }, { ...r, measure: null });
   }
 });
+
+// The recorder: a played round as a timeline that the player's own server and TV page read (tools/watch.js).
+const { loadAnim, csbihRoot } = await import('../hosts/csbih/load.js');
+const { Recorder } = await import('../hosts/csbih/record.js');
+
+test('a recorded round is a timeline of the player, with the fatalbot team named', { skip: skipDemo }, async () => {
+  const timeline = loadTimeline(demoId);
+  const v16 = (timeline.source?.netProtocol ?? 0) >= 47;
+  const demoLevel = loadLevel(core, timeline.map, { v16 });
+  const rounds = core.demoRound.demoRounds(timeline).filter((r) => !r.empty && r.winner).slice(0, 2);
+  const { anim, mdl } = await loadAnim();
+  const record = new Recorder({ map: timeline.map, title: 'test', v16, anim, mdl });
+  const played = rounds.map((round) => playDemoRound({ core, level: demoLevel, timeline, round, side: 'T', seed: 3, profiles: loadProfiles(demoId), mapData: loadMapData(timeline.map), record, tail: 2, gap: 1 }));
+  const t = JSON.parse(JSON.stringify(record.timeline()));
+  assert.equal(t.version, 8);
+  assert.equal(t.map, timeline.map);
+  assert.deepEqual(t.rounds.map((r) => r.kind), ['start', 'end', 'start', 'end']);
+  assert.deepEqual(t.rounds.filter((r) => r.kind === 'end').map((r) => r.winner), played.map((r) => r.winner));
+  // Twenty rows a second, each with every player: [t, (entity, x, y, z, yaw, flags) ...].
+  assert.ok(t.samples.length > t.duration * 15);
+  for (const row of t.samples) assert.equal((row.length - 1) % 6, 0);
+  assert.ok(t.samples.every((row, i) => i === 0 || row[0] >= t.samples[i - 1][0]), 'the rows go on in time');
+  const fatal = t.players.filter((p) => p.name.startsWith('FatalBot | '));
+  assert.equal(fatal.length, 5);
+  assert.ok(t.anims.length > 20 && t.anims.every((a) => a[2] >= 0 && a[2] < mdl.sequences.length && a[3] >= 0 && a[3] < mdl.sequences.length));
+  assert.ok(t.shots.length > 0 && t.loadouts.length >= 10 && t.sounds.length > 0);
+  assert.ok(t.kills.every((k) => k.t <= t.duration && k.victim));
+  // The player's own server reads it, and takes "FatalBot" as the tag of that team.
+  const { indexEntry } = await import(`${csbihRoot()}/src/server.js`);
+  const entry = indexEntry('fatalbot-test', t);
+  assert.equal(entry.info.kind, 'hltv');
+  assert.equal(entry.summary.rounds, 2);
+  assert.ok(entry.summary.teams.some((team) => team.tag === 'FatalBot' && team.players.length === 5));
+});

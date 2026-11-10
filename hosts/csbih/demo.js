@@ -13,9 +13,10 @@ const PAST_CLOCK = 60;
 /**
  * Plays `round` (one of demoRounds(timeline)) with fatalbot as `side`. `profiles` are the demo's players by entity
  * (load.js loadProfiles); `mapData` is {views, lineups} for the route bots. `hands: 'demo'` gives each fatalbot the
- * motor profile of the player it replaces; `'default'` the default one.
+ * motor profile of the player it replaces; `'default'` the default one. `record` (record.js Recorder) takes the round
+ * for the player's TV page: the round then runs `tail` seconds past its end, and `gap` seconds pass before the next.
  */
-export function playDemoRound({ core, level, timeline, round, side, seed = 1, profiles = {}, mapData = {}, hands = 'demo' }) {
+export function playDemoRound({ core, level, timeline, round, side, seed = 1, profiles = {}, mapData = {}, hands = 'demo', record = null, tail = 0, gap = 0 }) {
   const { World } = core.world;
   const { Rails, railsFor } = core.rails;
   const scenario = core.demoRound.demoRound(timeline, round, { spawns: level.rules.spawns ?? null });
@@ -51,6 +52,13 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
     world.addPlayer({ ...p, controller: railsFor(timeline, p) ? rails.controller(p, bot.skill) : bot });
   }
   if (!world.bomb && scenario.bombAt) world.bomb = { state: 'dropped', carrier: null, busy: null, origin: [...scenario.bombAt] };
+  if (record) {
+    // On the screen the bots of fatalbot carry its name, in the order of the demo's players; the others their own.
+    const names = new Map();
+    let n = 0;
+    for (const p of scenario.players) names.set(p.id, p.team === side ? `FatalBot | ${++n}` : p.name);
+    record.begin(world, { seconds: round.seconds, names, note: `Round ${round.number} of the demo: FatalBot plays the ${side}s. In the demo the ${round.winner}s won it.` });
+  }
   const g = gauge(core, world, (id) => kind.get(id), ['fatal', 'demo']);
   for (const p of world.players.values()) g.time(p);
   const timed = new Set([...world.players.values()].map((p) => p.controller));
@@ -62,6 +70,7 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
     world.step();
     const events = world.events.slice(from);
     g.events(events);
+    record?.step(world, events);
     if (events.some((e) => e.type === 'planted')) planted = true;
     world.events.length = 0;
     // A player that left the rails has another controller: its time counts too.
@@ -75,10 +84,21 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
     result = core.round.roundResult(world, round.seconds);
   }
   const alive = (team) => [...world.players.values()].filter((p) => p.team === team && p.alive).length;
+  const ended = { seconds: world.time, T: alive('T'), CT: alive('CT') };
+  if (record) {
+    record.end(world, result);
+    for (let i = 0; i < tail / world.tickSeconds; i++) {
+      const from = world.events.length;
+      world.step();
+      record.step(world, world.events.slice(from));
+      world.events.length = 0;
+    }
+    record.close(world, gap);
+  }
   return {
-    number: round.number, side, winner: result?.winner ?? null, reason: result?.reason ?? 'no end', seconds: world.time, planted,
+    number: round.number, side, winner: result?.winner ?? null, reason: result?.reason ?? 'no end', seconds: ended.seconds, planted,
     demo: { winner: round.winner, reason: round.reason, seconds: round.end - round.t0 },
-    alive: { T: alive('T'), CT: alive('CT') }, derails: rails.derails.length, firstDerail: rails.derails[0]?.t ?? null, measure: g.measure,
+    alive: { T: ended.T, CT: ended.CT }, derails: rails.derails.length, firstDerail: rails.derails[0]?.t ?? null, measure: g.measure,
   };
 }
 

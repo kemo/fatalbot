@@ -36,13 +36,29 @@ The arenas and some tests need a built checkout of csbih-player: the source in `
 
 The recorded measures are in [docs/measures/](docs/measures/).
 
+## Watch
+
+```sh
+node tools/watch.js --map de_dust2 --side T --rounds 8    # then open the address that it prints
+node tools/watch.js --demo <id> --side CT --first 16      # another demo, the other side, from round 16
+```
+
+`tools/watch.js` plays the rounds of test 1 and shows them in the TV page of csbih-player, at the speed of the game:
+the level in 3D, the radar, the first person, the kill feed and the scoreboard. The bots of fatalbot are named
+"FatalBot | 1" to "FatalBot | 5", and the page shows "FatalBot" as the tag of that team. The other team keeps its
+names: the players of the demo, who stay on their recording until the round leaves it.
+
+The tool writes one timeline into `out/watch/` (git-ignored) and starts the player's own server on it, on port
+3038. csbih-player itself is not changed.
+
 ## Layout
 
 ```
 src/            the brain: pure ES modules, the same files for every host
-hosts/csbih/    the adapter for the game core of csbih-player, the Node loader of its levels, the two arenas
+hosts/csbih/    the adapter for the game core of csbih-player, the Node loader of its levels, the two arenas,
+                and the recorder that writes played rounds as a timeline of the player
 hosts/goldsrc/  the plan of the adapter for a real server
-tools/          the command lines of the arenas
+tools/          the command lines: arena.js, demo-arena.js, watch.js
 test/           node --test
 docs/specs/     what the code does and why
 docs/measures/  the recorded measures, each with its command line

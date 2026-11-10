@@ -87,3 +87,16 @@ export function loadProfiles(id) {
     return {};
   }
 }
+
+/**
+ * What the recorder needs to name the sequences of a body (record.js): the player's animation helpers and one
+ * parsed player model. Every player model of the game has the same sequences.
+ */
+export async function loadAnim() {
+  const root = csbihRoot();
+  const anim = await import(pathToFileURL(join(root, 'web', 'player-anim.js')).href);
+  const { readMdl } = await import(pathToFileURL(join(root, 'web', 'mdl.js')).href);
+  const file = ['assets/models/player/leet/leet.mdl', 'assets/models16/player/leet/leet.mdl'].map((f) => join(root, f)).find((f) => existsSync(f));
+  if (!file) throw new Error(`No player model in ${root}/assets: run tools/fetch-assets.sh of csbih-player.`);
+  return { anim, mdl: readMdl(buffer(file)) };
+}
