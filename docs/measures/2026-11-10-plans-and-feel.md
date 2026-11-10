@@ -6,7 +6,8 @@ commit `33f6352`: the same code, where every standing bot made way (section 8).
 
 **Corrected later** (docs/measures/2026-11-10-players-aim.md): the share of the kills with a shot to the head
 in this document is a fault of the arena. Its head box was larger than a head. With the hit boxes of the player
-model fatalbot makes 41 to 44% of its kills by a shot to the head, and the players of all 520 demos make 42.2%.
+model fatalbot makes 41 to 44% of its kills by a shot to the head, and the players of all 520 demos make 42.1%
+of their kills of an enemy with a gun.
 The rounds won of this document were played with the large head box; the same gates with the hit boxes of the
 model are in that document, section 4.
 

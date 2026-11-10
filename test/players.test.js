@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { aimOf, burstSteps, errorOf, median, shotsBy, shotsOfKill, spread, tracksOf } from '../hosts/csbih/players.js';
+import { aimOf, burstSteps, errorOf, groupOf, median, playerFacts, shotsBy, shotsOfKill, spread, tracksOf, turnsBySight } from '../hosts/csbih/players.js';
 import { csbihMissing, loadBody } from '../hosts/csbih/load.js';
 import { seeded } from '../src/random.js';
 
@@ -68,6 +68,22 @@ test('the aim of many demos: the share of the kills to the head, of all and of e
   assert.equal(aim.head.players.p50, 0.5);
   assert.ok(aim.head.error > 0);
   assert.equal(aimOf(demos, seeded(1), 'pistol').kills, 0);
+});
+
+test('the hand by the size of the turn, and a gun that a demo names by its entity', () => {
+  const fights = [{ e0: 2, toShot: 0.3, peak: 30, shotErr: 1 }, { e0: 8, toShot: 0.4, peak: 50, shotErr: 2 }, { e0: 25, toShot: 0.6, peak: 150, shotErr: 3 }, { e0: 90, toShot: 0.9, peak: 400, shotErr: 5 }];
+  const [small, mid, large] = turnsBySight(fights);
+  assert.deepEqual([small.n, mid.n, large.n], [2, 1, 1]);
+  assert.equal(small.share, 0.5);
+  assert.equal(mid.peak.p50, 150);
+  assert.equal(large.toShot.p50, 0.9);
+  assert.equal(groupOf('ak47'), 'rifle');
+  assert.equal(groupOf('awp'), 'sniper');
+  // The kills that count: of an enemy, with a gun. A demo names the MP5 "mp5navy".
+  const kill = (weapon, victimTeam = 'CT') => ({ t: 1, killer: 1, victim: 2, weapon, killerTeam: 'T', victimTeam, headshot: weapon === 'mp5navy' });
+  const facts = playerFacts({ engagements: () => [] }, null, { version: 8, samples: [], shots: [], kills: [kill('mp5navy'), kill('knife'), kill('grenade'), kill('ak47', 'T'), kill('no such gun')] });
+  assert.equal(facts.length, 1);
+  assert.deepEqual([facts[0].kills, facts[0].heads, facts[0].groups.other], [1, 1, [1, 1]]);
 });
 
 const skip = csbihMissing() ?? false;

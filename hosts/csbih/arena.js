@@ -2,7 +2,7 @@
 // the level; each side is driven by a "kind" of bot. The measures read the players from outside (place, view, last
 // command, events), never the state of a bot, so they count the same for every kind.
 
-import { burstSteps, groupOf, shotsBy, shotsOfKill } from './players.js';
+import { burstSteps, groupOf, shotsBy, shotsOfKill, turnsBySight } from './players.js';
 
 const ID = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 /**
@@ -353,4 +353,10 @@ export function burstLines(kind, bursts, group = 'rifle') {
   const steps = burstSteps(own).filter((b) => b.n >= 20);
   const head = own.filter((b) => b.head).length / own.length;
   return [`${kind.padEnd(8)} G7 shots of ${own.length} kills with a ${group} (${(head * 100).toFixed(1)}% to the head): the crosshair under the head, the middle (p10 to p90), and its error, p50 / p90`, ...steps.map((b) => `${''.padEnd(10)}${b.title.padEnd(14)} ${b.low.p50.toFixed(1).padStart(6)} (${b.low.p10.toFixed(0)} to ${b.low.p90.toFixed(0)}) units   ${b.error.p50.toFixed(2)} / ${b.error.p90.toFixed(1)} deg   n ${b.n}`)].join('\n');
+}
+
+/** The hand of a kind by the size of the turn that a kill needed (players.js turnsBySight), as tools/players.js prints it. */
+export function turnLines(kind, list) {
+  const f = (v, d) => (Number.isFinite(v) ? v.toFixed(d) : '-');
+  return [`${kind.padEnd(8)} G7 the hand by the error at the first sight: kills (share), sight to first shot p10 / p50 / p90, peak turn p50 / p90, error at the first shot p10 / p50 / p90`, ...turnsBySight(list).map((b) => `${''.padEnd(10)}${b.title.padEnd(9)} ${String(b.n).padStart(5)} (${f(b.share * 100, 0)}%)   ${f(b.toShot.p10, 2)} / ${f(b.toShot.p50, 2)} / ${f(b.toShot.p90, 2)} s   ${f(b.peak.p50, 0)} / ${f(b.peak.p90, 0)} deg/s   ${f(b.shotErr.p10, 1)} / ${f(b.shotErr.p50, 1)} / ${f(b.shotErr.p90, 1)} deg`)].join('\n');
 }

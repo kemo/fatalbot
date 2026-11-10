@@ -27,8 +27,25 @@ const RAD = Math.PI / 180;
 const turn = (d) => ((((d + 540) % 360) + 360) % 360) - 180;
 
 const GROUP = { rifle: 'rifle', sniper: 'sniper', pistol: 'pistol' };
+// A demo names some guns by the name of their entity.
+const NAMES = { mp5navy: 'mp5' };
+const gunKind = (weapon) => kindOf(NAMES[weapon] ?? weapon);
 /** The group of a weapon for the tables: rifle, sniper, pistol or other. */
-export const groupOf = (weapon) => GROUP[kindOf(weapon)] ?? 'other';
+export const groupOf = (weapon) => GROUP[gunKind(weapon)] ?? 'other';
+
+// The sight errors that the turn is told apart by: [from, to, title] in degrees.
+export const SIGHT_STEPS = [[0, 10, 'Under 10'], [10, 40, '10 to 40'], [40, 181, 'Over 40']];
+/**
+ * The hand by the size of the turn that a kill needed: for the kills whose crosshair error at the first sight lies
+ * in each step of SIGHT_STEPS, {title, n, toShot, peak, shotErr} as spreads. A fast hand shows in the large
+ * turns, and a bad crosshair placement in how many of them there are.
+ */
+export function turnsBySight(fights) {
+  return SIGHT_STEPS.map(([from, to, title]) => {
+    const own = fights.filter((f) => f.e0 >= from && f.e0 < to);
+    return { title, n: own.length, share: fights.length ? own.length / fights.length : NaN, toShot: spread(own.map((f) => f.toShot)), peak: spread(own.map((f) => f.peak)), shotErr: spread(own.map((f) => f.shotErr)) };
+  });
+}
 
 /** The samples of a timeline as tracks: Map(player -> [[t, {x, y, z, yaw, pitch, dead, duck}]]). */
 export function tracksOf(timeline) {
@@ -113,7 +130,7 @@ export function playerFacts(aimStats, hulls, timeline) {
   const byKiller = new Map();
   for (const k of timeline.kills ?? []) {
     if (!k.killer || k.killer === k.victim || k.killerTeam === k.victimTeam) continue;
-    if (kindOf(k.weapon) === 'grenade' || kindOf(k.weapon) === 'knife' || !kindOf(k.weapon)) continue;
+    if (gunKind(k.weapon) === 'grenade' || gunKind(k.weapon) === 'knife' || !gunKind(k.weapon)) continue;
     let list = byKiller.get(k.killer);
     if (!list) byKiller.set(k.killer, (list = []));
     list.push(k);

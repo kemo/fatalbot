@@ -8,7 +8,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { csbihMissing, loadAimStats, loadBody, loadCore, loadLevel, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
-import { addMeasures, aimLine, burstLines, measureLine, useBody } from '../hosts/csbih/arena.js';
+import { addMeasures, aimLine, burstLines, measureLine, turnLines, useBody } from '../hosts/csbih/arena.js';
 import { playDemoRound } from '../hosts/csbih/demo.js';
 
 const args = { demos: null, map: 'de_dust2', count: '4', rounds: '10', sides: 'both', seed: '1', hands: 'demo', json: null, nades: false, plans: false };
@@ -103,5 +103,6 @@ console.log(`The players left their recording ${left} times: ${Object.entries(wh
 console.log("Kinds: fatal; rails (the players' own recording); standin (the reference bot that plays on for a player).");
 for (const [kind, m] of Object.entries(measure)) if (m.alive > 0) console.log(measureLine(kind, m));
 for (const [kind, list] of Object.entries(aim)) console.log(aimLine(kind, list));
+for (const [kind, list] of Object.entries(aim)) console.log(turnLines(kind, list));
 for (const [kind, list] of Object.entries(bursts)) for (const group of ['rifle', 'pistol', 'sniper']) console.log(burstLines(kind, list, group));
 if (args.json) writeFileSync(args.json, JSON.stringify({ args, total, measure, why, report }, null, 1));

@@ -45,10 +45,12 @@ Ported from `bot.js aimAt`, `hand` and `fight`, where the numbers were fitted to
 - **New:** one strafing fight in three is fought on the run (`fight.js RUN_GUN`). The players of the demos fire 7
   to 13% of their rifle shots on the run, the reference bot 22%.
 - **Measured against the players of 520 demos** (`tools/players.js`, docs/measures/2026-11-10-players-aim.md):
-  the share of the kills with a shot to the head (41 to 44%, the players 42.2%), the crosshair error at the first
-  sight and at the first shot, the time to the first shot and the turn before it all lie inside the spread of the
-  players. The first shot comes later than the middle player's. In a long burst the players pull the crosshair
-  further down than the hand does, and their pistol kills go to the head more often.
+  the share of the kills with a shot to the head (41 to 44%, the players 42.1%), the crosshair error at the first
+  sight and at the first shot, the time to the first shot and the turn before it lie inside the spread of the
+  players. For the same size of turn the hand is not faster than the players', and the first shot comes later.
+  Outside the spread: the share of the head with a pistol (too low) and with a sniper rifle (too high). In a long
+  burst the players pull the crosshair further down than the hand does. The bot makes more large turns than the
+  players: its crosshair lies further from the enemy at the first sight.
 
 ## 4. The feet (`walk.js`, `moves.js`)
 

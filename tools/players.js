@@ -11,7 +11,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { csbihMissing, csbihRoot, loadAimStats, loadCore, loadLevel, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
-import { MEASURES, MIN_FIGHTS, MIN_KILLS, aimOf, burstSteps, playerFacts } from '../hosts/csbih/players.js';
+import { MEASURES, MIN_FIGHTS, MIN_KILLS, aimOf, burstSteps, playerFacts, turnsBySight } from '../hosts/csbih/players.js';
 import { seeded } from '../src/random.js';
 
 const args = { maps: null, shard: null, fresh: false, json: null };
@@ -33,7 +33,7 @@ const core = await loadCore();
 const aimStats = await loadAimStats();
 const CACHE = join(dirname(fileURLToPath(import.meta.url)), '..', 'out', 'players', 'cache');
 mkdirSync(CACHE, { recursive: true });
-const VERSION = 2;
+const VERSION = 3;
 
 // Which demo is of which map: the index of the player's server knows without a read of each timeline.
 let index = null;
@@ -129,6 +129,13 @@ for (const group of ['rifle', 'pistol', 'sniper']) {
   lines.push(...stepRows(steps));
   lines.push('', `Shots of a kill: ${out.groups[group].burstLength.p50} in the middle, ${out.groups[group].burstLength.p90} at p90.`);
 }
+// The hand by the size of the turn: the tails of the time and of the turn show a hand that is too fast.
+const fights = all.flat().flatMap((p) => p.fights);
+out.turns = turnsBySight(fights);
+lines.push('', `### The hand by the crosshair error at the first sight (${fights.length} kills)`, '');
+lines.push('| Error at the first sight (degrees) | Kills | Share | First sight to first shot: p10 | p50 | p90 (s) | Peak turn: p50 | p90 (degrees a second) | Error at the first shot: p10 | p50 | p90 (degrees) |');
+lines.push('|------|------|------|------|------|------|------|------|------|------|------|');
+for (const b of out.turns) lines.push(`| ${b.title} | ${b.n} | ${pct(b.share)} | ${num(b.toShot.p10, 2)} | ${num(b.toShot.p50, 2)} | ${num(b.toShot.p90, 2)} | ${num(b.peak.p50, 0)} | ${num(b.peak.p90, 0)} | ${num(b.shotErr.p10, 1)} | ${num(b.shotErr.p50, 1)} | ${num(b.shotErr.p90, 1)} |`);
 lines.push('', '### By map (all kills with a gun)', '');
 lines.push(`| Map | Demos | Kills | To the head | its error | ${MEASURES.map(([, title]) => title).join(' | ')} |`);
 lines.push(`|-----|------|------|------|------|${MEASURES.map(() => '------').join('|')}|`);
