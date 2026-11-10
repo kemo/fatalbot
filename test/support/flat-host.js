@@ -42,8 +42,11 @@ export function flatMap({ sites = [], size: SIZE = 24, spawns = [-300, 300] } = 
   };
 }
 
-/** The ports of the flat map: the wall stops a line and a box; nothing else does. `half` is half the wall's length. */
-export function flatPorts({ half = WALL_HALF } = {}) {
+/**
+ * The ports of the flat map: the wall stops a line and a box, and the floor stops a box that goes down. `half` is
+ * half the wall's length; `floor(x, y)` says where the map has a floor (everywhere when absent).
+ */
+export function flatPorts({ half = WALL_HALF, floor = () => true } = {}) {
   const blocked = (a, b) => {
     if ((a[0] - WALL_X) * (b[0] - WALL_X) >= 0) return false;
     const t = (WALL_X - a[0]) / (b[0] - a[0]);
@@ -72,7 +75,9 @@ export function flatPorts({ half = WALL_HALF } = {}) {
   return {
     traceLine: line,
     traceHull(a, b, ducked, out) {
-      const fraction = blocked(a, b) ? 0.5 : 1;
+      let fraction = blocked(a, b) ? 0.5 : 1;
+      // A standing box rests with its origin 36 over the floor.
+      if (a[2] >= 36 && b[2] < 36 && floor(b[0], b[1])) fraction = Math.min(fraction, (a[2] - 36) / (a[2] - b[2]));
       if (out) {
         out.fraction = fraction;
         out.startSolid = false;

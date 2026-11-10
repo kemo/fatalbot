@@ -17,7 +17,7 @@ const PAST_CLOCK = 60;
  * round is the demo, and the measures are the players' own. `record` (record.js Recorder) takes the round
  * for the player's TV page: the round then runs `tail` seconds past its end, and `gap` seconds pass before the next.
  */
-export function playDemoRound({ core, level, timeline, round, side, seed = 1, profiles = {}, mapData = {}, hands = 'demo', record = null, tail = 0, gap = 0, aimStats = null, nades = false }) {
+export function playDemoRound({ core, level, timeline, round, side, seed = 1, profiles = {}, mapData = {}, hands = 'demo', record = null, tail = 0, gap = 0, aimStats = null, nades = false, plans = null }) {
   const { World } = core.world;
   const { Rails, railsFor } = core.rails;
   const scenario = core.demoRound.demoRound(timeline, round, { spawns: level.rules.spawns ?? null });
@@ -26,7 +26,7 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
   world.knifeRound = scenario.knives;
   world.bodyOf = body;
   // fatalbot takes the map's grenade lineups only with `nades` (they cost rounds until a team plan times them).
-  const host = csbihHost(core, world, level, { seed, lineups: nades ? mapData.lineups ?? [] : [] });
+  const host = csbihHost(core, world, level, { seed, lineups: nades ? mapData.lineups ?? [] : [], plans });
   host.clock = () => round.seconds - world.time;
   const story = core.demoMatch.demoStory(scenario);
   const routeBots = new Map();

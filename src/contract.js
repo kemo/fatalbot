@@ -16,6 +16,11 @@
  * @property {{team: 'T'|'CT', kind: 'he'|'flash'|'smoke', from: Vec3, velocity: Vec3, at: number}[]} [lineups]
  *   Throws of grenades that players of this map made: where the grenade started, its velocity, and the second of
  *   the round. Optional; without them a bot throws no lineup.
+ * @property {{T: {points: number[][], site: number, te: number, share: number, won: number}[], CT: {points: number[][], share: number, won: number}[]}} [plans]
+ *   Strategies that teams played on this map: where the five stood (the Ts at second 20 of a round, the CTs at
+ *   second 15), for the Ts the site that they took and the second that the first of them stood in it, and the
+ *   share of the rounds and of the wins. A place is [x, y, z] or [x, y, z, yaw]: the yaw is the view of the player
+ *   who stood there. Optional; without them a team plans by the level alone.
  *
  * @typedef {Object} Ports Queries into the level, inside a tick. Players are never in a trace.
  * @property {(from: Vec3, to: Vec3, out?: {fraction: number, startSolid: boolean, end: Vec3, normal: Vec3}) => number} traceLine
@@ -113,6 +118,12 @@ export function checkMap(map) {
   if (map?.ladders?.some?.((l) => !vec(l.normal))) bad.push('map.ladders.normal');
   if (!Array.isArray(map?.spawns) || !map.spawns.every((s) => TEAMS.includes(s.team) && vec(s.origin) && num(s.yaw))) bad.push('map.spawns');
   if (map?.lineups !== undefined && !(Array.isArray(map.lineups) && map.lineups.every((l) => TEAMS.includes(l.team) && ['he', 'flash', 'smoke'].includes(l.kind) && vec(l.from) && vec(l.velocity) && num(l.at)))) bad.push('map.lineups');
+  if (map?.plans !== undefined) {
+    const place = (p) => Array.isArray(p) && (p.length === 3 || p.length === 4) && p.every(num);
+    const plan = (p) => Array.isArray(p?.points) && p.points.every(place) && num(p.share) && num(p.won);
+    const ok = Array.isArray(map.plans?.T) && Array.isArray(map.plans?.CT) && map.plans.CT.every(plan) && map.plans.T.every((p) => plan(p) && Number.isInteger(p.site) && num(p.te));
+    if (!ok) bad.push('map.plans');
+  }
   return bad;
 }
 

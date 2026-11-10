@@ -33,6 +33,8 @@ export class Team {
     this.thrown = new Set();
     // The flashbangs of the team in the air: [{point, until, by}] (grenades.js).
     this.flashes = [];
+    // The teammates asked to make way: bot id -> {dir, until, to} (walk.js makeWay).
+    this.way = new Map();
   }
 
   /** A player of the team sees an enemy. */

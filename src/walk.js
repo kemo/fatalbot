@@ -17,6 +17,16 @@ const JUMP_CLEARS = 54;
 // that time): it steps aside from a player, else jumps.
 const STUCK_CIRCLE = 16;
 const STUCK_SECONDS = 0.25;
+// Held up this long by a teammate that stands, within BLOCKED_NEAR of its point, a bot stands too for BLOCKED_WAIT.
+const BLOCKED_SECONDS = 0.8;
+const BLOCKED_NEAR = 400;
+const BLOCKED_WAIT = 4;
+// Held up this long by a teammate that stands, a bot asks it for the way. The teammate steps WAY_STEP aside where
+// it has more than WAY_ROOM, and stays out of the way for WAY_SECONDS.
+const WAY_ASK = 0.4;
+const WAY_STEP = 72;
+const WAY_ROOM = 40;
+const WAY_SECONDS = 2.5;
 // On a walk of the graph a ledge ahead counts once the bot has been slow for this long (s).
 const HELD_UP = 0.08;
 // A straight walk is looked for up to this many floors ahead; the view looks this far along the way.
@@ -70,8 +80,13 @@ export function walkTo(c, cmd, point, facing) {
     if (facing) rest(c, cmd);
     return false;
   }
-  s.walked = c.tick;
   const key = pointKey(point);
+  // A teammate stands in the way, near the point: this is as near as the bot gets for now (stuckCheck).
+  if (s.blocked?.key === key && time < s.blocked.until && left < BLOCKED_NEAR && !me.onLadder && abs(point[2] - o[2]) < 40) {
+    if (facing) rest(c, cmd);
+    return false;
+  }
+  s.walked = c.tick;
   // The player's habits on the way: the walk near the end of it, the knife out on a long run far from a fight.
   if (s.walkFor !== key) {
     s.walkFor = key;
@@ -109,9 +124,10 @@ export function walkTo(c, cmd, point, facing) {
     const i = max(s.pathIndex, min(s.pullTo, path.length - 1));
     target = path[i].point;
     kind = path[s.pathIndex].kind;
-    // On the last floor of the way: the point itself lies off the graph (a spot between two floors). Straight to
-    // it; where the bot comes no nearer is as near as it gets, and it stands there.
-    if (s.pathIndex === path.length - 1 && reached(path[s.pathIndex]) && !s.escape && me.onGround && !me.onLadder) {
+    // On the last floor of the way, or on the way to it: where the bot comes no nearer to the point for a moment
+    // is as near as it gets, and it stands there. The point can lie off the graph (a spot between two floors), or
+    // a teammate can stand on it (a place of a team's formation holds two players a step apart).
+    if (s.pathIndex === path.length - 1 && !s.escape && me.onGround && !me.onLadder) {
       const gap = hypot(left, point[2] - o[2]);
       if (s.endKey !== key || gap < s.endBest - 1) {
         s.endKey = key;
@@ -121,7 +137,7 @@ export function walkTo(c, cmd, point, facing) {
         if (facing) rest(c, cmd);
         return false;
       }
-      target = point;
+      if (reached(path[s.pathIndex])) target = point;
     }
   }
   // A ladder: face it and hold forward, the view up to climb and down to descend.
@@ -290,6 +306,13 @@ function stuckCheck(c, cmd, fresh) {
   const blocker = mates.find((p) => p !== me && p.alive && hypot(p.origin[0] - o[0], p.origin[1] - o[1]) < 48 && abs(p.origin[2] - o[2]) < 60);
   if (blocker) {
     cmd.side = me.id < blocker.id ? 1 : -1;
+    // A teammate that stands in the way hears "make way" (makeWay).
+    if (s.stuckFor > WAY_ASK && hypot(blocker.velocity[0], blocker.velocity[1]) < 30 && !(c.team.way.get(blocker.id)?.until > time)) {
+      c.team.way.set(blocker.id, { dir: [blocker.origin[0] - o[0], blocker.origin[1] - o[1]], until: time + WAY_SECONDS, to: null });
+    }
+    // A teammate that stands and does not make way (it holds its own place): the bot waits here a while, where
+    // its point is near (walkTo).
+    if (s.stuckFor > BLOCKED_SECONDS && hypot(blocker.velocity[0], blocker.velocity[1]) < 30) s.blocked = { key: s.walkFor, until: time + BLOCKED_WAIT };
     return;
   }
   if (fresh && Math.floor(s.stuckFor * 4) % 3 === 0) cmd.jump = true;
@@ -347,9 +370,12 @@ export function climb(c, cmd, target) {
   const o = me.origin;
   const ladder = ladderNear(map, o);
   if (!ladder) return false;
-  // On the ladder a step over the floor, with nowhere higher to go: below the foot's line the walk keys climb again,
-  // above it the climb sends the bot back down. After a moment of that a jump takes it off the ladder.
-  const low = me.onLadder && !me.onGround && o[2] < ladder.mins[2] + LADDER_FOOT + FOOT_BAND && target[2] < o[2] + 32;
+  // Up when the floor it goes to lies over the ladder's middle: at the top that floor is level with the bot.
+  const up = target[2] > (ladder.mins[2] + ladder.maxs[2]) / 2;
+  // On the ladder a step over the floor, with nowhere higher to go or on its way down: below the foot's line the
+  // walk keys climb again, above it the climb sends the bot back down. After a moment of that a jump takes it off
+  // the ladder.
+  const low = me.onLadder && !me.onGround && o[2] < ladder.mins[2] + LADDER_FOOT + FOOT_BAND && (!up || target[2] < o[2] + 32);
   if (!low) s.footSince = null;
   else if ((s.footSince ??= time) < time - FOOT_HANG) {
     cmd.forward = 0;
@@ -361,8 +387,6 @@ export function climb(c, cmd, target) {
   // At the foot or the top already, level with the target: a walk, not a climb.
   const foot = o[2] < ladder.mins[2] + LADDER_FOOT;
   if ((me.onGround || foot) && abs(target[2] - o[2]) < 32) return false;
-  // Up when the floor it goes to lies over the ladder's middle: at the top that floor is level with the bot.
-  const up = target[2] > (ladder.mins[2] + ladder.maxs[2]) / 2;
   s.climbUp = up;
   s.climbTick = c.tick;
   // To the ladder's open face first, then facing it (its normal points out of the face).
@@ -423,6 +447,49 @@ export function leaveLadder(c, cmd) {
   if (!me.onLadder || me.onGround || s.climbTick === c.tick || atLadderFoot(brain.map, me.origin)) return;
   const o = me.origin;
   climb(c, cmd, [o[0], o[1], o[2] + (s.climbUp === false ? -LADDER_LEAVE : LADDER_LEAVE)]);
+}
+
+/**
+ * A teammate that this bot held up asked for the way (stuckCheck). A bot that stands steps out of it: to the side
+ * with room, else on ahead of the teammate. Its goal brings it back after WAY_SECONDS. True while it steps.
+ */
+export function makeWay(c, cmd) {
+  const { me, s, time, team, brain } = c;
+  const ask = team.way.get(me.id);
+  if (!ask || time > ask.until || !me.onGround || me.onLadder) return false;
+  const o = me.origin;
+  if (!ask.to) {
+    const d = hypot(ask.dir[0], ask.dir[1]) || 1;
+    const along = [ask.dir[0] / d, ask.dir[1] / d];
+    let best = null;
+    let room = WAY_ROOM;
+    for (const v of [[-along[1], along[0]], [along[1], -along[0]], along]) {
+      const far = brain.ports.traceHull(o, [o[0] + v[0] * WAY_STEP, o[1] + v[1] * WAY_STEP, o[2]], me.ducked) * WAY_STEP;
+      if (far <= room) continue;
+      // No step off a ledge: the floor lies under the end of the step.
+      const end = [o[0] + v[0] * far, o[1] + v[1] * far, o[2]];
+      if (brain.ports.traceHull(end, [end[0], end[1], end[2] - STEP * 2], me.ducked) >= 1) continue;
+      [best, room] = [v, far];
+    }
+    if (!best) {
+      team.way.delete(me.id);
+      return false;
+    }
+    ask.to = [o[0] + best[0] * room, o[1] + best[1] * room];
+  }
+  const dx = ask.to[0] - o[0];
+  const dy = ask.to[1] - o[1];
+  // Out of the way it stands, whatever its goal wants of its feet, until the call ends.
+  const there = hypot(dx, dy) < 8;
+  const rel = ((atan2(dy, dx) * 180) / PI - cmd.yaw) * RAD;
+  cmd.forward = there ? 0 : cos(rel);
+  cmd.side = there ? 0 : -sin(rel);
+  cmd.jump = false;
+  // The walk that the call holds up is not stuck: no edge of its way counts as failed.
+  s.stuckSince = null;
+  s.stuckAt = null;
+  s.stuckFor = 0;
+  return true;
 }
 
 /** A tick with no walk (a stand, a hold, a fight) ends the stuck spell: the next walk starts its own. */

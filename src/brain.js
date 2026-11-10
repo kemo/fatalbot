@@ -10,7 +10,7 @@ import { Team } from './team.js';
 import { census, listen, look, track } from './senses.js';
 import { lookAt } from './aim.js';
 import { noiseAim, restLook, viewOpen } from './watch.js';
-import { giveUp, leaveLadder, restStuck, walkTo } from './walk.js';
+import { giveUp, leaveLadder, makeWay, restStuck, walkTo } from './walk.js';
 import { fight, startFight } from './fight.js';
 import { decide, forgetGoal } from './tactics.js';
 import { buyList } from './buy.js';
@@ -194,7 +194,7 @@ function command(c) {
   if (goal.task !== 'lineup' && goal.point) s.goingTo = goal.point;
   const fighting = Boolean(s.target) && time - s.seenAt < MEMORY;
   if (giveUp(c, fighting)) {
-    forgetGoal(c);
+    forgetGoal(c, goal);
     s.lastPoint = null;
   }
   let feet = false;
@@ -262,6 +262,8 @@ function command(c) {
     const flash = flashToAvoid(c, eye);
     if (flash) lookAt(c, cmd, yawTo(flash, eye), 0);
   }
+  // A plant and a defuse hold the feet; any other stand makes way for a teammate that it holds up.
+  if (!fighting && goal.kind !== 'plant' && goal.kind !== 'defuse') makeWay(c, cmd);
   leaveLadder(c, cmd);
   if (cmd.weapon === undefined) delete cmd.weapon;
   return cmd;

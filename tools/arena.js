@@ -4,11 +4,11 @@
 // `--spells n` lists the n longest spells at a wall or stuck, with the place and the goal of the bot.
 // Team A plays T then CT on each map and seed (`--sides both`), so a side's bias and a team's strength come apart.
 // Kinds: `ref` (the bots of csbih-player, with the map's view field and lineups; `ref-bare` without them) and
-// `fatal` (this repository's brain; `fatal-nades` gives it the map's grenade lineups, which cost rounds until a
-// team plan times them: docs/measures).
+// `fatal` (this repository's brain). `fatal-plans` gives it the strategies of the map that tools/strategies.js mined
+// from the demos; `fatal-nades` the map's grenade lineups; `fatal-plans-nades` both.
 
 import { writeFileSync } from 'node:fs';
-import { csbihMissing, loadCore, loadLevel, loadMapData } from '../hosts/csbih/load.js';
+import { csbihMissing, loadCore, loadLevel, loadMapData, loadPlans } from '../hosts/csbih/load.js';
 import { measureLine, referenceKind, runMatch, summarize } from '../hosts/csbih/arena.js';
 
 const args = { a: 'fatal', b: 'ref', maps: 'de_dust2', rounds: '12', seeds: '1', sides: 'both', json: null, spells: '0' };
@@ -33,9 +33,9 @@ const core = await loadCore();
 async function kindFor(name, level) {
   if (name === 'ref') return referenceKind(core, loadMapData(level.map));
   if (name === 'ref-bare') return { ...referenceKind(core), name: 'ref-bare' };
-  if (name === 'fatal' || name === 'fatal-nades') {
+  if (/^fatal(-plans)?(-nades)?$/.test(name)) {
     const { fatalKind } = await import('../hosts/csbih/kind.js');
-    return fatalKind(core, level, { name, lineups: name === 'fatal-nades' ? loadMapData(level.map).lineups : [] });
+    return fatalKind(core, level, { name, lineups: name.includes('-nades') ? loadMapData(level.map).lineups : [], plans: name.includes('-plans') ? loadPlans(level.map) : null });
   }
   throw new Error(`Unknown kind of bots: ${name}.`);
 }

@@ -6,7 +6,8 @@
 // tag of that team. The other team keeps the names of its players.
 //
 // Usage: node tools/watch.js [--demo id] [--map de_dust2] [--side T|CT] [--rounds 6] [--first 1] [--seed 1]
-//                            [--hands demo|default] [--port 3038] [--no-serve]
+//                            [--hands demo|default] [--plans] [--port 3038] [--no-serve]
+// `--plans` gives fatalbot the plans that tools/strategies.js mined for the map.
 // The timeline goes to out/watch/ of this repository (git-ignored): it holds the play of real people.
 
 import { spawn } from 'node:child_process';
@@ -14,11 +15,11 @@ import { existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { brotliCompressSync } from 'node:zlib';
-import { csbihMissing, csbihRoot, loadAnim, loadCore, loadLevel, loadMapData, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
+import { csbihMissing, csbihRoot, loadAnim, loadCore, loadLevel, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
 import { playDemoRound } from '../hosts/csbih/demo.js';
 import { Recorder } from '../hosts/csbih/record.js';
 
-const args = { demo: null, map: 'de_dust2', side: 'T', rounds: '6', first: '1', seed: '1', hands: 'demo', port: '3038', 'no-serve': false };
+const args = { demo: null, map: 'de_dust2', side: 'T', rounds: '6', first: '1', seed: '1', hands: 'demo', port: '3038', 'no-serve': false, plans: false };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const key = argv[i].replace(/^--/, '');
@@ -66,15 +67,16 @@ if (!rounds.length) {
 }
 
 const { anim, mdl } = await loadAnim();
-const record = new Recorder({ map: timeline.map, title: `FatalBot (${side}) against the demo ${id}`, v16, anim, mdl });
+const plans = args.plans ? loadPlans(timeline.map) : null;
+const record = new Recorder({ map: timeline.map, title: `FatalBot (${side}${plans ? ', with the plans of the map' : ''}) against the demo ${id}`, v16, anim, mdl });
 const profiles = loadProfiles(id);
 const mapData = loadMapData(timeline.map);
 let won = 0;
 let theirs = 0;
-console.log(`FatalBot plays the ${side}s of ${id} (${timeline.map}), ${rounds.length} rounds, seed ${seed}, hands: ${args.hands}.`);
+console.log(`FatalBot plays the ${side}s of ${id} (${timeline.map}), ${rounds.length} rounds, seed ${seed}, hands: ${args.hands}${plans ? ', with the plans of the map' : ''}.`);
 for (const round of rounds) {
   const at = record.clock;
-  const r = playDemoRound({ core, level, timeline, round, side, seed, profiles, mapData, hands: args.hands, record, tail: 3, gap: 1 });
+  const r = playDemoRound({ core, level, timeline, round, side, seed, profiles, mapData, hands: args.hands, record, tail: 3, gap: 1, plans });
   if (r.winner === side) won++;
   if (round.winner === side) theirs++;
   const m = `${Math.floor(at / 60)}:${String(Math.floor(at % 60)).padStart(2, '0')}`;
@@ -86,7 +88,7 @@ console.log(`FatalBot won ${won} of ${rounds.length} rounds; the players in its 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const dir = join(HERE, '..', 'out', 'watch');
 mkdirSync(dir, { recursive: true });
-const name = `fatalbot-${side.toLowerCase()}-${id}`.replace(/[^\w-]/g, '-');
+const name = `fatalbot-${plans ? 'plans-' : ''}${side.toLowerCase()}-${id}`.replace(/[^\w-]/g, '-');
 writeFileSync(join(dir, `${name}.json.br`), brotliCompressSync(JSON.stringify(record.timeline())));
 // Beside the folder, not in it: the server takes every JSON file of the folder for a timeline.
 const channels = join(dir, '..', 'watch-channels.json');

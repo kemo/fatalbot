@@ -113,3 +113,15 @@ export async function loadAimStats() {
   process.chdir(cwd);
   return stats;
 }
+
+/**
+ * The plans of a map that tools/strategies.js of this repository mined from the demos (out/strategies/<map>.json):
+ * {T, CT}, or null when the analysis has not run for the map.
+ */
+export function loadPlans(map) {
+  try {
+    return JSON.parse(readFileSync(join(HERE, '..', '..', 'out', 'strategies', `${map}.json`), 'utf8')).plans ?? null;
+  } catch {
+    return null;
+  }
+}

@@ -1,21 +1,22 @@
 // fatalbot against recorded matches (hosts/csbih/demo.js): in each round of a demo, fatalbot takes the place of one
 // side, and the other side plays its recording until the round leaves it.
 // Usage: node tools/demo-arena.js [--demos id,id] [--map de_dust2] [--count 4] [--rounds 10] [--sides both|T|CT|none]
-//                                 [--seed 1] [--hands demo|default] [--nades] [--json file]
-// `--nades` gives fatalbot the map's grenade lineups.
+//                                 [--seed 1] [--hands demo|default] [--nades] [--plans] [--json file]
+// `--nades` gives fatalbot the map's grenade lineups. `--plans` gives it the plans that tools/strategies.js mined
+// for the map (they come from the same recorded matches).
 // Without --demos it takes `count` HLTV demos of `map`, the same ones for the same seed. A report names no player.
 
 import { writeFileSync } from 'node:fs';
-import { csbihMissing, loadAimStats, loadCore, loadLevel, loadMapData, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
+import { csbihMissing, loadAimStats, loadCore, loadLevel, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
 import { addMeasures, aimLine, measureLine } from '../hosts/csbih/arena.js';
 import { playDemoRound } from '../hosts/csbih/demo.js';
 
-const args = { demos: null, map: 'de_dust2', count: '4', rounds: '10', sides: 'both', seed: '1', hands: 'demo', json: null, nades: false };
+const args = { demos: null, map: 'de_dust2', count: '4', rounds: '10', sides: 'both', seed: '1', hands: 'demo', json: null, nades: false, plans: false };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const key = argv[i].replace(/^--/, '');
   if (key === 'help' || !(key in args)) {
-    console.log('node tools/demo-arena.js [--demos id,id] [--map de_dust2] [--count 4] [--rounds 10] [--sides both|T|CT|none] [--seed 1] [--hands demo|default] [--nades] [--json file]');
+    console.log('node tools/demo-arena.js [--demos id,id] [--map de_dust2] [--count 4] [--rounds 10] [--sides both|T|CT|none] [--seed 1] [--hands demo|default] [--nades] [--plans] [--json file]');
     process.exit(key === 'help' ? 0 : 1);
   }
   args[key] = typeof args[key] === 'boolean' ? true : argv[++i];
@@ -59,11 +60,12 @@ for (const id of wanted) {
   used++;
   const profiles = loadProfiles(id);
   const mapData = loadMapData(timeline.map);
+  const plans = args.plans ? loadPlans(timeline.map) : null;
   const row = { demo: used, map: timeline.map, rounds: [] };
   const line = { T: { n: 0, fatal: 0, demo: 0 }, CT: { n: 0, fatal: 0, demo: 0 }, null: { n: 0, fatal: 0, demo: 0 } };
   for (const round of rounds) {
     for (const side of sides) {
-      const r = playDemoRound({ core, level, timeline, round, side, seed, profiles, mapData, hands: args.hands, aimStats, nades: args.nades });
+      const r = playDemoRound({ core, level, timeline, round, side, seed, profiles, mapData, hands: args.hands, aimStats, nades: args.nades, plans });
       for (const [kind, list] of Object.entries(r.aim)) (aim[kind] ??= []).push(...list);
       row.rounds.push({ number: r.number, side, winner: r.winner, reason: r.reason, seconds: r.seconds, planted: r.planted, demo: r.demo, derails: r.derails, firstDerail: r.firstDerail });
       addMeasures(measure, r.measure);

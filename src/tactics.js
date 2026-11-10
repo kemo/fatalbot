@@ -21,6 +21,11 @@ const DEFUSE_KIT = 5.5;
 const DEFUSE_BARE = 10.5;
 const PATH_STRETCH = 1.3;
 const RUN_SPEED = 240;
+// A place of a formation that a teammate stands on: this near it is there.
+const NEAR_ENOUGH = 160;
+// A T of a plan goes at the latest with this much of the round clock left over its way to the site (the plant and
+// the fight for it).
+const CLOCK_MARGIN = 30;
 // With no defuse a T leaves the blast with this many seconds left, from within this range (YaPB).
 const T_LEAVES = 13;
 const T_LEAVES_RANGE = 964;
@@ -74,10 +79,13 @@ export function decide(c) {
   const bomb = bombFor(c);
   c.post = null;
   if (bomb?.state === 'planted') return me.team === 'CT' ? retake(c, bomb) : afterPlant(c, bomb);
+  // The Ts' plan may hold them at their places until its second: the carrier waits with the team.
+  const stage = me.team === 'T' ? stageGoal(c) : null;
   if (bomb?.state === 'carried' && bomb.mine) {
     // The carrier plants in the site of the team's plan; in another site only when the plan has none.
     const site = team.plan?.site ?? null;
     if (inBombSite(map, me.origin) && (site === null || touches(map.bombSites[site], me.origin))) return { kind: 'plant' };
+    if (stage) return stage;
     const at = site !== null ? siteSpot(c, site) : null;
     return { kind: 'goto', task: 'carry', point: at ?? nearestSite(map, me.origin) };
   }
@@ -86,8 +94,9 @@ export function decide(c) {
   // A grenade of the map that is due about now and near: there, and the throw.
   const lineup = lineupGoal(c);
   if (lineup) return lineup;
-  // An enemy known: hunt it, wait for it or fall back. Else a look around when nothing happens. Else the plan.
-  return contactTask(c) ?? seek(c) ?? objective(c);
+  // An enemy known: hunt it, wait for it or fall back. Else the place of the plan before its second. Else a look
+  // around when nothing happens. Else the plan.
+  return contactTask(c) ?? stage ?? seek(c) ?? objective(c);
 }
 
 function nearestSite(map, o) {
@@ -117,6 +126,39 @@ function postOf(c) {
   return s.rotate.post ?? own;
 }
 
+/**
+ * A T of a mined plan before its second: its place of the formation, held. The bot goes when its way to the site
+ * takes as long as is left to the plan's second (so the team comes into the site together, from where each stood),
+ * or when the round clock leaves no more time. Null once it goes, and for a plan with no places.
+ */
+function stageGoal(c) {
+  const { me, bot, s, team, time, brain, frame } = c;
+  const plan = team.plan;
+  const spot = plan?.spots?.get(bot.id);
+  if (!spot || plan.te === null || s.go || s.liveAt === undefined) return null;
+  if (s.eta === undefined) {
+    const { nav } = brain;
+    const a = nearestNode(nav, spot, 3, 64);
+    const b = nearestNode(nav, siteMid(brain.map.bombSites[plan.site]), 6, 200);
+    const path = a >= 0 && b >= 0 ? findPath(nav, a, b, 60000) : null;
+    let length = flat(spot, siteMid(brain.map.bombSites[plan.site])) * PATH_STRETCH;
+    if (path) {
+      length = 0;
+      for (let i = 1; i < path.length; i++) length += distance(path[i].point, path[i - 1].point);
+    }
+    s.eta = length / RUN_SPEED;
+  }
+  if (time - s.liveAt >= plan.te - s.eta || frame.round.timeLeft < s.eta + CLOCK_MARGIN) {
+    s.go = true;
+    return null;
+  }
+  // A teammate on the bot's place: near enough is there.
+  const taken = flat(spot, me.origin) < NEAR_ENOUGH && c.mates.some((p) => p.id !== me.id && p.alive && flat(p.origin, spot) < 48);
+  // At its place a T looks where the player of the formation looked (the fourth number of the place).
+  const there = taken || flat(spot, me.origin) < 40;
+  return { kind: 'hold', task: 'stage', point: taken ? null : spot, look: there && spot.length > 3 ? { yaw: spot[3], pitch: 0 } : null, rest: there };
+}
+
 /** The bot's part of the team's plan when nothing else asks for it: its place, held. */
 function objective(c) {
   const { me, team, time } = c;
@@ -127,7 +169,8 @@ function objective(c) {
     if (!post?.point) return { kind: 'hold', point: null };
     // At the post the view rests on the way in that it watches; the walk there looks along its own way.
     const there = flat(post.point, me.origin) < 40;
-    const look = there && post.watch ? toward(eyeAt(post.point), eyeAt(post.watch)) : null;
+    // A post of a mined setup has the view of the player who stood there; a post of the level watches its way in.
+    const look = !there ? null : post.yaw !== null && post.yaw !== undefined ? { yaw: post.yaw, pitch: 0 } : post.watch ? toward(eyeAt(post.point), eyeAt(post.watch)) : null;
     return { kind: 'hold', task: plan.rotate && post.site === plan.rotate.site && plan.posts.get(c.bot.id)?.site !== post.site ? 'rotate' : 'site', point: post.point, look, rest: there };
   }
   const at = time >= plan.goAt ? siteSpot(c, plan.site) : null;
@@ -437,8 +480,18 @@ function seek(c) {
 }
 
 /** What a give-up forgets: every choice that would bring the same goal back. */
-export function forgetGoal(c) {
-  const { s, team, bot } = c;
+export function forgetGoal(c, goal = null) {
+  const { s, team, bot, me } = c;
+  // A place of the formation that the bot did not get to: it takes the place of the nearest teammate elsewhere.
+  const spots = team.plan?.spots;
+  const spot = goal?.task === 'stage' ? spots?.get(bot.id) : null;
+  if (spot) {
+    let next = null;
+    for (const p of new Set(spots.values())) if (flat(p, spot) > NEAR_ENOUGH && (!next || flat(p, me.origin) < flat(next, me.origin))) next = p;
+    if (next) spots.set(bot.id, next);
+    else spots.delete(bot.id);
+    s.eta = undefined;
+  }
   s.lastSeen = null;
   s.siteSpot = null;
   s.task = null;
