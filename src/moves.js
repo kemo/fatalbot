@@ -12,8 +12,18 @@ const JUMP_STRAIGHT = 220;
 const HOP_STRAIGHT = 420;
 // The floors of the run must be open ones: this many ways out of each (a floor by a wall or an edge has fewer).
 const OPEN_WAYS = 7;
-// In the air the view turns this fast toward the strafe key (degrees a second): the velocity follows it and grows.
-const AIR_TURN = 32;
+// The floors of the way that the straight run looks at, and how far off its line a floor still counts (degrees).
+const LOOK_FLOORS = 20;
+const ON_LINE = 10;
+// A hop starts only while the run and the view are this near the line of the way (degrees).
+const ON_WAY = 6;
+// The box of the bot must pass this far along the way, and a little to each side of it.
+const CLEAR_AHEAD = 220;
+const CLEAR_SIDE = 20;
+// In the air the view swings this far to each side of the way (degrees), over about this long (s): the velocity
+// follows the view and grows.
+const SWING = 8;
+const AIR_SECONDS = 0.6;
 // Over this part of the weapon's speed the air strafe lets go: the game cuts a jump over 1.2.
 const AIR_FULL = 1.12;
 // A hop starts only from a run this fast, as a part of the weapon's speed.
@@ -24,31 +34,50 @@ const LATE_TICKS = 2;
 const COUNTER_OVER = 40;
 
 /**
- * The straight level run that the way gives from the bot along `run` (degrees), in units, over open floors only.
+ * The straight level run that the way gives from the bot along `run` (degrees), in units: the distance to the
+ * furthest of the next floors that lies on that line, on the bot's level, over open floors, with the bot's box free
+ * all the way to it. A way on the grid goes in steps to each side of its line, so a floor off the line is passed
+ * over, not an end.
  */
 export function straightAhead(c, path, from, run) {
   if (!path) return 0;
   const { me, brain } = c;
-  const { nav } = brain;
+  const { nav, ports } = brain;
   const o = me.origin;
   let far = 0;
-  for (let i = from; i < path.length; i++) {
+  for (let i = from; i < Math.min(path.length, from + LOOK_FLOORS); i++) {
     const n = path[i];
     if (n.kind !== WALK || abs(n.point[2] - o[2]) > 18) break;
     if (nav.offsets[n.node + 1] - nav.offsets[n.node] < OPEN_WAYS) break;
     const dx = n.point[0] - o[0];
     const dy = n.point[1] - o[1];
     const d = hypot(dx, dy);
-    if (d > 48 && abs(turn((atan2(dy, dx) * 180) / PI - run)) > 12) break;
-    far = d;
+    if (d <= far || d < 48 || abs(turn((atan2(dy, dx) * 180) / PI - run)) > ON_LINE) continue;
+    if (ports.traceHull(o, [n.point[0], n.point[1], o[2]], false) >= 1) far = d;
   }
   return far;
 }
 
+/** True when the bot's box passes CLEAR_AHEAD units along `run` (degrees), on its line and beside it. */
+function corridor(c, run) {
+  const { me, brain } = c;
+  const o = me.origin;
+  const dx = cos(run * RAD);
+  const dy = sin(run * RAD);
+  for (const side of [0, CLEAR_SIDE, -CLEAR_SIDE]) {
+    const from = [o[0] - dy * side, o[1] + dx * side, o[2]];
+    if (brain.ports.traceHull(from, [from[0] + dx * CLEAR_AHEAD, from[1] + dy * CLEAR_AHEAD, from[2]], false) < 1) return false;
+  }
+  return true;
+}
+
 /**
  * A jump on a calm run, and the bunny hops after it: in the air the forward key is up, a strafe key is down and the
- * view turns to that side, so the speed grows as a player's does; on the landing the jump comes again. True while
- * the hop holds the keys of this tick.
+ * view turns to that side, so the speed grows as a player's does; on the landing the jump comes again, and the view
+ * swings back across the way. True while the hop holds the keys of this tick.
+ *
+ * A jump is a habit, not a gain: the game slows the run for 1.3 s after the last landing. So a bot in a hurry
+ * (`c.hurry`) never hops.
  */
 export function hop(c, cmd, path, target, run, distance, kind) {
   const { me, own, s, skill, random, dt } = c;
@@ -56,13 +85,16 @@ export function hop(c, cmd, path, target, run, distance, kind) {
   const top = maxSpeedOf(cmd.weapon ?? me.weapon);
   let h = s.hop;
   if (!h) {
-    if (!me.onGround || me.onLadder || me.ducked || own.stamina > 0 || kind !== WALK || speed < top * RUN_FAST) return false;
+    if (c.hurry || !me.onGround || me.onLadder || me.ducked || own.stamina > 0 || kind !== WALK || speed < top * RUN_FAST) return false;
     if (random() >= (skill.jumpRate / 60) * dt) return false;
-    if (straightAhead(c, path, s.pathIndex, run) < JUMP_STRAIGHT) return false;
+    // The run must already go along the way: a jump out of a bend flies on along the old line, into the wall.
+    const off = turn(run - (atan2(me.velocity[1], me.velocity[0]) * 180) / PI);
+    if (abs(off) > ON_WAY || abs(turn(run - me.yaw)) > ON_WAY) return false;
+    if (straightAhead(c, path, s.pathIndex, run) < JUMP_STRAIGHT || !corridor(c, run)) return false;
     // How many hops follow the first jump: each one by the player's habit.
     let more = 0;
     while (more < 6 && random() < skill.hopChain) more++;
-    h = s.hop = { more, dir: random() < 0.5 ? 1 : -1, air: false, late: 0, tick: c.tick };
+    h = s.hop = { more, dir: random() < 0.5 ? 1 : -1, rate: SWING / AIR_SECONDS, air: false, late: 0, tick: c.tick };
     cmd.jump = true;
     return false;
   }
@@ -77,14 +109,14 @@ export function hop(c, cmd, path, target, run, distance, kind) {
     // The air strafe: no forward key, the strafe key, and the view turning the same way. A right strafe turns right.
     cmd.forward = 0;
     cmd.side = speed < top * AIR_FULL ? h.dir : 0;
-    cmd.yaw = turn(me.yaw - h.dir * AIR_TURN * dt);
+    cmd.yaw = turn(me.yaw - h.dir * h.rate * dt);
     cmd.pitch = me.pitch;
     return true;
   }
   if (!h.air) return false;
   // Landed. The next hop, when the habit, the floor ahead and the speed allow it; the key a moment late now and then.
   h.air = false;
-  if (h.more <= 0 || me.ducked || straightAhead(c, path, s.pathIndex, run) < HOP_STRAIGHT) {
+  if (h.more <= 0 || c.hurry || me.ducked || straightAhead(c, path, s.pathIndex, run) < HOP_STRAIGHT || !corridor(c, run)) {
     s.hop = null;
     return false;
   }
@@ -94,9 +126,10 @@ export function hop(c, cmd, path, target, run, distance, kind) {
     return false;
   }
   h.more--;
-  // The strafe goes back toward the way: left of it, the next one turns right.
+  // The view swings back across the way: left of it, the next strafe turns right, as far past the way as SWING.
   const off = turn(run - me.yaw);
-  h.dir = abs(off) < 3 ? -h.dir : off > 0 ? -1 : 1;
+  h.dir = off > 0 ? -1 : 1;
+  h.rate = (abs(off) + SWING) / AIR_SECONDS;
   cmd.jump = true;
   return false;
 }

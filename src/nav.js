@@ -10,8 +10,10 @@ export const DROP = 1;
 export const JUMP = 2;
 export const LADDER = 3;
 const CELL = 32;
-// A jump costs as much as this much more walk: a way takes it only to save the way round.
-const KIND_COST = [0, 16, 48, 32];
+// What an edge of each kind costs over its length, in units of walk. A jump is dear: for 1.3 s after it the game
+// slows the run (the jump stamina of pm_shared), which costs about 0.7 s, the time of 180 units. csbih-player's
+// search prices it at 48 and so takes more jumps.
+const KIND_COST = [0, 16, 180, 32];
 
 /**
  * The graph of the brain from the arrays of the map (spec 02): {count, xyz, offsets, to, kinds}. The arrays are

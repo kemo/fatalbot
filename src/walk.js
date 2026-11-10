@@ -6,7 +6,7 @@ import { PI, RAD, abs, atan2, cos, hypot, max, min, sign, sin } from './geometry
 import { JUMP, LADDER, WALK, findPath, navParts, nearestNode } from './nav.js';
 import { lookAt } from './aim.js';
 import { restLook } from './watch.js';
-import { bestGun } from './weapons.js';
+import { bestGun, maxSpeedOf } from './weapons.js';
 import { hop } from './moves.js';
 
 // The look for a ledge: this far ahead, a step up, and the height a jump with the legs up clears.
@@ -17,6 +17,8 @@ const JUMP_CLEARS = 54;
 // that time): it steps aside from a player, else jumps.
 const STUCK_CIRCLE = 16;
 const STUCK_SECONDS = 0.25;
+// On a walk of the graph a ledge ahead counts once the bot has been slow for this long (s).
+const HELD_UP = 0.08;
 // A straight walk is looked for up to this many floors ahead; the view looks this far along the way.
 const PULL = 10;
 const LOOK_AHEAD = 480;
@@ -144,9 +146,22 @@ export function walkTo(c, cmd, point, facing) {
     return true;
   }
   const fresh = own.stamina <= 0;
-  if (fresh && ((kind === JUMP && distance < 48) || ledgeAhead(c, dx / distance, dy / distance))) cmd.jump = true;
+  // A jump where the way has a jump, or at a ledge that a step does not climb. On a walk of the graph the movement
+  // climbs the steps itself, so there a ledge counts only once it holds the bot up: a jump at full speed (the
+  // reference bot's, on any stairs) slows the run for a second and can carry the bot off the stairs.
+  const held = kind === null || slowFor(c, cmd) > HELD_UP;
+  if (fresh && ((kind === JUMP && distance < 48) || (held && ledgeAhead(c, dx / distance, dy / distance)))) cmd.jump = true;
   stuckCheck(c, cmd, fresh);
   return true;
+}
+
+/** The seconds that the bot has run at under half the speed that its keys ask for. */
+function slowFor(c, cmd) {
+  const { me, s, time } = c;
+  const want = maxSpeedOf(cmd.weapon ?? me.weapon) * (cmd.walk ? 0.52 : 1) * (me.ducked ? 0.34 : 1);
+  if (hypot(me.velocity[0], me.velocity[1]) >= want * 0.5) s.slowSince = null;
+  else s.slowSince ??= time;
+  return s.slowSince === null ? 0 : time - s.slowSince;
 }
 
 /** At the point with no view of its own to keep: the bot looks where an enemy comes from, never at the wall. */
