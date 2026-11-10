@@ -35,6 +35,13 @@ const command = brain.think(id);                   // once for each bot
 | `buyZones` | Boxes with a team or null | `rules.buyZones` | `func_buyzone` brushes |
 | `spawns` | Team, origin, yaw | `rules.spawns` | `info_player_deathmatch` (T), `info_player_start` (CT) |
 | `ladders` | Boxes with the normal of the climbed face | `rules.ladders` | `func_ladder` brushes |
+| `lineups` (optional) | Throws of grenades that players made on this map: team, kind, start point, velocity, second of the round | `out/profiles/throws-<map>.json` of csbih-player | the same file: its points are world coordinates of the map |
+| `plans` (optional) | Strategies that teams played on this map, for each side: the places of the five (the Ts at second 20, the CTs at second 15), each with the view of its player, the share of the rounds and of the wins; for the Ts also the site and the second of the first T in it | `out/strategies/<map>.json` of `tools/strategies.js` | the same file |
+
+The optional fields hold what recorded matches teach about a map. They name no player. Without them the brain
+plays by the level alone: no lineup is thrown, the Ts take a site at once, and each CT takes a post of the level.
+A place of a plan can lie where the graph has no way to (a box that players jump onto). The brain moves such a
+place to the nearest floor that its side can walk to, or leaves it out (`plan.js floorsOf`).
 
 ## 4. The ports (inside a tick)
 
@@ -42,7 +49,7 @@ Players are never in a trace: the level and its solid brush models only.
 
 | Port | Returns | csbih | goldsrc |
 |------|---------|-------|---------|
-| `traceLine(from, to)` | The free part of the line, 0 to 1 | `traceBox` with `HULL_POINT` | `TRACE_LINE` with `ignore_monsters` |
+| `traceLine(from, to, out?)` | The free part of the line, 0 to 1; `out` takes `fraction`, `startSolid`, `end` and the `normal` of the surface that it hit (the flight of a grenade needs it) | `traceBox` with `HULL_POINT` | `TRACE_LINE` with `ignore_monsters`; `vecPlaneNormal` of the result |
 | `traceHull(from, to, ducked, out?)` | The same for a player's box; `out` takes `fraction`, `startSolid`, `end` | `traceBox` with `HULL_STAND` or `HULL_DUCK`, the other players taken out | `TRACE_HULL` with `human_hull` or `head_hull` and `ignore_monsters` |
 
 ## 5. The frame (each tick)

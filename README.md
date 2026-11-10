@@ -20,7 +20,13 @@ npm test                                          # the tests; those that need c
 node tools/demo-arena.js --map de_dust2 --count 4 # fatalbot in the place of one side of recorded matches
 node tools/arena.js --maps de_dust2 --rounds 12   # fatalbot against the bots of csbih-player
 node tools/arena.js --help
+node tools/strategies.js --report docs/strategies.md   # the strategies of every recorded match, by map
 ```
+
+`tools/arena.js` takes a kind of bot for each team (`--a`, `--b`): `ref` (the bots of csbih-player), `fatal`,
+`fatal-plans` (with the plans that `tools/strategies.js` mined for the map), `fatal-nades` (with the lineups of the
+map) and `fatal-plans-nades`. The plain `fatal` is the default: the plans and the lineups are options until they
+win more rounds than they cost (docs/measures/).
 
 The arenas and some tests need a built checkout of csbih-player: the source in `src/shared/game/`, the levels in
 `assets/levels/`, and for the demo arena the timelines in `out/`. They look in `../csbih-player`; set
@@ -34,7 +40,8 @@ The arenas and some tests need a built checkout of csbih-player: the source in `
 2. **Against the reference bots** (`tools/arena.js`): the bots of csbih-player, both side orders, the same hands.
 3. **On the CS 1.6 server**: one team of fatalbot against one team of YaPB. Not possible yet: see "Open decisions".
 
-The recorded measures are in [docs/measures/](docs/measures/).
+The recorded measures are in [docs/measures/](docs/measures/). The strategies of the recorded matches are in
+[docs/strategies.md](docs/strategies.md).
 
 ## Watch
 
@@ -56,9 +63,10 @@ The tool writes one timeline into `out/watch/` (git-ignored) and starts the play
 ```
 src/            the brain: pure ES modules, the same files for every host
 hosts/csbih/    the adapter for the game core of csbih-player, the Node loader of its levels, the two arenas,
-                and the recorder that writes played rounds as a timeline of the player
+                the recorder that writes played rounds as a timeline of the player, and the analysis of the
+                strategies of the recorded matches (docs/strategies.md)
 hosts/goldsrc/  the plan of the adapter for a real server
-tools/          the command lines: arena.js, demo-arena.js, watch.js
+tools/          the command lines: arena.js, demo-arena.js, watch.js, strategies.js
 test/           node --test
 docs/specs/     what the code does and why
 docs/measures/  the recorded measures, each with its command line
@@ -85,3 +93,9 @@ A claim that a bot is better needs a number. Spec 01 holds the gates. In short:
 2. **The licence** of this repository. None is set.
 3. **How csbih-player takes the brain**: a copy at a pinned commit, a git submodule, or a path. Its own `bot.js`
    stays the bot of `/igraj` until the owner decides.
+4. **The data of the maps.** The plans and the lineups come from the recorded matches. They name no player, and
+   they are places on Valve's maps. They are made into `out/` and are not committed. A host on a real server needs
+   them as files: the owner decides if they enter this repository.
+5. **The graph of csbih-player** has floors with no way to them (a platform on de_nuke, box tops, a roof on
+   de_inferno). Players of the demos stand there. A fix belongs in `tools/build-nav.js` of csbih-player, which is
+   read-only from here.

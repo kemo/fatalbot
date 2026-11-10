@@ -1,6 +1,7 @@
 # 03 The brain as built
 
-Status: built on 2026-11-10 and measured (docs/measures/2026-11-10-first-brain.md). This spec says what each module does, what came from
+Status: built on 2026-11-10 and measured (docs/measures/2026-11-10-first-brain.md and
+docs/measures/2026-11-10-plans-and-feel.md). This spec says what each module does, what came from
 csbih-player's bot and what is new. The numbers are in the code, each with its source in a comment.
 
 ## 1. One tick of one bot (`brain.js command`)
@@ -40,8 +41,9 @@ Ported from `bot.js aimAt`, `hand` and `fight`, where the numbers were fitted to
 - **New:** the shots of a burst are counted from the clip, so the brain needs no weapon state of the host.
 - **New:** past 400 units, no shot while the gun spreads wide from the run (`moves.js fightStep`): a stand is
   reached with the keys against the run (the counter-strafe), and a strafing bot walks while it fires a rifle.
-  Nearer, the gun fires at once and the stop comes while the shots go. Measured: fatalbot fires 3 to 4.5% of its
-  rifle shots on the run, the players of the demos 5 to 8%, the reference bot 22%.
+  Nearer, the gun fires at once and the stop comes while the shots go.
+- **New:** one strafing fight in three is fought on the run (`fight.js RUN_GUN`). The players of the demos fire 7
+  to 13% of their rifle shots on the run, the reference bot 22%.
 
 ## 4. The feet (`walk.js`, `moves.js`)
 
@@ -55,8 +57,18 @@ round a teammate, the jump of a stuck bot, the island of the graph.
   next jump comes on the landing, now and then a tick or two late. The players of the measured demos rarely hop in
   a chain (0.1 to 0.6 times a minute), and fatalbot with their profiles does the same; a profile with a high
   `hopChain` hops more.
-- Gate G7 is not met yet: fatalbot jumps less than the players and fires fewer shots on the run
-  (docs/measures/2026-11-10-first-brain.md, section 3).
+- **New:** the bot counts its own jumps of the round, and the hop comes more often while the count is under the
+  profile's `jumpRate` and less often over it.
+- **New:** where a bot comes no nearer to its point for 0.5 s, within 64 units of it, it stands. The point can lie
+  between two floors, or a teammate can stand on it.
+- **New:** a bot that a standing teammate holds up for 0.4 s asks for the way (`team.way`, a call on the radio).
+  The teammate steps 72 units aside where it has room and a floor under the step, else on ahead, and stays out of
+  the way for 2.5 s (`makeWay`). A bot in a fight, at the plant or at the defuse keeps its feet. Near its own
+  point the held-up bot waits 4 s instead of pushing.
+- **New:** at the foot of a ladder on its way down, a bot that hangs there jumps off, also when its point lies
+  higher than the foot. The ported rule let it hang there.
+- Gate G7 is not met yet: fatalbot jumps half as often as the players, and it makes 60% of its kills with a shot
+  to the head where the players make 33 to 39% (docs/measures/2026-11-10-plans-and-feel.md, section 6).
 - To come: the peek at a corner, the jiggle at an angle, the jump onto a box with the legs up as a habit.
 
 ## 5. Tactics (`tactics.js`, `watch.js`)
@@ -78,11 +90,46 @@ New. The reference bots have no team plan.
 - A CT with a post holds it on a contact, and watches where the enemy comes into sight.
 - The CTs rotate to a site when the team saw 60% of the living Ts near it within 6 s.
 - The Ts take one site together, chosen at the round's start.
-- To come (csbih-player spec 12): the Ts' defaults and executes, fakes, trades, the retake together, the save, the
-  buy of the team, and the plans mined from the demos.
 
-## 7. What the brain does not do yet
+### 6.1 The plans of a map (an option)
 
-- Grenades: it buys them and does not throw them. The reference bot throws the lineups of the demos.
+`tools/strategies.js` mines the strategies that teams played on a map (docs/strategies.md), and a host can give
+them to the brain as `map.plans` (spec 02). With them:
+
+- At the round's start each team draws one plan, by its share of the rounds times 0.4 plus its share of wins.
+- Each T goes to a place of the formation and looks as its player looked. It leaves when its way to the site
+  takes the time that is left until the plan's second of the first T in the site. The bomb carrier waits too. A
+  known enemy comes first, as always. With 30 s on the clock plus the way, every T goes.
+- Each CT takes a place of the setup as its post, with the view of its player. The rotation is the same.
+- A place moves to the nearest floor, within 200 units and 72 of height, that its side can walk to from its start
+  and that is no bare end of a ladder. A place with no such floor is left out: its CT takes a post of the level,
+  its T the place of a teammate. On de_nuke 14 places of the CT setups lie on a platform that the graph of
+  csbih-player has no walk edges on.
+- A T that comes no nearer to its place for 5 s gives it up and takes the place of the nearest teammate.
+- Measured (docs/measures/2026-11-10-plans-and-feel.md): in the places of recorded Ts the plans win more rounds
+  on three maps of four. Against the reference bots and against the plain fatalbot they win fewer: the five Ts
+  arrive at the same second by one way. So the plans are an option of the hosts (`fatal-plans`, `--plans`), not
+  the default.
+- To come (csbih-player spec 12): the execute after the formation (the order of the entries, the trades, the
+  grenades at its second), fakes, the retake together, the save, the buy of the team.
+
+## 7. Grenades (`grenades.js`), an option
+
+- The throw of the game: the view bent 10 degrees up, a speed of (90 - pitch) x 6 up to 750, plus the thrower's
+  own speed (`throwOf`). The flight goes through `traceLine`, with the bounce off the normal of each hit.
+- `solveThrow` finds the yaw and the pitch of a standing throw that lands at a point.
+- A lineup of a map (`map.lineups`, spec 02) gives where a grenade of a player went off. The recorded velocity is
+  no help: most throws were made on the run or in a jump. The bot solves its own standing throw from the recorded
+  start to the same end, once a map. About half of the lineups have such a throw.
+- A bot takes one lineup a round, within 700 units of its way, and not at a place where teammates stand near the
+  end of the flight. Teammates turn their view away from a flashbang of the team in the air (`flashToAvoid`).
+- Measured: with the lineups fatalbot wins fewer rounds against the reference bots. The stop for the throw costs
+  more than the grenade gives while no plan times it. So the lineups are an option of the hosts (`fatal-nades`,
+  `--nades`), not the default.
+- To come: the throw at the second of the team's plan, the throw on the run, and the turn away from an enemy's
+  flashbang (`frame.grenades`).
+
+## 8. What the brain does not do yet
+
 - It does not shoot a vent or a window open on its way, and it does not pick up a gun from the floor.
 - Maps with no bomb: the bots hold and look about.

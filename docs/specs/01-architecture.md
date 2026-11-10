@@ -137,7 +137,7 @@ The brain takes data as plain objects. The tools that mine the demos stay in csb
 | Nav graph, bomb sites, buy zones, spawns, ladders | the level (BSP) | given by the csbih adapter |
 | Places of a map, hiding spots, approach points | the nav graph | to do, in the brain |
 | Lineups of grenades, the view field, the angles where enemies appear | the demos, per map | in csbih-player; not read yet |
-| Plans of a team per map and side | the demos, per map | not mined yet (csbih-player spec 12, section 6) |
+| Plans of a team per map and side | the demos, per map | mined by `tools/strategies.js` (docs/strategies.md), after csbih-player spec 12, section 6 |
 
 ## 7. Order of work
 
@@ -146,9 +146,11 @@ The brain takes data as plain objects. The tools that mine the demos stay in csb
    rules, the hand, the fight), the senses, the team's knowledge, and the bomb (plant, defuse, guard, posts, escape).
 3. Built: the demo arena (section 4.1, test 1), and the watch of its rounds in the player (`tools/watch.js`).
 4. Built: the feet (moves.js): the stop before the shots, the hops. To come: the peek, the jiggle at an angle.
-5. Built: the first team layer for the CTs: posts, anchors, a rotation (spec 03, section 6). To come: the Ts'
-   plans, trades, a retake together, saves, the team's buy. First by rules, then from the mined plans.
-6. The data of the demos per map: lineups, the view field, the angles where enemies appear. The grenades.
+5. Built: the first team layer for the CTs: posts, anchors, a rotation (spec 03, section 6). Built as an option:
+   the plans mined from the demos, as formations and their timing (spec 03, section 6.1). To come: the execute
+   after the formation, trades, a retake together, saves, the team's buy.
+6. Built as an option: the grenades with the lineups of the demos (spec 03, section 7). To come: the throw at the
+   plan's second, the view field and the angles where enemies appear.
 7. The goldsrc host, when the owner has decided section 5.
 
 ## 8. Sources
