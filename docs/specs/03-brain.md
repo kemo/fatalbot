@@ -44,6 +44,11 @@ Ported from `bot.js aimAt`, `hand` and `fight`, where the numbers were fitted to
   Nearer, the gun fires at once and the stop comes while the shots go.
 - **New:** one strafing fight in three is fought on the run (`fight.js RUN_GUN`). The players of the demos fire 7
   to 13% of their rifle shots on the run, the reference bot 22%.
+- **Measured against the players of 520 demos** (`tools/players.js`, docs/measures/2026-11-10-players-aim.md):
+  the share of the kills with a shot to the head (41 to 44%, the players 42.2%), the crosshair error at the first
+  sight and at the first shot, the time to the first shot and the turn before it all lie inside the spread of the
+  players. The first shot comes later than the middle player's. In a long burst the players pull the crosshair
+  further down than the hand does, and their pistol kills go to the head more often.
 
 ## 4. The feet (`walk.js`, `moves.js`)
 
@@ -68,8 +73,8 @@ round a teammate, the jump of a stuck bot, the island of the graph.
   the step out of it cost the Ts rounds. Near its own point the held-up bot waits 4 s instead of pushing.
 - **New:** at the foot of a ladder on its way down, a bot that hangs there jumps off, also when its point lies
   higher than the foot. The ported rule let it hang there.
-- Gate G7 is not met yet: fatalbot jumps half as often as the players, and it makes 60% of its kills with a shot
-  to the head where the players make 33 to 39% (docs/measures/2026-11-10-plans-and-feel.md, section 6).
+- Gate G7 is not met yet: fatalbot jumps half as often as the players
+  (docs/measures/2026-11-10-plans-and-feel.md, section 6).
 - To come: the peek at a corner, the jiggle at an angle, the jump onto a box with the legs up as a habit.
 
 ## 5. Tactics (`tactics.js`, `watch.js`)

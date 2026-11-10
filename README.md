@@ -21,6 +21,7 @@ node tools/demo-arena.js --map de_dust2 --count 4 # fatalbot in the place of one
 node tools/arena.js --maps de_dust2 --rounds 12   # fatalbot against the bots of csbih-player
 node tools/arena.js --help
 node tools/strategies.js --report docs/strategies.md   # the strategies of every recorded match, by map
+node tools/players.js                                  # the aim of the recorded players, with spread and error
 ```
 
 `tools/arena.js` takes a kind of bot for each team (`--a`, `--b`): `ref` (the bots of csbih-player), `fatal`,
@@ -63,10 +64,10 @@ The tool writes one timeline into `out/watch/` (git-ignored) and starts the play
 ```
 src/            the brain: pure ES modules, the same files for every host
 hosts/csbih/    the adapter for the game core of csbih-player, the Node loader of its levels, the two arenas,
-                the recorder that writes played rounds as a timeline of the player, and the analysis of the
-                strategies of the recorded matches (docs/strategies.md)
+                the recorder that writes played rounds as a timeline of the player, the analysis of the
+                strategies of the recorded matches (docs/strategies.md), and the measure of the players' aim
 hosts/goldsrc/  the plan of the adapter for a real server
-tools/          the command lines: arena.js, demo-arena.js, watch.js, strategies.js
+tools/          the command lines: arena.js, demo-arena.js, watch.js, strategies.js, players.js
 test/           node --test
 docs/specs/     what the code does and why
 docs/measures/  the recorded measures, each with its command line

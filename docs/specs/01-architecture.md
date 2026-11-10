@@ -89,7 +89,7 @@ same maps, side orders and seeds before and after a change.
 | G5 Cost | Milliseconds of the brain for one tick of ten bots | under 1 ms in Node |
 | G6 Fair | The blindfold test: an enemy that a bot cannot see or hear changes no command | holds always |
 
-| G7 Human feel | Jumps a minute; share of the shots fired on the run (over 140 units a second); to come: turn rates, time to the first shot, crosshair error at the first sight | near the players of the demos |
+| G7 Human feel | Jumps a minute; share of the shots fired on the run (over 140 units a second); share of the kills with a shot to the head; crosshair error at the first sight and at the first shot; time to the first shot; peak turn; the crosshair under the head at each shot of a burst | inside the spread of the players of the demos, p10 to p90 (`tools/players.js`), measured with the hit boxes of the player model |
 
 G1 alone is easy to cheat: a faster hand wins. So both sides take the same motor profile (the `DEFAULT_PROFILE`
 numbers of csbih-player), and G6 must hold.
