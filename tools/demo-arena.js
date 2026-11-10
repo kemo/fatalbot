@@ -34,6 +34,7 @@ const pct = (n, of) => (of ? `${((n / of) * 100).toFixed(0)}%` : '-');
 
 const total = { T: { n: 0, fatal: 0, demo: 0 }, CT: { n: 0, fatal: 0, demo: 0 } };
 const measure = {};
+const why = {};
 const report = [];
 let used = 0;
 for (const id of wanted) {
@@ -61,6 +62,7 @@ for (const id of wanted) {
       const r = playDemoRound({ core, level, timeline, round, side, seed, profiles, mapData, hands: args.hands });
       row.rounds.push({ number: r.number, side, winner: r.winner, reason: r.reason, seconds: r.seconds, planted: r.planted, demo: r.demo, derails: r.derails, firstDerail: r.firstDerail });
       addMeasures(measure, r.measure);
+      for (const [k, n] of Object.entries(r.why)) why[k] = (why[k] ?? 0) + n;
       for (const sum of [line[side], total[side]]) {
         sum.n++;
         if (r.winner === side) sum.fatal++;
@@ -80,5 +82,9 @@ for (const side of sides) {
   const t = total[side];
   console.log(`In the place of the ${side}s: fatalbot won ${t.fatal} of ${t.n} rounds (${pct(t.fatal, t.n)}); the players in those places won ${t.demo} (${pct(t.demo, t.n)}).`);
 }
+// How a player left the recording: 'hit' is a player that fatalbot hit before it saw or heard fatalbot.
+const left = Object.values(why).reduce((n, v) => n + v, 0);
+console.log(`The players left their recording ${left} times: ${Object.entries(why).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n} (${pct(n, left)})`).join(', ')}.`);
+console.log("Kinds: fatal; rails (the players' own recording); standin (the reference bot that plays on for a player).");
 for (const [kind, m] of Object.entries(measure)) console.log(measureLine(kind, m));
-if (args.json) writeFileSync(args.json, JSON.stringify({ args, total, measure, report }, null, 1));
+if (args.json) writeFileSync(args.json, JSON.stringify({ args, total, measure, why, report }, null, 1));

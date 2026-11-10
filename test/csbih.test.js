@@ -82,7 +82,7 @@ test('fatalbot takes a side of a recorded round: the round ends, and the same se
   for (const side of ['T', 'CT']) {
     const r = play(side, 3);
     assert.ok(r.winner === 'T' || r.winner === 'CT', `the round ends (${r.reason})`);
-    assert.ok(r.measure.fatal.commands > 0 && r.measure.demo.alive > 0);
+    assert.ok(r.measure.fatal.commands > 0 && r.measure.rails.alive + r.measure.standin.alive > 0);
     const again = play(side, 3);
     assert.deepEqual({ ...again, measure: null }, { ...r, measure: null });
   }

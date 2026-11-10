@@ -24,6 +24,8 @@ const KNIFE_SLASH = 60;
 const KNIFE_STAND = 36;
 // The sight of the enemy this fresh keeps the trigger and the feet with the fight.
 const IN_SIGHT = 0.15;
+// Nearer than this a gun that is not steady yet fires all the same.
+const CLOSE_FIRE = 400;
 // The bolt of an AWP or a Scout: the game brings the scope back itself after it.
 const BOLT = { awp: 1.45, scout: 1.25 };
 
@@ -120,7 +122,9 @@ export function fight(c, cmd) {
   // The feet: from side to side as the player strafed, else still; a sniper stands. Slow enough for the gun, or no shot.
   if (sniper) s.strafe = false;
   const steady = fightStep(c, cmd, ready);
-  if (!ready || !steady) return true;
+  // Close in, a player fires at once and stops while the shots go: the first ones leave on the run. The players of
+  // the demos fire 5 to 8 of 100 rifle shots over 140 units a second (docs/measures).
+  if (!ready || (!steady && want.distance > CLOSE_FIRE)) return true;
   // A teammate in the line of the shot: no shot, as a player holds fire.
   if (mateInLine(c, cmd, want.distance)) return true;
   cmd.attack = w?.auto ? true : c.tick % 2 === 0;

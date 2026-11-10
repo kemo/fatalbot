@@ -24,7 +24,11 @@ const JUMP_RISE = 200;
 const ROUND_LIMIT = 240;
 
 const now = () => globalThis.performance.now();
-const blank = () => ({ alive: 0, wall: 0, stuck: 0, ms: 0, commands: 0, kills: 0, deaths: 0, headshots: 0, jumps: 0, shots: 0, shotsMoving: 0 });
+const blank = () => ({ alive: 0, wall: 0, stuck: 0, ms: 0, commands: 0, kills: 0, deaths: 0, headshots: 0, jumps: 0, hops: 0, shots: 0, shotsMoving: 0, rifleShots: 0, rifleShotsMoving: 0 });
+// The guns that spread wide over 140 units a second (the game's weapon code): a shot on the run with one is a choice.
+const RIFLES = new Set(['ak47', 'm4a1', 'galil', 'famas', 'aug', 'sg552', 'm249']);
+// A jump this soon after a landing is a hop of a chain (ticks).
+const HOP_TICKS = 3;
 
 /**
  * The measures of a world by kind of bot. `kindOf(id)` names the kind of a player. Call `events(list)` with the
@@ -72,8 +76,13 @@ export function gauge(core, world, kindOf, names) {
           const p = world.players.get(e.player);
           const m = measure[kindOf(e.player)];
           if (p && m && !e.stab && e.weapon !== 'knife') {
+            const moving = Math.hypot(p.body.velocity[0], p.body.velocity[1]) > 140;
             m.shots++;
-            if (Math.hypot(p.body.velocity[0], p.body.velocity[1]) > 140) m.shotsMoving++;
+            if (moving) m.shotsMoving++;
+            if (RIFLES.has(e.weapon)) {
+              m.rifleShots++;
+              if (moving) m.rifleShotsMoving++;
+            }
           }
         } else if (e.type === 'hurt') of(e.player).fightAt = world.time;
         else if (e.type === 'kill') {
@@ -93,8 +102,13 @@ export function gauge(core, world, kindOf, names) {
         const m = measure[kindOf(p.id)];
         if (!m || !p.alive) continue;
         const w = of(p.id);
-        // A jump: off the floor with the speed of one.
-        if (live && w.ground && !p.body.onGround && p.body.velocity[2] > JUMP_RISE) m.jumps++;
+        // A jump: off the floor with the speed of one. Right after a landing, it is a hop of a chain.
+        // A climb onto a ladder rises as fast and is no jump.
+        if (live && w.ground && !p.body.onGround && !p.body.onLadder && p.body.velocity[2] > JUMP_RISE) {
+          m.jumps++;
+          if (ticks - (w.landed ?? -Infinity) <= HOP_TICKS) m.hops++;
+        }
+        if (!w.ground && p.body.onGround) w.landed = ticks;
         w.ground = Boolean(p.body.onGround);
       }
       if (ticks % SAMPLE_TICKS) return;
@@ -251,5 +265,6 @@ const pct = (n, of) => (of ? `${((n / of) * 100).toFixed(1)}%` : '-');
 
 /** One line of the measures of a kind, for a tool's report. */
 export function measureLine(kind, m) {
-  return `${kind.padEnd(8)} G3 wall ${pct(m.wall, m.alive)}  stuck ${pct(m.stuck, m.alive)}  |  G5 ${((m.ms / Math.max(1, m.commands)) * 10).toFixed(3)} ms for ten bots a tick  |  kills ${m.kills} deaths ${m.deaths} headshots ${pct(m.headshots, m.kills)}  |  jumps a minute ${(m.jumps / Math.max(1, m.alive / 60)).toFixed(1)}  shots on the run ${pct(m.shotsMoving, m.shots)}`;
+  const minutes = Math.max(1, m.alive / 60);
+  return `${kind.padEnd(8)} G3 wall ${pct(m.wall, m.alive)}  stuck ${pct(m.stuck, m.alive)}  |  G5 ${((m.ms / Math.max(1, m.commands)) * 10).toFixed(3)} ms for ten bots a tick  |  kills ${m.kills} deaths ${m.deaths} headshots ${pct(m.headshots, m.kills)}  |  G7 jumps a minute ${(m.jumps / minutes).toFixed(1)} (in a chain ${(m.hops / minutes).toFixed(2)})  shots on the run ${pct(m.shotsMoving, m.shots)} (rifles ${pct(m.rifleShotsMoving, m.rifleShots)})`;
 }

@@ -59,7 +59,10 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
     for (const p of scenario.players) names.set(p.id, p.team === side ? `FatalBot | ${++n}` : p.name);
     record.begin(world, { seconds: round.seconds, names, note: `Round ${round.number} of the demo: FatalBot plays the ${side}s. In the demo the ${round.winner}s won it.` });
   }
-  const g = gauge(core, world, (id) => kind.get(id), ['fatal', 'demo']);
+  // The other side counts apart while it is its recording ('rails': the players themselves) and once it plays on
+  // as the reference bot ('standin').
+  const kindNow = (id) => (kind.get(id) === 'fatal' ? 'fatal' : world.players.get(id)?.controller?.rails ? 'rails' : 'standin');
+  const g = gauge(core, world, kindNow, ['fatal', 'rails', 'standin']);
   for (const p of world.players.values()) g.time(p);
   const timed = new Set([...world.players.values()].map((p) => p.controller));
   let result = null;
@@ -98,8 +101,15 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
   return {
     number: round.number, side, winner: result?.winner ?? null, reason: result?.reason ?? 'no end', seconds: ended.seconds, planted,
     demo: { winner: round.winner, reason: round.reason, seconds: round.end - round.t0 },
-    alive: { T: ended.T, CT: ended.CT }, derails: rails.derails.length, firstDerail: rails.derails[0]?.t ?? null, measure: g.measure,
+    alive: { T: ended.T, CT: ended.CT }, derails: rails.derails.length, firstDerail: rails.derails[0]?.t ?? null, why: whyOf(rails.derails), measure: g.measure,
   };
+}
+
+/** Why the players left their recording, counted by the reason of rails.js. */
+function whyOf(derails) {
+  const out = {};
+  for (const d of derails) out[d.why] = (out[d.why] ?? 0) + 1;
+  return out;
 }
 
 // The numbers of a hand and an eye that both bots read under the same names.

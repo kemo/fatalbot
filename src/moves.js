@@ -28,6 +28,9 @@ const AIR_SECONDS = 0.6;
 const AIR_FULL = 1.12;
 // A hop starts only from a run this fast, as a part of the weapon's speed.
 const RUN_FAST = 0.9;
+// The profile counts a player's jumps over all its time; a bot can hop on a part of its time only (a calm, straight,
+// open run). On that part it jumps this many times as often, so that the count of a round comes near the player's.
+const HOP_EAGER = 3;
 // The landing of a hop: the key comes this many ticks late at most (a perfect hop every time is no hand).
 const LATE_TICKS = 2;
 // A stand in a fight: over this speed the keys push against the run; under it the friction ends it.
@@ -86,7 +89,7 @@ export function hop(c, cmd, path, target, run, distance, kind) {
   let h = s.hop;
   if (!h) {
     if (c.hurry || !me.onGround || me.onLadder || me.ducked || own.stamina > 0 || kind !== WALK || speed < top * RUN_FAST) return false;
-    if (random() >= (skill.jumpRate / 60) * dt) return false;
+    if (random() >= (skill.jumpRate / 60) * HOP_EAGER * dt) return false;
     // The run must already go along the way: a jump out of a bend flies on along the old line, into the wall.
     const off = turn(run - (atan2(me.velocity[1], me.velocity[0]) * 180) / PI);
     if (abs(off) > ON_WAY || abs(turn(run - me.yaw)) > ON_WAY) return false;
