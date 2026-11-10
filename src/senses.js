@@ -25,8 +25,8 @@ const BEEP_EARSHOT = 1000;
 const BOMB_SIGHT = 1500;
 // A T hears a defuse this far off (the official CS bot).
 export const DEFUSE_HEARD = 2000;
-// A CT this near the middle of a site, with a clear line to it, sees that no bomb lies there.
-const SITE_CHECK = 500;
+// A CT this near the middle of a site that hears no beep knows that no bomb lies there.
+const SITE_CHECK = 400;
 
 // Noticing an enemy in sight: at once within NOTICE_SHARP degrees of the crosshair, then NOTICE_PER_DEGREE more a
 // degree, NOTICE_FAR more for each 1000 units past NOTICE_NEAR; each exposure draws its own factor.
@@ -258,10 +258,11 @@ function bombLook(c, eye, clear) {
     return;
   }
   if (bomb.state !== 'planted' || team.bomb?.state !== 'planted') return;
-  // In a site with no bomb in sight or earshot: not this one. With one site left, it is that one.
+  // In a site with no bomb in sight or earshot: not this one (the beep carries over a whole site). With one site
+  // left, it is that one.
   brain.map.bombSites.forEach((site, k) => {
     const mid = [(site.mins[0] + site.maxs[0]) / 2, (site.mins[1] + site.maxs[1]) / 2, site.mins[2] + 36];
-    if (hypot(mid[0] - me.origin[0], mid[1] - me.origin[1]) < SITE_CHECK && abs(mid[2] - me.origin[2]) < 160 && clear(eye, mid)) team.noBomb.add(k);
+    if (hypot(mid[0] - me.origin[0], mid[1] - me.origin[1]) < SITE_CHECK && abs(mid[2] - me.origin[2]) < 200) team.noBomb.add(k);
   });
   const open = brain.map.bombSites.map((_, k) => k).filter((k) => !team.noBomb.has(k));
   if (open.length === 1) team.bomb.site = open[0];

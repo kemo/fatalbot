@@ -14,7 +14,7 @@ import { giveUp, leaveLadder, restStuck, walkTo } from './walk.js';
 import { fight, startFight } from './fight.js';
 import { decide, forgetGoal } from './tactics.js';
 import { buyList } from './buy.js';
-import { planRound } from './plan.js';
+import { planRound, updatePlan } from './plan.js';
 import { idleCommand } from './contract.js';
 import { WEAPONS, bestGun, isMelee, isPistol } from './weapons.js';
 
@@ -36,8 +36,8 @@ export const DEFAULT_PROFILE = {
   // it at once (four times as far a shot).
   fov: 70,
   hearing: 350,
-  // 0 to 1: how often the bot goes after an enemy it saw rather than waiting for it.
-  aggression: 0.5,
+  // The share of the contacts that the player pushes: 0.2 is a middling player of the demos (tactics.js will).
+  aggression: 0.2,
   // Shots in a burst far away and near; the part of the fights fought moving and ducked.
   burstFar: 3,
   burstNear: 8,
@@ -51,6 +51,8 @@ export const DEFAULT_PROFILE = {
   hopChain: 0.5,
 };
 
+// How often a team looks at its plan again, in seconds.
+const PLAN_EVERY = 1;
 // How often a bot looks for enemies, in seconds; how long it remembers one it no longer sees.
 const LOOK_EVERY = 0.05;
 const MEMORY = 2.5;
@@ -58,6 +60,9 @@ const MEMORY = 2.5;
 const RIFLE_BACK = 2;
 // An enemy heard or seen keeps the gun out for this long.
 const ALERT_SECONDS = 8;
+// The tasks that the round waits for, and the seconds of the round clock under which every run is one.
+const HURRY = new Set(['carry', 'fetch', 'search', 'escape', 'stop-defuse', 'guard', 'hunt']);
+const HURRY_CLOCK = 30;
 // A bot buys this long after the round's start, as a hand goes through the menu.
 const BUY_AFTER = [0.4, 2.5];
 
@@ -121,6 +126,7 @@ export function createBrain({ map, ports, seed = 1 }) {
         }
       }
       listen(brain, frame);
+      if (brain.tick % Math.max(1, Math.round(PLAN_EVERY / frame.dt)) === 0) updatePlan(brain, frame.time);
     },
 
     /** The command of the bot `id` for this tick. */
@@ -205,6 +211,8 @@ function command(c) {
     // The pistol of a fight goes back for the rifle once it is quiet.
     else if (isPistol(me.weapon) && bestGun(own) !== me.weapon && time - s.seenAt > RIFLE_BACK) cmd.weapon = bestGun(own);
   }
+  // No hop on a run that the round waits for (moves.js hop).
+  c.hurry = HURRY.has(goal.task) || goal.kind === 'defuse' || c.team.bomb?.state === 'planted' || frame.round.timeLeft < HURRY_CLOCK;
   if (!feet && goal.point) {
     walkTo(c, cmd, goal.point, !fighting && !goal.look && !heard);
     if (goal.walk && !fighting) cmd.walk = true;

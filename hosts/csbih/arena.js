@@ -37,13 +37,20 @@ export function gauge(core, world, kindOf, names) {
   const watch = new Map();
   const of = (id) => {
     let w = watch.get(id);
-    if (!w) watch.set(id, (w = { fightAt: -Infinity, wallSince: null, stuckSince: null, stuckAt: null, ground: true }));
+    if (!w) watch.set(id, (w = { fightAt: -Infinity, wallSince: null, wallGoal: null, stuckSince: null, stuckGoal: null, stuckAt: null, ground: true }));
     return w;
   };
   const timed = new WeakSet();
   let ticks = 0;
+  // The spells that counted, for a look at where a kind stands or stares: {kind, type, seconds, at, goal}.
+  const spells = [];
+  const end = (type, p, since, goal) => {
+    if (since === null || since === undefined || world.time - since < SPELL) return;
+    spells.push({ kind: kindOf(p.id), type, seconds: world.time - since, at: p.body.origin.map(Math.round), goal, team: p.team });
+  };
   return {
     measure,
+    spells,
     time(player) {
       const c = player.controller;
       const m = measure[kindOf(player.id)];
@@ -96,7 +103,10 @@ export function gauge(core, world, kindOf, names) {
         const m = measure[kindOf(p.id)];
         if (!m) continue;
         const w = of(p.id);
+        const goal = p.controller?.state?.lastGoal ?? null;
         if (!live || !p.alive || world.time - w.fightAt < FIGHT_MEMORY) {
+          end('wall', p, w.wallSince, w.wallGoal);
+          end('stuck', p, w.stuckSince, w.stuckGoal);
           w.wallSince = null;
           w.stuckSince = null;
           if (live && p.alive) m.alive += dt;
@@ -107,12 +117,17 @@ export function gauge(core, world, kindOf, names) {
         const eye = [o[0], o[1], o[2] + p.body.eye];
         const a = (p.yaw * Math.PI) / 180;
         traceBox(world.level, HULL_POINT, eye, [eye[0] + Math.cos(a) * WALL_GAP, eye[1] + Math.sin(a) * WALL_GAP, eye[2]], tr);
-        w.wallSince = tr.fraction < 1 ? w.wallSince ?? world.time : null;
+        if (tr.fraction >= 1) {
+          end('wall', p, w.wallSince, w.wallGoal);
+          w.wallSince = null;
+        } else if (w.wallSince === null) [w.wallSince, w.wallGoal] = [world.time, goal];
         if (w.wallSince !== null) m.wall += spell(world.time - w.wallSince, dt);
         const wants = Boolean(p.lastCmd?.forward || p.lastCmd?.side);
         if (!wants || !w.stuckAt || Math.hypot(o[0] - w.stuckAt[0], o[1] - w.stuckAt[1], o[2] - w.stuckAt[2]) > STUCK_CIRCLE) {
+          end('stuck', p, w.stuckSince, w.stuckGoal);
           w.stuckAt = [...o];
           w.stuckSince = wants ? world.time : null;
+          w.stuckGoal = goal;
         }
         if (w.stuckSince !== null) m.stuck += spell(world.time - w.stuckSince, dt);
       }
@@ -198,7 +213,7 @@ export function runMatch({ core, level, sides, seed = 1, rounds = 12, options = 
     g.sample(match.result === null && world.time >= world.freezeUntil);
     if (match.result === null && world.time - match.liveAt > (match.options.roundTime ?? 105) + ROUND_LIMIT) throw new Error(`Round ${match.number} on ${level.map} (seed ${seed}) does not end.`);
   }
-  return { map: level.map, seed, sides: { T: sides.T.name, CT: sides.CT.name }, score: { ...match.score }, rounds: played, measure: g.measure, ticks, stepMs };
+  return { map: level.map, seed, sides: { T: sides.T.name, CT: sides.CT.name }, score: { ...match.score }, rounds: played, measure: g.measure, spells: g.spells, ticks, stepMs };
 }
 
 /** Sums matches into one table: rounds, wins by side and by kind, the reasons, and the measures by kind. */

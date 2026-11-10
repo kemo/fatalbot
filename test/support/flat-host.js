@@ -4,10 +4,12 @@
 export const WALL_X = 320;
 export const WALL_HALF = 200;
 const STEP = 32;
-const SIZE = 24;
 
-/** A flat map: SIZE x SIZE floors, STEP apart, around the origin, each joined to its eight neighbours. */
-export function flatMap({ sites = [] } = {}) {
+/**
+ * A flat map: `size` x `size` floors, STEP apart, around the origin, each joined to its eight neighbours. `spawns`
+ * gives the x of the T and the CT spawn.
+ */
+export function flatMap({ sites = [], size: SIZE = 24, spawns = [-300, 300] } = {}) {
   const count = SIZE * SIZE;
   const xyz = new Float32Array(count * 3);
   const edges = [];
@@ -35,7 +37,7 @@ export function flatMap({ sites = [] } = {}) {
     nav: { count, xyz, offsets, to, kinds: new Uint8Array(to.length) },
     bombSites: sites,
     buyZones: [],
-    spawns: [{ team: 'T', origin: [-300, 0, 36], yaw: 0 }, { team: 'CT', origin: [300, 0, 36], yaw: 180 }],
+    spawns: [{ team: 'T', origin: [spawns[0], 0, 36], yaw: 0 }, { team: 'CT', origin: [spawns[1], 0, 36], yaw: 180 }],
     ladders: [],
   };
 }

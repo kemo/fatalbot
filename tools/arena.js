@@ -1,6 +1,7 @@
 // Matches of bots in the csbih host, with the measures of the gates (spec 01, section 4).
 // Usage: node tools/arena.js [--a fatal] [--b ref] [--maps de_dust2,de_inferno] [--rounds 12] [--seeds 1,2,3]
-//                            [--sides both] [--json file]
+//                            [--sides both] [--json file] [--spells 20]
+// `--spells n` lists the n longest spells at a wall or stuck, with the place and the goal of the bot.
 // Team A plays T then CT on each map and seed (`--sides both`), so a side's bias and a team's strength come apart.
 // Kinds: `ref` (the bots of csbih-player, with the map's view field and lineups; `ref-bare` without them) and
 // `fatal` (this repository's brain).
@@ -9,12 +10,12 @@ import { writeFileSync } from 'node:fs';
 import { csbihMissing, loadCore, loadLevel, loadMapData } from '../hosts/csbih/load.js';
 import { measureLine, referenceKind, runMatch, summarize } from '../hosts/csbih/arena.js';
 
-const args = { a: 'fatal', b: 'ref', maps: 'de_dust2', rounds: '12', seeds: '1', sides: 'both', json: null };
+const args = { a: 'fatal', b: 'ref', maps: 'de_dust2', rounds: '12', seeds: '1', sides: 'both', json: null, spells: '0' };
 const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const key = argv[i].replace(/^--/, '');
   if (key === 'help' || !(key in args)) {
-    console.log('node tools/arena.js [--a fatal] [--b ref] [--maps de_dust2,de_inferno] [--rounds 12] [--seeds 1,2,3] [--sides both|once] [--json file]');
+    console.log('node tools/arena.js [--a fatal] [--b ref] [--maps de_dust2,de_inferno] [--rounds 12] [--seeds 1,2,3] [--sides both|once] [--json file] [--spells n]');
     process.exit(key === 'help' ? 0 : 1);
   }
   args[key] = argv[++i];
@@ -66,4 +67,11 @@ console.log(`G2 sides: T ${pct(s.bySide.T, s.rounds)}  CT ${pct(s.bySide.CT, s.r
 if (Object.keys(s.byKind).length > 1 || args.a !== args.b) console.log(`G1 kinds: ${Object.entries(s.byKind).map(([k, n]) => `${k} ${pct(n, s.rounds)}`).join('  ')}`);
 console.log(`G4 rounds: plants ${pct(s.plants, s.rounds)}; ${Object.entries(s.reasons).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ${n}`).join(', ')}; on the clock with no kill ${s.noKillTimeouts}`);
 for (const [kind, m] of Object.entries(s.measure)) console.log(measureLine(kind, m));
+if (Number(args.spells)) {
+  const all = matches.flatMap((m) => m.spells.map((x) => ({ ...x, map: m.map, seed: m.seed })));
+  const byGoal = {};
+  for (const x of all) byGoal[`${x.kind} ${x.type} ${x.goal}`] = (byGoal[`${x.kind} ${x.type} ${x.goal}`] ?? 0) + x.seconds;
+  console.log(`\nSpells by kind, type and goal (seconds): ${Object.entries(byGoal).sort((x, y) => y[1] - x[1]).map(([k, v]) => `${k} ${v.toFixed(0)}`).join('; ')}`);
+  for (const x of all.sort((p, q) => q.seconds - p.seconds).slice(0, Number(args.spells))) console.log(`  ${x.kind.padEnd(6)} ${x.type.padEnd(5)} ${x.seconds.toFixed(1).padStart(5)} s  ${x.map} seed ${x.seed}  ${x.team.padEnd(2)} at ${x.at.join(',')}  goal ${x.goal}`);
+}
 if (args.json) writeFileSync(args.json, JSON.stringify({ args, summary: s, matches }, null, 1));

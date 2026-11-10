@@ -9,6 +9,7 @@ import { findPath, nearestNode, nodePoint, reaches } from './nav.js';
 import { approachPoint } from './watch.js';
 import { placeAt, placesOf } from './places.js';
 import { pointKey } from './walk.js';
+import { choosePost, inBombSite, siteMid, touches } from './sites.js';
 
 // A defuser stops this near the bomb, from its body: the game takes the use key 64 from the player.
 const DEFUSE_NEAR = 56;
@@ -60,18 +61,6 @@ const SEEK_TRIES = 12;
 const over = (p) => [p[0], p[1], p[2] + 36];
 const eyeAt = (p) => [p[0], p[1], p[2] + EYE];
 
-/** True when the box of a player at `origin` touches a bomb site of the map. */
-export function inBombSite(map, origin) {
-  const [x, y, z] = origin;
-  for (const { mins, maxs } of map.bombSites) {
-    if (x + 16 > mins[0] && x - 16 < maxs[0] && y + 16 > mins[1] && y - 16 < maxs[1] && z + 36 > mins[2] && z - 36 < maxs[2]) return true;
-  }
-  return false;
-}
-
-/** The middle of a bomb site, at the height of a player on its floor. */
-export const siteMid = (site) => [(site.mins[0] + site.maxs[0]) / 2, (site.mins[1] + site.maxs[1]) / 2, site.mins[2] + 36];
-
 /** 0 to 1: how much this player goes after a fight. */
 export function will(skill) {
   return Math.max(0.1, Math.min(0.95, (skill.aggression / AGGRESSION_MID) * 0.5));
@@ -82,6 +71,7 @@ export function decide(c) {
   const { me, team, brain } = c;
   const { map } = brain;
   const bomb = bombFor(c);
+  c.post = null;
   if (bomb?.state === 'planted') return me.team === 'CT' ? retake(c, bomb) : afterPlant(c, bomb);
   if (bomb?.state === 'carried' && bomb.mine) {
     // The carrier plants in the site of the team's plan; in another site only when the plan has none.
@@ -91,13 +81,9 @@ export function decide(c) {
     return { kind: 'goto', task: 'carry', point: at ?? nearestSite(map, me.origin) };
   }
   if (bomb?.state === 'dropped' && me.team === 'T' && nearestMate(c.mates, bomb.point) === me) return { kind: 'goto', task: 'fetch', point: over(bomb.point) };
+  c.post = postOf(c);
   // An enemy known: hunt it, wait for it or fall back. Else a look around when nothing happens. Else the plan.
   return contactTask(c) ?? seek(c) ?? objective(c);
-}
-
-function touches(site, origin) {
-  const [x, y, z] = origin;
-  return Boolean(site) && x + 16 > site.mins[0] && x - 16 < site.maxs[0] && y + 16 > site.mins[1] && y - 16 < site.maxs[1] && z + 36 > site.mins[2] && z - 36 < site.maxs[2];
 }
 
 function nearestSite(map, o) {
@@ -109,13 +95,38 @@ function nearestSite(map, o) {
   return best ?? [...o];
 }
 
+/**
+ * The post of a defender now: its own of the plan, or one at the site that the team rotates to. Null for an attacker
+ * and for a map with no post.
+ */
+function postOf(c) {
+  const { me, bot, s, team, random, brain } = c;
+  const plan = team.plan;
+  if (me.team !== 'CT' || !plan?.posts) return null;
+  const own = plan.posts.get(bot.id) ?? null;
+  if (!plan.rotate || !own || own.site === plan.rotate.site) return own;
+  if (s.rotate?.at !== plan.rotate.at) {
+    const post = choosePost(brain, plan.rotate.site, team.takenBy('post', bot.id), random());
+    s.rotate = { at: plan.rotate.at, post };
+    team.take('post', bot.id, post?.point ?? null);
+  }
+  return s.rotate.post ?? own;
+}
+
 /** The bot's part of the team's plan when nothing else asks for it: its place, held. */
 function objective(c) {
-  const { me, bot, team, time } = c;
+  const { me, team, time } = c;
   const plan = team.plan;
   if (!plan) return { kind: 'hold', point: null };
-  const site = me.team === 'T' ? (time >= plan.goAt ? plan.site : null) : plan.posts?.get(bot.id) ?? null;
-  const at = site !== null && site !== undefined ? siteSpot(c, site) : null;
+  if (me.team === 'CT') {
+    const post = c.post;
+    if (!post?.point) return { kind: 'hold', point: null };
+    // At the post the view rests on the way in that it watches; the walk there looks along its own way.
+    const there = flat(post.point, me.origin) < 40;
+    const look = there && post.watch ? toward(eyeAt(post.point), eyeAt(post.watch)) : null;
+    return { kind: 'hold', task: plan.rotate && post.site === plan.rotate.site && plan.posts.get(c.bot.id)?.site !== post.site ? 'rotate' : 'site', point: post.point, look, rest: there };
+  }
+  const at = time >= plan.goAt ? siteSpot(c, plan.site) : null;
   if (at) return { kind: 'hold', task: 'site', point: at, look: null };
   return { kind: 'hold', point: null };
 }
@@ -129,7 +140,9 @@ function retake(c, bomb) {
     // Not seen yet: to the site that the team knows, else the nearest one that nobody found empty.
     const open = brain.map.bombSites.map((site, k) => ({ k, mid: siteMid(site) })).filter(({ k }) => !c.team.noBomb.has(k));
     const pick = bomb.site !== null ? open.find((x) => x.k === bomb.site) : open.sort((a, b) => flat(a.mid, o) - flat(b.mid, o) || a.k - b.k)[0];
-    return pick ? { kind: 'goto', task: 'search', point: pick.mid } : { kind: 'hold', point: null };
+    // To a floor inside the site: its middle can lie in a crate.
+    const at = pick ? siteSpot(c, pick.k) ?? pick.mid : null;
+    return at ? { kind: 'goto', task: 'search', point: at } : { kind: 'hold', point: null };
   }
   const toBomb = flat(o, bomb.point);
   const mine = bomb.defuser === me.id;
@@ -335,6 +348,9 @@ function chooseTask(c, contact) {
     const spot = coverFrom(c, contact.point);
     if (spot) return { kind: 'cover', point: spot, watch: contact.point, until: time + random(3, 8) };
   }
+  // A defender with a post holds it: the enemy comes to the site, and a lone run at it gives the site away. The
+  // call of the contact is the team's (plan.js rotates on it).
+  if (c.post?.point) return { kind: 'ambush', point: null, anchor: true, watch: contact.point, until: time + random(3, 6) };
   // A call from afar is somebody else's fight as often as not.
   if (contact.kind === 'call' && random() > 0.5) return { kind: 'pass', point: null, until: time + random(2, 5) };
   if (random() < AMBUSH) return { kind: 'ambush', point: null, watch: contact.point, until: time + random(3, 3 + 9 * (1 - courage)) };
@@ -367,7 +383,8 @@ function contactTask(c) {
   const eye = eyeOf(me);
   const aim = approachPoint(c, eye, task.watch);
   const look = aim ? toward(eye, aim) : null;
-  if (task.kind === 'ambush') return { kind: 'hold', task: 'ambush', point: null, look };
+  // An anchor waits at its post of this moment: a rotation moves it while it watches.
+  if (task.kind === 'ambush') return { kind: 'hold', task: 'ambush', point: task.anchor ? c.post?.point ?? null : null, look };
   if (task.kind === 'cover') return { kind: 'hold', task: 'cover', point: task.point, look: flat(task.point, o) < 32 ? look : null };
   return { kind: 'goto', task: 'hunt', point: task.point, look: look && flat(aim, o) > 96 ? look : null, walk: task.walk };
 }
