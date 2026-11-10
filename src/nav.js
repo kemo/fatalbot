@@ -20,6 +20,18 @@ const KIND_COST = [0, 16, 180, 32];
  * shared with the host and never written.
  */
 export function navOf(raw) {
+  // One graph for one level, however many brains play on it: what is worked out once (the places, the sites, the
+  // floods) serves them all. The key is the host's own array.
+  const known = graphs.get(raw.xyz);
+  if (known) return known;
+  const nav = index(raw);
+  graphs.set(raw.xyz, nav);
+  return nav;
+}
+
+const graphs = new WeakMap();
+
+function index(raw) {
   const { count, xyz, offsets, to, kinds } = raw;
   const cells = new Map();
   for (let i = 0; i < count; i++) {
@@ -28,7 +40,7 @@ export function navOf(raw) {
     if (list) list.push(i);
     else cells.set(key, [i]);
   }
-  return { count, xyz, offsets, to, kinds, cells, search: null, floods: null, floodStack: null, parts: null };
+  return { count, xyz, offsets, to, kinds, cells, search: null, floods: null, floodStack: null, parts: null, places: null, sites: null };
 }
 
 const cellKey = (x, y) => Math.floor(x / CELL + 0.5) * 65536 + Math.floor(y / CELL + 0.5);
@@ -165,7 +177,7 @@ export function canReach(nav, from, to) {
 /**
  * The shortest way between two nodes (A*): [{point, kind, node}] from the first to the last; null when none.
  * `avoid` holds edges to leave out, as `from * nav.count + to`. `cost(node)` adds to the price of a step onto a
- * node (a place of danger). The order of the heap decides ties: keep it when this changes.
+ * node (a place of danger; Infinity closes it). The order of the heap decides ties: keep it when this changes.
  */
 export function findPath(nav, from, to, limit = 20000, avoid = null, cost = null) {
   if (from < 0 || to < 0) return null;
@@ -201,6 +213,8 @@ export function findPath(nav, from, to, limit = 20000, avoid = null, cost = null
       // A floor with fewer ways out lies by a wall: the way keeps to the middle of a passage.
       const narrow = 8 - (offsets[next + 1] - offsets[next]);
       const step = g[at] + dist(at, next) * (1 + Math.max(0, narrow) * 0.08) + KIND_COST[nav.kinds[e]] + (cost ? cost(next) : 0);
+      // An infinite price closes a floor.
+      if (step === Infinity) continue;
       if (stamp[next] !== gen || step < g[next]) {
         stamp[next] = gen;
         g[next] = step;

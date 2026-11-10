@@ -8,9 +8,12 @@ import { SIGHTING_SECONDS } from './team.js';
 // How long a sound holds the bot's attention.
 const NOISE_KEEP = 1.5;
 
-// Looked for again this often, or when the point moved this far.
-const APPROACH_EVERY = 0.2;
+// Looked for again when the point moved this far or the bot stepped this far, and at the latest after this long.
+// The search of the way is the dear part of a bot's tick on a large level.
+const APPROACH_EVERY = 1.5;
 const APPROACH_MOVED = 64;
+const APPROACH_STEPPED = 48;
+const APPROACH_KEPT = 4;
 const APPROACH_NODES = 60;
 // A point nearer than this is the wall at the bot's own shoulder, no place to watch.
 const APPROACH_NEAR = 96;
@@ -36,8 +39,13 @@ const APART = 25;
 export function approachPoint(c, eye, point) {
   const { s, time, me, brain } = c;
   const { nav, ports } = brain;
-  const cached = s.approach;
-  if (cached && time < cached.until && hypot(cached.of[0] - point[0], cached.of[1] - point[1], cached.of[2] - point[2]) < APPROACH_MOVED) return cached.aim;
+  // The answer holds while neither end moved: a bot that waits at an angle does not search its way again. One
+  // answer for each point watched: the noise and the task of one tick ask for two points.
+  const key = (Math.round(point[0] / APPROACH_MOVED) * 73856093) ^ (Math.round(point[1] / APPROACH_MOVED) * 19349663) ^ (Math.round(point[2] / APPROACH_MOVED) * 83492791);
+  const answers = (s.approach ??= new Map());
+  const cached = answers.get(key);
+  if (cached && time < cached.until && hypot(cached.from[0] - me.origin[0], cached.from[1] - me.origin[1], cached.from[2] - me.origin[2]) < APPROACH_STEPPED) return cached.aim;
+  if (answers.size >= APPROACH_KEPT) answers.clear();
   const at = [point[0], point[1], point[2] + STANDING_EYE];
   let aim = null;
   if (ports.traceLine(eye, at) >= 1) aim = at;
@@ -54,7 +62,7 @@ export function approachPoint(c, eye, point) {
       }
     }
   }
-  s.approach = { of: [...point], until: time + APPROACH_EVERY, aim };
+  answers.set(key, { from: [...me.origin], until: time + APPROACH_EVERY, aim });
   return aim;
 }
 

@@ -15,7 +15,6 @@ const ENTRY_APART = 400;
 const ENTRY_DETOUR = 2.2;
 // The floors this near a found way in are closed for the next search, so that it finds another way.
 const ENTRY_CLOSE = 320;
-const CLOSED = 4000;
 // A post lies within this of the site's middle; so many floors are tried; so many posts are kept, this far apart.
 const POST_REACH = 800;
 const POST_TRIES = 220;
@@ -44,7 +43,7 @@ export const inBombSite = (map, origin) => map.bombSites.some((site) => touches(
 
 /** The ways in and the posts of site `k` (cached on the brain): {mid, entries: [point], posts: [{point, sees, score}]}. */
 export function siteInfo(brain, k) {
-  const cache = (brain.sites ??= []);
+  const cache = (brain.nav.sites ??= []);
   if (cache[k]) return cache[k];
   const site = brain.map.bombSites[k];
   const mid = siteMid(site);
@@ -61,12 +60,13 @@ function entriesOf(brain, mid) {
   const from = nearestNode(nav, start, 8, 200);
   const to = nearestNode(nav, mid, 8, 200);
   if (from < 0 || to < 0) return [];
-  const closed = new Float32Array(nav.count);
-  const cost = (node) => closed[node];
+  // A found way in is closed for the next search: with no other way, that search ends without one.
+  const closed = new Uint8Array(nav.count);
+  const cost = (node) => (closed[node] ? Infinity : 0);
   const found = [];
   let shortest = Infinity;
   for (let tries = 0; tries < MAX_ENTRIES + 2 && found.length < MAX_ENTRIES; tries++) {
-    const path = findPath(nav, from, to, 80000, null, cost);
+    const path = findPath(nav, from, to, nav.count + 1, null, cost);
     if (!path) break;
     const length = pathLength(path);
     shortest = Math.min(shortest, length);
@@ -76,7 +76,7 @@ function entriesOf(brain, mid) {
     if (!entry) break;
     if (!found.some((e) => flat(e, entry) < ENTRY_APART)) found.push(entry);
     for (let i = 0; i < nav.count; i++) {
-      if (hypot(nav.xyz[i * 3] - entry[0], nav.xyz[i * 3 + 1] - entry[1]) < ENTRY_CLOSE && abs(nav.xyz[i * 3 + 2] - entry[2]) < 160) closed[i] = CLOSED;
+      if (hypot(nav.xyz[i * 3] - entry[0], nav.xyz[i * 3 + 1] - entry[1]) < ENTRY_CLOSE && abs(nav.xyz[i * 3 + 2] - entry[2]) < 160) closed[i] = 1;
     }
   }
   return found;
