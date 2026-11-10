@@ -1,6 +1,6 @@
 # 03 The brain as built
 
-Status: built on 2026-11-10 and measured (docs/measures). This spec says what each module does, what came from
+Status: built on 2026-11-10 and measured (docs/measures/2026-11-10-first-brain.md). This spec says what each module does, what came from
 csbih-player's bot and what is new. The numbers are in the code, each with its source in a comment.
 
 ## 1. One tick of one bot (`brain.js command`)
@@ -38,9 +38,10 @@ Ported from `bot.js aimAt`, `hand` and `fight`, where the numbers were fitted to
 - The reaction time before the first shot; the first shot before the view settles; bursts by range; the recoil
   pulled down by the profile's control; the scope of a sniper rifle; the knife.
 - **New:** the shots of a burst are counted from the clip, so the brain needs no weapon state of the host.
-- **New:** no shot while the gun spreads wide from the run (`moves.js fightStep`): a stand is reached with the keys
-  against the run (the counter-strafe), and a strafing bot walks while it fires a rifle. Measured: 4% of
-  fatalbot's shots fall on the run, 22% of the reference bot's.
+- **New:** past 400 units, no shot while the gun spreads wide from the run (`moves.js fightStep`): a stand is
+  reached with the keys against the run (the counter-strafe), and a strafing bot walks while it fires a rifle.
+  Nearer, the gun fires at once and the stop comes while the shots go. Measured: fatalbot fires 3 to 4.5% of its
+  rifle shots on the run, the players of the demos 5 to 8%, the reference bot 22%.
 
 ## 4. The feet (`walk.js`, `moves.js`)
 
@@ -51,7 +52,11 @@ round a teammate, the jump of a stuck bot, the island of the graph.
   and on a walk edge the bot jumps at a ledge only once the ledge holds it up. The reference bot jumps on stairs.
 - **New:** the bunny hop (`hop`): by the profile's habit (`jumpRate`, `hopChain`), on a straight open run, never in
   a hurry. In the air the forward key is up, a strafe key is down and the view swings 8 degrees across the way. The
-  next jump comes on the landing, now and then a tick or two late.
+  next jump comes on the landing, now and then a tick or two late. The players of the measured demos rarely hop in
+  a chain (0.1 to 0.6 times a minute), and fatalbot with their profiles does the same; a profile with a high
+  `hopChain` hops more.
+- Gate G7 is not met yet: fatalbot jumps less than the players and fires fewer shots on the run
+  (docs/measures/2026-11-10-first-brain.md, section 3).
 - To come: the peek at a corner, the jiggle at an angle, the jump onto a box with the legs up as a habit.
 
 ## 5. Tactics (`tactics.js`, `watch.js`)
