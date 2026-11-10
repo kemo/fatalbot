@@ -39,7 +39,7 @@ export function referenceKind(core, { views = null, lineups = [] } = {}) {
 
 /**
  * Plays one match and returns its rounds and measures. `sides` gives the kind of each side: {T: kind, CT: kind}; a
- * kind is {name, round(world, player), attach?(world), afterStep?(world, events)}.
+ * kind is {name, round(world, player, match), attach?(world, {seed})}.
  */
 export function runMatch({ core, level, sides, seed = 1, rounds = 12, options = {} }) {
   const { World } = core.world;
@@ -59,7 +59,7 @@ export function runMatch({ core, level, sides, seed = 1, rounds = 12, options = 
     }
   }
   const kinds = [...new Set(Object.values(sides))];
-  for (const kind of kinds) kind.attach?.(world);
+  for (const kind of kinds) kind.attach?.(world, { seed });
 
   const measure = Object.fromEntries(kinds.map((k) => [k.name, { alive: 0, wall: 0, stuck: 0, ms: 0, commands: 0, kills: 0, deaths: 0, headshots: 0 }]));
   const timed = new WeakSet();
@@ -80,7 +80,7 @@ export function runMatch({ core, level, sides, seed = 1, rounds = 12, options = 
   const match = new Match(world, { ...options, last: rounds }, {
     newRound: () => {
       for (const p of world.players.values()) {
-        kindOf.get(p.id).round(world, p);
+        kindOf.get(p.id).round(world, p, match);
         time(p);
       }
     },
@@ -100,7 +100,6 @@ export function runMatch({ core, level, sides, seed = 1, rounds = 12, options = 
     stepMs += now() - t;
     ticks++;
     const events = world.events.slice(from);
-    for (const kind of kinds) kind.afterStep?.(world, events);
     for (const e of events) {
       if (e.type === 'round' && e.phase === 'start') round = { number: e.number, startAt: world.time, planted: false, kills: { T: 0, CT: 0 } };
       else if (e.type === 'round' && e.phase === 'end') played.push({ number: e.number, winner: e.winner, reason: e.reason, seconds: world.time - match.liveAt, planted: round.planted, kills: round.kills });
