@@ -74,7 +74,7 @@ const SEEK_TRIES = 12;
 // the spread of its logarithm, and the ends of the draw. In the quiet part of a round the recorded CTs stand in
 // 33% of the steps of 2 s and the Ts in 16%; a stand lasts 2 s in the middle and 14 s at the ninth tenth
 // (docs/measures/2026-11-11-economy.md).
-const STAND_MIDDLE = { CT: 3, T: 2 };
+const STAND_MIDDLE = { CT: 1.2, T: 1.2 };
 const STAND_SPREAD = 1.1;
 const STAND_ENDS = [0.5, 30];
 // With an enemy seen or heard this fresh a player keeps its floor.
