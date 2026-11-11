@@ -17,7 +17,7 @@ import { decide, forgetGoal } from './tactics.js';
 import { buyList } from './buy.js';
 import { flashToAvoid, lineupThrow } from './grenades.js';
 import { planRound, updatePlan } from './plan.js';
-import { siteSpots } from './sites.js';
+import { stagePlaces } from './sites.js';
 import { idleCommand } from './contract.js';
 import { WEAPONS, bestGun, isGrenade, isMelee, isPistol } from './weapons.js';
 
@@ -169,10 +169,10 @@ export function createBrain({ map, ports, seed = 1 }) {
       return s ? { goal: s.lastGoal ?? null, point: s.lastPoint ?? null, target: s.target?.id ?? null, stuckFor: s.stuckFor ?? 0, path: s.path ? s.path.map((n) => n.point) : null, escape: s.escape ?? null } : null;
     },
   };
-  // The places are cut once a map, not in a tick of a round. So are the posts of each site with their timing, the
-  // places where the attackers wait, and the floors about both: on a large level they take a quarter of a second.
+  // The places are cut once a map, not in a tick of a round. So are the posts of each site with their timing and
+  // the places where the attackers wait: on a large level they take a quarter of a second.
   placesOf(nav, map);
-  map.bombSites.forEach((_, k) => siteSpots(brain, k));
+  map.bombSites.forEach((_, k) => stagePlaces(brain, k));
   return brain;
 }
 
@@ -222,8 +222,7 @@ function command(c) {
       const rest = goal.rest || (goal.kind !== 'defuse' && !viewOpen(c, eyeOf(me), goal.look.yaw, goal.look.pitch));
       const view = rest ? restLook(c, goal.look) : goal.look;
       lookAt(c, cmd, view.yaw, view.pitch);
-    } else if (goal.kind === 'hold' && (!goal.point || goal.rest)) {
-      // A bot that waits with no view of its own looks along the open lines about it.
+    } else if (!goal.point && goal.kind === 'hold') {
       const view = restLook(c);
       lookAt(c, cmd, view.yaw, view.pitch);
     }

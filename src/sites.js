@@ -262,8 +262,8 @@ function spotsAbout(brain, point, good) {
 }
 
 /**
- * The floors about a post of site `k` that watch what the post watches: every way in that it sees, or the site
- * for a post further back. Found once for each post; empty for a place that is no post of the site.
+ * The floors about a post of site `k` that watch what the post watches: a way in that it sees, or the site for a
+ * post further back. Found once for each post; empty for a place that is no post of the site.
  */
 export function postSpots(brain, k, point) {
   const info = siteInfo(brain, k);
@@ -275,7 +275,7 @@ export function postSpots(brain, k, point) {
   post.spots = spotsAbout(brain, post.point, (p) => {
     if (info.entries.some((e) => flat(p, e) < 250)) return false;
     const eye = eyeAt(p);
-    return watched.length ? watched.every((e) => ports.traceLine(eye, eyeAt(e)) >= 1) : ports.traceLine(eye, eyeAt(info.mid)) >= 1;
+    return watched.length ? watched.some((e) => ports.traceLine(eye, eyeAt(e)) >= 1) : ports.traceLine(eye, eyeAt(info.mid)) >= 1;
   });
   return post.spots;
 }
@@ -324,12 +324,6 @@ export function stagePlaces(brain, k) {
     }
   }
   return info.stage;
-}
-
-/** Finds the floors about every post and every waiting place of site `k`: with the brain, not in a tick of a round. */
-export function siteSpots(brain, k) {
-  for (const post of siteInfo(brain, k).posts) postSpots(brain, k, post.point);
-  for (const place of stagePlaces(brain, k)) stageSpots(brain, k, place);
 }
 
 /**
