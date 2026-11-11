@@ -195,13 +195,15 @@ What was checked, in the copy of links:
   `src/shared/` of the copy, into a scratch folder): it fails with the first form of the patch, passes with the
   stand-in (103 files), and passes with the copy (123 files, 22 of them fatalbot's). In the built `fatal.js` the
   import names the hashed adapter. The build throws on an import cycle: the brain has none.
-- The play page of the copy opens with `?bot=fatal` (de_dust2, nine bots): the 21 files of the copy load and the
-  console has no message. Without the option none of the copy loads.
+- The play page of the copy with `?bot=fatal` (de_dust2, nine bots): the page says "fatalbot" (`data-bots`, and
+  the map label "de_dust2 · 9 botova · fatalbot"), the 21 files of the copy load, and the console has no message.
+  The page sets that name only when the host was made, so the brain was made in the browser on the level of the
+  page. Without the option the page says "bot.js" and none of the copy loads.
 
 What was not checked:
 
-- That the bots of the page move by fatalbot. This was checked before the page had its label; the test of
-  `botRound` covers the wiring.
+- A round played on the page with fatalbot at the keys of the bots: nobody played one. The test of `botRound`
+  covers that a bot gets the host's controller.
 - A replay on the page (`/igraj?demo=`).
 - A full static build with the levels, the models and the timelines, and a page served from one. The checkout of
   csbih-player has a static build, so its own `/igraj` answers 403 without a pass of gamerz.ba; the copy had no
