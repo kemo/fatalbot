@@ -40,7 +40,7 @@ const ROUND_LIMIT = 240;
 
 const now = () => globalThis.performance.now();
 const blank = () => ({
-  alive: 0, wall: 0, stuck: 0, ms: 0, commands: 0, kills: 0, deaths: 0, headshots: 0, jumps: 0, hops: 0, shots: 0, shotsMoving: 0, rifleShots: 0, rifleShotsMoving: 0, throws: 0, blinded: 0,
+  alive: 0, wall: 0, stuck: 0, ms: 0, msMax: 0, commands: 0, kills: 0, deaths: 0, headshots: 0, jumps: 0, hops: 0, shots: 0, shotsMoving: 0, rifleShots: 0, rifleShotsMoving: 0, throws: 0, blinded: 0,
   // The jumps by what they were: in a fight, up onto a ledge, down off one, or on the flat (a habit of the run).
   jumpsFight: 0, jumpsUp: 0, jumpsDown: 0, jumpsFlat: 0,
   // Of the jumps on the flat: those in the first EARLY seconds of a round, and those from under SLOW units a second.
@@ -105,7 +105,10 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
       c.command = (w, me) => {
         const t = now();
         const cmd = command(w, me);
-        m.ms += now() - t;
+        const took = now() - t;
+        m.ms += took;
+        // The longest single command: a search or a plan that one tick pays for.
+        if (took > m.msMax) m.msMax = took;
         m.commands++;
         return cmd;
       };
@@ -381,7 +384,7 @@ export function summarize(matches) {
 export function addMeasures(sum, measure) {
   for (const [kind, v] of Object.entries(measure)) {
     const s = (sum[kind] ??= blank());
-    for (const k of Object.keys(s)) s[k] += v[k];
+    for (const k of Object.keys(s)) s[k] = k === 'msMax' ? Math.max(s[k], v[k] ?? 0) : s[k] + (v[k] ?? 0);
   }
   return sum;
 }
@@ -391,7 +394,7 @@ const pct = (n, of) => (of ? `${((n / of) * 100).toFixed(1)}%` : '-');
 /** One line of the measures of a kind, for a tool's report. */
 export function measureLine(kind, m) {
   const minutes = Math.max(1, m.alive / 60);
-  return `${kind.padEnd(8)} G3 wall ${pct(m.wall, m.alive)}  stuck ${pct(m.stuck, m.alive)}  |  G5 ${((m.ms / Math.max(1, m.commands)) * 10).toFixed(3)} ms for ten bots a tick  |  kills ${m.kills} deaths ${m.deaths} headshots ${pct(m.headshots, m.kills)}  |  G7 jumps a minute ${(m.jumps / minutes).toFixed(1)} (in a chain ${(m.hops / minutes).toFixed(2)})  shots on the run ${pct(m.shotsMoving, m.shots)} (rifles ${pct(m.rifleShotsMoving, m.rifleShots)})  grenades a minute ${(m.throws / minutes).toFixed(2)} (enemies blinded ${m.blinded})`;
+  return `${kind.padEnd(8)} G3 wall ${pct(m.wall, m.alive)}  stuck ${pct(m.stuck, m.alive)}  |  G5 ${((m.ms / Math.max(1, m.commands)) * 10).toFixed(3)} ms for ten bots a tick (the longest command of one bot ${m.msMax.toFixed(1)} ms)  |  kills ${m.kills} deaths ${m.deaths} headshots ${pct(m.headshots, m.kills)}  |  G7 jumps a minute ${(m.jumps / minutes).toFixed(1)} (in a chain ${(m.hops / minutes).toFixed(2)})  shots on the run ${pct(m.shotsMoving, m.shots)} (rifles ${pct(m.rifleShotsMoving, m.rifleShots)})  grenades a minute ${(m.throws / minutes).toFixed(2)} (enemies blinded ${m.blinded})`;
 }
 
 /** One line of the feet of a kind: its jumps a minute by what they were, and its rifle shots on the run by the range. */
