@@ -70,6 +70,11 @@ const SEEK_SECONDS = 25;
 const SEEK_NEAR = 128;
 const STILL_RANGE = 96;
 const SEEK_TRIES = 12;
+// The CTs with this many more players alive than the Ts leave their posts and go after the rest, each within
+// PRESS_AFTER seconds. The recorded CTs in that state move at 91 units a second and half of them are out of the
+// sites; a plant follows in 14% of those rounds (docs/measures/2026-11-11-economy.md).
+const PRESS = 2;
+const PRESS_AFTER = [1, 4];
 
 const over = (p) => [p[0], p[1], p[2] + 36];
 const eyeAt = (p) => [p[0], p[1], p[2] + EYE];
@@ -121,6 +126,17 @@ export function decide(c) {
   // An enemy known: hunt it, wait for it or fall back. Else the place of the plan before its second. Else a look
   // around when nothing happens. Else the plan.
   return contactTask(c) ?? stage ?? seek(c) ?? objective(c);
+}
+
+/** True when this CT goes after the Ts: its team is PRESS players ahead, and its own moment to go has come. */
+function pressing(c) {
+  const { me, s, time, random } = c;
+  if (me.team !== 'CT' || !c.enemyCount || c.mateCount - c.enemyCount < PRESS) {
+    s.pressAt = null;
+    return false;
+  }
+  s.pressAt ??= time + random(PRESS_AFTER[0], PRESS_AFTER[1]);
+  return time >= s.pressAt;
 }
 
 function nearestSite(map, o) {
@@ -433,8 +449,8 @@ function chooseTask(c, contact) {
     if (spot) return { kind: 'cover', point: spot, watch: contact.point, until: time + random(3, 8) };
   }
   // A defender with a post holds it: the enemy comes to the site, and a lone run at it gives the site away. The
-  // call of the contact is the team's (plan.js rotates on it).
-  if (c.post?.point) return { kind: 'ambush', point: null, anchor: true, watch: contact.point, until: time + random(3, 6) };
+  // call of the contact is the team's (plan.js rotates on it). A team that is ahead goes after the enemy.
+  if (c.post?.point && !pressing(c)) return { kind: 'ambush', point: null, anchor: true, watch: contact.point, until: time + random(3, 6) };
   // A call from afar is somebody else's fight as often as not.
   if (contact.kind === 'call' && random() > 0.5) return { kind: 'pass', point: null, until: time + random(2, 5) };
   if (random() < AMBUSH) return { kind: 'ambush', point: null, watch: contact.point, until: time + random(3, 3 + 9 * (1 - courage)) };
@@ -494,7 +510,8 @@ function placeToCheck(c) {
 /**
  * A bot with nothing to do does not stand for the rest of the round: after a wait it goes to a place of the map that
  * its team has not checked (the official bot's hunt). The Ts must make something happen, the last of a side and the
- * brave ones too; a CT is content to hold while the clock runs for it. A goal, or null.
+ * brave ones too; a CT is content to hold while the clock runs for it, until its team is ahead (pressing): then
+ * it goes at once. A goal, or null.
  */
 function seek(c) {
   const { me, s, skill, time, random } = c;
@@ -502,15 +519,18 @@ function seek(c) {
   if (s.seek && (time >= s.seek.until || flat(s.seek.point, o) < SEEK_NEAR)) s.seek = null;
   if (s.seek) return { kind: 'goto', task: 'seek', point: s.seek.point };
   const friends = c.mateCount - 1;
-  if (!c.enemyCount || !(me.team === 'T' || friends === 0 || will(skill) > 0.6)) return null;
+  const press = pressing(c);
+  if (!c.enemyCount || !(me.team === 'T' || friends === 0 || press || will(skill) > 0.6)) return null;
   const w = s.waiting;
-  if (!w || flat(w.at, o) > STILL_RANGE) {
+  if (!press && (!w || flat(w.at, o) > STILL_RANGE)) {
     s.waiting = { at: [...o], until: time + random(WAIT_MIN, WAIT_MAX) };
     return null;
   }
-  if (time < w.until) return null;
+  if (!press && time < w.until) return null;
   s.waiting = null;
-  const point = placeToCheck(c);
+  // A team that is ahead goes where it last saw an enemy; with no fresh sight, to a place that nobody checked.
+  const seen = press ? c.team.enemiesSeen(time).find((g) => flat(g.point, o) > SEEK_NEAR && reaches(c.brain.nav, o, g.point)) : null;
+  const point = seen ? [...seen.point] : placeToCheck(c);
   if (!point) return null;
   s.seek = { point, until: time + SEEK_SECONDS };
   return { kind: 'goto', task: 'seek', point };
