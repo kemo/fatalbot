@@ -128,9 +128,10 @@ export function restLook(c, base = null) {
     const aim = threat ? approachPoint(c, eye, threat) : null;
     if (aim) {
       const v = toward(eye, aim);
-      if (!list.some((a) => Math.abs(turn(a.yaw - v.yaw)) < APART)) list.push({ yaw: v.yaw, pitch: v.pitch, w: 0, main: !list.length });
+      // A corner at arm's length is no view to rest on: the eye would rest on its wall.
+      if (viewOpen(c, eye, v.yaw, v.pitch) && !list.some((a) => Math.abs(turn(a.yaw - v.yaw)) < APART)) list.push({ yaw: v.yaw, pitch: v.pitch, w: 0, main: !list.length });
     }
-    for (const l of openLines(c, eye)) if (!list.some((a) => Math.abs(turn(a.yaw - l.yaw)) < APART)) list.push(l);
+    for (const l of openLines(c, eye)) if (l.w * OPEN_REACH >= VIEW_OPEN && !list.some((a) => Math.abs(turn(a.yaw - l.yaw)) < APART)) list.push(l);
     // The main view takes twice the time of all the others together.
     const others = list.reduce((n, a) => n + (a.main ? 0 : a.w), 0);
     for (const a of list) if (a.main) a.w = Math.max(1, others * 2);
