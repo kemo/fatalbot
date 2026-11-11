@@ -158,3 +158,43 @@ test('the level of a recording is a build of its map, and most of its rounds sta
   const rounds = core.demoRound.demoRounds(timeline).filter((r) => !r.empty && (r.winner === 'T' || r.winner === 'CT'));
   assert.ok(fitRounds(core, level, timeline, rounds).length * 2 > rounds.length);
 });
+
+test('a bot that joins late does not get the shots of the time before it: only where the bomb is', { skip }, async () => {
+  const { csbihHost } = await import('../hosts/csbih/adapter.js');
+  restLevel(level);
+  const world = new core.world.World(level.hulls, { nav: level.nav, rules: level.rules, seed: 1 });
+  const host = csbihHost(core, world, level);
+  // A player that no brain drives fires in each step, as the game tells it: inside the step. In one step the bomb is planted.
+  let plant = false;
+  const spawn = level.rules.spawns.find((s) => s.side === 'T');
+  world.addPlayer({
+    id: 7, name: 'x', team: 'T', origin: spawn.origin,
+    controller: { command: (w, me) => {
+      w.events.push({ type: 'shot', player: me.id });
+      if (plant) w.events.push({ type: 'planted', at: [0, 0, 0] });
+      plant = false;
+      return { forward: 0, side: 0, jump: false, duck: false, walk: false, attack: false, use: false, yaw: me.yaw, pitch: me.pitch };
+    } },
+  });
+  // No bot plays, so no frame is made: 300 steps with a shot each.
+  for (let i = 0; i < 300; i++) {
+    plant = i === 100;
+    world.step();
+    world.events.length = 0;
+  }
+  // The first frame: where the bomb is, and the shot of the last step. Not the 299 shots before it.
+  assert.deepEqual(host.frame().events.map((e) => e.type), ['planted', 'shot']);
+  // With a frame after each step, a frame holds the events of that step.
+  for (let i = 0; i < 3; i++) {
+    world.step();
+    world.events.length = 0;
+    assert.deepEqual(host.frame().events.map((e) => e.type), ['shot']);
+  }
+  // A release forgets the bots and what waits for a frame.
+  host.controller(5);
+  world.step();
+  world.events.length = 0;
+  host.release();
+  assert.equal(host.brain.bots.size, 0);
+  assert.deepEqual(host.frame().events, []);
+});

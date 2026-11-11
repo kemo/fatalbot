@@ -81,8 +81,9 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
   const timed = new Set([...world.players.values()].map((p) => p.controller));
   let result = null;
   let planted = false;
-  // The stand-ins of fatalbot with a route: their seconds alive, the seconds of those on their route, and why each left it.
-  const routed = { seconds: 0, on: 0, why: {} };
+  // The stand-ins of fatalbot with a route: their seconds alive, the seconds of those on their route, why each left
+  // it, and when (`left`: {t, team, why}), to see how many leave together.
+  const routed = { seconds: 0, on: 0, why: {}, left: [] };
   const left = new Set();
   const limit = (round.seconds + PAST_CLOCK) / world.tickSeconds;
   for (let i = 0; i < limit && !result; i++) {
@@ -109,6 +110,7 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
       else if (!left.has(p.id)) {
         left.add(p.id);
         routed.why[state] = (routed.why[state] ?? 0) + 1;
+        routed.left.push({ t: world.time, team: p.team, why: state });
       }
     }
     result = core.round.roundResult(world, round.seconds);

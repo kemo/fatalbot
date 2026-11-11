@@ -46,7 +46,9 @@ const aim = {};
 const bursts = {};
 const measure = {};
 const why = {};
-const routed = { seconds: 0, on: 0, why: {} };
+// `together`: the bots that left their route within TOGETHER seconds of a teammate that left its own.
+const TOGETHER = 1;
+const routed = { seconds: 0, on: 0, why: {}, gone: 0, together: 0 };
 const report = [];
 let used = 0;
 for (const id of wanted) {
@@ -82,6 +84,10 @@ for (const id of wanted) {
       routed.seconds += r.routed.seconds;
       routed.on += r.routed.on;
       for (const [k, n] of Object.entries(r.routed.why)) routed.why[k] = (routed.why[k] ?? 0) + n;
+      // A route that ends with its recording is no leave by an event of the round.
+      const events = r.routed.left.filter((x) => x.why !== 'route-end');
+      routed.gone += events.length;
+      routed.together += events.filter((x) => events.some((y) => y !== x && y.team === x.team && Math.abs(y.t - x.t) <= TOGETHER)).length;
       for (const sum of [line[side], total[side]]) {
         sum.n++;
         if (r.winner === (side ?? round.winner)) sum.fatal++;
@@ -112,6 +118,7 @@ console.log(`Kinds: fatal; rails (the players' own recording); standin (${args.s
 if (routed.seconds > 0) {
   const gone = Object.values(routed.why).reduce((n, v) => n + v, 0);
   console.log(`The stand-ins with a route were on it for ${pct(routed.on, routed.seconds)} of their ${Math.round(routed.seconds)} s alive. They left it ${gone} times: ${Object.entries(routed.why).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n} (${pct(n, gone)})`).join(', ')}.`);
+  console.log(`Of the ${routed.gone} bots that left a route before its recording ended, ${routed.together} (${pct(routed.together, routed.gone)}) left within ${TOGETHER} s of a teammate that left its own.`);
 }
 for (const [kind, m] of Object.entries(measure)) if (m.alive > 0) console.log(measureLine(kind, m));
 for (const [kind, m] of Object.entries(measure)) if (m.alive > 0) console.log(feetLine(kind, m));

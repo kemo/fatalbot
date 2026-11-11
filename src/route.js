@@ -83,7 +83,8 @@ export function routeHere(c) {
   if (t !== r.progress || c.frame.round.phase === 'freeze') r.at = time;
   r.progress = t;
   const here = route(t);
-  if (!here) leaveRoute(c, 'route-end');
+  // Before the round is live a recording can have no place for its player yet: that is no end of the route.
+  if (!here && c.frame.round.phase !== 'freeze') leaveRoute(c, 'route-end');
   return here;
 }
 

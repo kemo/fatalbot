@@ -11,6 +11,8 @@ const SMOKE_RADIUS = 115;
 const NO_CLOCK = 9999;
 const TEAM = { 1: 'T', 2: 'CT' };
 const EVENTS = new Set(['shot', 'hurt', 'kill', 'reload', 'planted', 'dropped', 'picked', 'defusing', 'defused', 'exploded']);
+// The events that tell where the bomb is: a player who comes into a round later knows the last of them.
+const BOMB_EVENTS = new Set(['planted', 'dropped', 'picked']);
 
 /**
  * Puts the doors of a level back where its file has them; call it before each `new World` of the level. The game
@@ -96,6 +98,8 @@ export function csbihHost(core, world, level, { seed = 1, lineups = [], plans = 
   const mine = new Set();
   let pending = [];
   let built = -1;
+  // True when a frame took the events of the last step.
+  let took = false;
 
   const host = {
     brain,
@@ -124,6 +128,7 @@ export function csbihHost(core, world, level, { seed = 1, lineups = [], plans = 
       for (const g of world.grenades) if (g.kind === 'smoke' && g.burst !== null && !g.done) smokes.push({ origin: g.cloud ?? g.pos, radius: SMOKE_RADIUS });
       const events = pending;
       pending = [];
+      took = true;
       const left = host.clock ? host.clock() : NO_CLOCK;
       return {
         time,
@@ -175,6 +180,16 @@ export function csbihHost(core, world, level, { seed = 1, lineups = [], plans = 
       };
     },
 
+    /**
+     * Every bot leaves the brain, and no event waits for a frame: for a new round of a replay, in which each
+     * player starts on its recording again and a bot joins when it plays.
+     */
+    release() {
+      for (const id of mine) brain.leave(id);
+      mine.clear();
+      pending = [];
+    },
+
     /** Takes the events of a step (the host wraps world.step for this; a caller that steps by itself can call it). */
     heard(events) {
       for (const e of events) {
@@ -200,11 +215,16 @@ export function csbihHost(core, world, level, { seed = 1, lineups = [], plans = 
     };
   }
 
-  // The events of each step: the world keeps them only until its caller clears them.
+  // The events of each step: the world keeps them only until its caller clears them. A frame holds the events
+  // since the frame before it, and the brain takes them as of now. So while no bot plays (a replay before its
+  // first handoff) no frame is made, and the events of a step that no frame took are gone: a bot that joins later
+  // did not hear those shots. It still learns where the bomb is.
   const step = world.step.bind(world);
   world.step = () => {
     const from = world.events.length;
+    took = false;
     step();
+    if (!took) pending = pending.filter((e) => BOMB_EVENTS.has(e.type)).slice(-1);
     host.heard(world.events.slice(from));
   };
   return host;
