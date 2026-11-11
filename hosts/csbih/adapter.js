@@ -142,10 +142,12 @@ export function csbihHost(core, world, level, { seed = 1, lineups = [], plans = 
     /**
      * The controller of the bot that plays `id`. `profile` overrides the brain's default profile. `person: true`
      * leaves out the `bot` mark, so the route bots of a demo round answer this player as they answer a member.
+     * `route(seconds)`: the route of the recorded player that the bot plays on for, on the world's clock
+     * ({x, y, z, yaw, pitch, duck, weapon, bomb}, null where it ends).
      */
-    controller(id, { profile = {}, person = false } = {}) {
+    controller(id, { profile = {}, person = false, route = null } = {}) {
       mine.add(id);
-      const bot = brain.join(id, { profile });
+      const bot = brain.join(id, { profile, route });
       return {
         bot: !person,
         fatal: true,
@@ -153,7 +155,7 @@ export function csbihHost(core, world, level, { seed = 1, lineups = [], plans = 
         // What the tools of csbih-player read from a bot's controller.
         get state() {
           const s = brain.bots.get(id).s;
-          return { lastGoal: s.lastGoal ?? null, target: s.target ? world.players.get(s.target.id) ?? null : null, seenAt: s.seenAt, firstSeen: s.firstSeen, stuckFor: s.stuckFor };
+          return { route: route ? s.routeOff ?? 'on' : null, lastGoal: s.lastGoal ?? null, target: s.target ? world.players.get(s.target.id) ?? null : null, seenAt: s.seenAt, firstSeen: s.firstSeen, stuckFor: s.stuckFor };
         },
         command(w, me) {
           if (built !== w.tick) {

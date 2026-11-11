@@ -9,11 +9,17 @@ The types are in `src/contract.js`, with `checkMap`, `checkFrame` and `checkComm
 
 ```js
 const brain = createBrain({ map, ports, seed });   // once a level
-brain.join(id, { profile });                       // a bot takes a player
+brain.join(id, { profile, route });                // a bot takes a player; `route` is optional
 // each tick:
 brain.frame(frame);                                // once, before any think
 const command = brain.think(id);                   // once for each bot
 ```
+
+`route(seconds)` is for a replay: the route of the recorded player that the bot plays on for, on the clock of the
+frames, as `{x, y, z, yaw, pitch, duck, weapon, bomb}`, and null where the recording of that player ends. It holds
+for the round of the join. The bot keeps the route until its own round leaves the recording (spec 03, section
+6.3). The csbih host takes it from the track of the demo round; a real server has none.
+
 
 - The brain copies what it keeps. A host can give the same arrays in every frame.
 - A frame holds every player, also the enemies. Only `src/senses.js` reads them (spec 01, gate G6).

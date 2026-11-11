@@ -3,7 +3,7 @@
 // Usage: node tools/demo-arena.js [--demos id,id] [--map de_dust2] [--count 4] [--rounds 10] [--sides both|T|CT|none]
 //                                 [--seed 1] [--hands demo|default] [--nades] [--plans] [--json file]
 // `--standins fatal` lets fatalbot play on for a player who left its recording, in the place of the reference bot:
-// the bots of a replay of csbih-player.
+// the bots of a replay of csbih-player. `--standins fatal-route` gives each of them the route of its player too.
 // `--nades` gives fatalbot the map's grenade lineups. `--plans` gives it the plans that tools/strategies.js mined
 // for the map (they come from the same recorded matches).
 // Without --demos it takes `count` HLTV demos of `map`, the same ones for the same seed. A report names no player.
@@ -19,7 +19,7 @@ const argv = process.argv.slice(2);
 for (let i = 0; i < argv.length; i++) {
   const key = argv[i].replace(/^--/, '');
   if (key === 'help' || !(key in args)) {
-    console.log('node tools/demo-arena.js [--demos id,id] [--map de_dust2] [--count 4] [--rounds 10] [--sides both|T|CT|none] [--seed 1] [--hands demo|default] [--nades] [--plans] [--standins ref|fatal] [--json file]');
+    console.log('node tools/demo-arena.js [--demos id,id] [--map de_dust2] [--count 4] [--rounds 10] [--sides both|T|CT|none] [--seed 1] [--hands demo|default] [--nades] [--plans] [--standins ref|fatal|fatal-route] [--json file]');
     process.exit(key === 'help' ? 0 : 1);
   }
   args[key] = typeof args[key] === 'boolean' ? true : argv[++i];
@@ -46,6 +46,7 @@ const aim = {};
 const bursts = {};
 const measure = {};
 const why = {};
+const routed = { seconds: 0, on: 0, why: {} };
 const report = [];
 let used = 0;
 for (const id of wanted) {
@@ -78,6 +79,9 @@ for (const id of wanted) {
       row.rounds.push({ number: r.number, side, winner: r.winner, reason: r.reason, seconds: r.seconds, planted: r.planted, demo: r.demo, derails: r.derails, firstDerail: r.firstDerail });
       addMeasures(measure, r.measure);
       for (const [k, n] of Object.entries(r.why)) why[k] = (why[k] ?? 0) + n;
+      routed.seconds += r.routed.seconds;
+      routed.on += r.routed.on;
+      for (const [k, n] of Object.entries(r.routed.why)) routed.why[k] = (routed.why[k] ?? 0) + n;
       for (const sum of [line[side], total[side]]) {
         sum.n++;
         if (r.winner === (side ?? round.winner)) sum.fatal++;
@@ -104,10 +108,14 @@ for (const side of sides) {
 // How a player left the recording: 'hit' is a player that fatalbot hit before it saw or heard fatalbot.
 const left = Object.values(why).reduce((n, v) => n + v, 0);
 console.log(`The players left their recording ${left} times: ${Object.entries(why).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n} (${pct(n, left)})`).join(', ')}.`);
-console.log(`Kinds: fatal; rails (the players' own recording); standin (${args.standins === 'fatal' ? 'fatalbot' : 'the reference bot'} that plays on for a player).`);
+console.log(`Kinds: fatal; rails (the players' own recording); standin (${args.standins === 'ref' ? 'the reference bot' : args.standins === 'fatal-route' ? 'fatalbot with the route of its player' : 'fatalbot'} that plays on for a player).`);
+if (routed.seconds > 0) {
+  const gone = Object.values(routed.why).reduce((n, v) => n + v, 0);
+  console.log(`The stand-ins with a route were on it for ${pct(routed.on, routed.seconds)} of their ${Math.round(routed.seconds)} s alive. They left it ${gone} times: ${Object.entries(routed.why).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${k} ${n} (${pct(n, gone)})`).join(', ')}.`);
+}
 for (const [kind, m] of Object.entries(measure)) if (m.alive > 0) console.log(measureLine(kind, m));
 for (const [kind, m] of Object.entries(measure)) if (m.alive > 0) console.log(feetLine(kind, m));
 for (const [kind, list] of Object.entries(aim)) console.log(aimLine(kind, list));
 for (const [kind, list] of Object.entries(aim)) console.log(turnLines(kind, list));
 for (const [kind, list] of Object.entries(bursts)) for (const group of ['rifle', 'pistol', 'sniper']) console.log(burstLines(kind, list, group));
-if (args.json) writeFileSync(args.json, JSON.stringify({ args, total, measure, why, report }, null, 1));
+if (args.json) writeFileSync(args.json, JSON.stringify({ args, total, measure, why, routed, report }, null, 1));

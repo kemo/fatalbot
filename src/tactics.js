@@ -11,6 +11,7 @@ import { placeAt, placesOf } from './places.js';
 import { pointKey } from './walk.js';
 import { choosePost, inBombSite, postSpots, siteMid, stageSpots, touches } from './sites.js';
 import { lineupGoal } from './grenades.js';
+import { routeGaveUp, routeGoal, routeHere } from './route.js';
 
 // A defuser stops this near the bomb, from its body: the game takes the use key 64 from the player.
 const DEFUSE_NEAR = 56;
@@ -107,9 +108,16 @@ export function decide(c) {
   const { map } = brain;
   const bomb = bombFor(c);
   c.post = null;
-  if (bomb?.state === 'planted') return me.team === 'CT' ? retake(c, bomb) : afterPlant(c, bomb);
+  // A bot that plays on for a recorded player keeps that player's route while its own round is the recording's
+  // (route.js). The bomb comes first, as for every bot.
+  const route = routeGoal(c, bomb);
+  if (bomb?.state === 'planted') return route ?? (me.team === 'CT' ? retake(c, bomb) : afterPlant(c, bomb));
   // The Ts' plan may hold them at their places until its second: the carrier waits with the team.
-  const stage = me.team === 'T' ? stageGoal(c) : null;
+  const stage = me.team === 'T' && !route ? stageGoal(c) : null;
+  if (route && bomb?.state === 'carried' && bomb.mine) {
+    // The player planted where its route holds the C4 in a site.
+    return routeHere(c)?.weapon === 'c4' && inBombSite(map, me.origin) ? { kind: 'plant' } : route;
+  }
   if (bomb?.state === 'carried' && bomb.mine) {
     // The carrier plants in the site of the team's plan; in another site only when the plan has none.
     const site = team.plan?.site ?? null;
@@ -123,6 +131,7 @@ export function decide(c) {
     return { kind: 'goto', task: 'carry', point: at ?? nearestSite(map, me.origin) };
   }
   if (bomb?.state === 'dropped' && me.team === 'T' && nearestMate(c.mates, bomb.point) === me) return { kind: 'goto', task: 'fetch', point: over(bomb.point) };
+  if (route) return route;
   c.post = postOf(c);
   // A grenade of the map that is due about now and near: there, and the throw.
   const lineup = lineupGoal(c);
@@ -564,6 +573,7 @@ function seek(c) {
 /** What a give-up forgets: every choice that would bring the same goal back. */
 export function forgetGoal(c, goal = null) {
   const { s, team, bot, me } = c;
+  if (goal?.task === 'route') routeGaveUp(c);
   // A place of the formation that the bot did not get to: it takes the place of the nearest teammate elsewhere.
   const spots = team.plan?.spots;
   const spot = goal?.task === 'stage' ? spots?.get(bot.id) : null;

@@ -17,6 +17,7 @@ import { decide, forgetGoal } from './tactics.js';
 import { buyList } from './buy.js';
 import { flashToAvoid, lineupThrow } from './grenades.js';
 import { planRound, updatePlan } from './plan.js';
+import { steerRoute } from './route.js';
 import { stagePlaces } from './sites.js';
 import { idleCommand } from './contract.js';
 import { WEAPONS, bestGun, isGrenade, isMelee, isPistol } from './weapons.js';
@@ -99,10 +100,13 @@ export function createBrain({ map, ports, seed = 1 }) {
     reloads: new Map(),
     spawnMid: { T: midOf(map.spawns, 'T'), CT: midOf(map.spawns, 'CT') },
 
-    /** A bot takes the player `id`. `profile` overrides DEFAULT_PROFILE. */
-    join(id, { profile = {} } = {}) {
+    /**
+     * A bot takes the player `id`. `profile` overrides DEFAULT_PROFILE. `route(seconds)` is the route of a recorded
+     * player that the bot plays on for, on the clock of the frames, for the round of the join (route.js).
+     */
+    join(id, { profile = {}, route = null } = {}) {
       const index = brain.joined++;
-      const bot = { id, index, side: null, skill: { ...DEFAULT_PROFILE, ...profile }, random: seeded(seed).fork(index + 1), s: newState(), c: null };
+      const bot = { id, index, side: null, skill: { ...DEFAULT_PROFILE, ...profile }, random: seeded(seed).fork(index + 1), s: newState(), c: null, route, routeRound: null };
       bot.c = { brain, bot, skill: bot.skill, random: bot.random, every: (seconds) => (brain.tick + index) % Math.max(1, Math.round(seconds / brain.now.dt)) === 0 };
       brain.bots.set(id, bot);
       return bot;
@@ -163,10 +167,13 @@ export function createBrain({ map, ports, seed = 1 }) {
       return command(c);
     },
 
-    /** What a bot is doing, for a tool or a log: {goal, point, target, stuckFor, path (its floors), escape}. */
+    /**
+     * What a bot is doing, for a tool or a log: {goal, point, target, stuckFor, path (its floors), escape, route
+     * (null with none, 'on', or why the bot left it)}.
+     */
     debug(id) {
       const s = brain.bots.get(id)?.s;
-      return s ? { goal: s.lastGoal ?? null, point: s.lastPoint ?? null, target: s.target?.id ?? null, stuckFor: s.stuckFor ?? 0, path: s.path ? s.path.map((n) => n.point) : null, escape: s.escape ?? null } : null;
+      return s ? { route: brain.bots.get(id).route ? s.routeOff ?? 'on' : null, goal: s.lastGoal ?? null, point: s.lastPoint ?? null, target: s.target?.id ?? null, stuckFor: s.stuckFor ?? 0, path: s.path ? s.path.map((n) => n.point) : null, escape: s.escape ?? null } : null;
     },
   };
   // The places are cut once a map, not in a tick of a round. So are the posts of each site with their timing and
@@ -218,8 +225,9 @@ function command(c) {
     heard = goal.kind === 'plant' || (goal.kind === 'defuse' && goal.near) ? null : noiseAim(c);
     if (heard) lookAt(c, cmd, heard.yaw, heard.pitch);
     else if (goal.look) {
-      // The view of a defuser stays on the bomb at its feet; any other view that ends in a wall is replaced.
-      const rest = goal.rest || (goal.kind !== 'defuse' && !viewOpen(c, eyeOf(me), goal.look.yaw, goal.look.pitch));
+      // The view of a defuser stays on the bomb at its feet, and the view of a route is the player's own; any
+      // other view that ends in a wall is replaced.
+      const rest = goal.rest || (goal.kind !== 'defuse' && goal.kind !== 'route' && !viewOpen(c, eyeOf(me), goal.look.yaw, goal.look.pitch));
       const view = rest ? restLook(c, goal.look) : goal.look;
       lookAt(c, cmd, view.yaw, view.pitch);
     } else if (!goal.point && goal.kind === 'hold') {
@@ -236,13 +244,18 @@ function command(c) {
     walkTo(c, cmd, goal.point, !fighting && !goal.look && !heard);
     if (goal.walk && !fighting) cmd.walk = true;
   }
+  // On the route of its player: that player's steps, and the gun that it held (no C4 before the site).
+  if (!feet && goal.kind === 'route') {
+    steerRoute(c, cmd);
+    if (!fighting && goal.weapon && goal.weapon !== 'c4' && goal.weapon !== me.weapon && own.weapons[goal.weapon]) cmd.weapon = goal.weapon;
+  }
   if (goal.duck) cmd.duck = true;
   // A player that waits at a place jumps now and then (moves.js idleJump).
   if (!fighting && !feet && goal.kind === 'hold' && idleJump(c, cmd)) cmd.jump = true;
   // Danger near (an enemy heard or seen, a hit taken): no knife in the hand.
   const alert = time - (s.alertAt ?? -Infinity) < ALERT_SECONDS || (own.hurt !== null && time - own.hurt.at < ALERT_SECONDS);
   const knives = frame.round.knives;
-  if (!fighting && !knives && goal.kind !== 'plant' && isMelee(cmd.weapon ?? me.weapon) && bestGun(own) !== 'knife' && (alert || !(s.knifeOut && goal.point))) cmd.weapon = bestGun(own);
+  if (!fighting && !knives && goal.kind !== 'plant' && isMelee(cmd.weapon ?? me.weapon) && bestGun(own) !== 'knife' && (alert || !((s.knifeOut && goal.point) || goal.kind === 'route'))) cmd.weapon = bestGun(own);
   // A quiet moment: a clip under half is filled again, as players did between fights.
   const gun = own.weapons[me.weapon];
   const full = WEAPONS[me.weapon]?.clip ?? 0;

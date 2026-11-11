@@ -33,8 +33,14 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
   const story = core.demoMatch.demoStory(scenario);
   const routeBots = new Map();
   // The bot that plays on for a player who left its recording: the reference bot with that player's route, as the
-  // replay page of csbih-player has it, or fatalbot with that player's hand (`standins: 'fatal'`).
-  const handoff = (me) => (standins === 'fatal' ? host.controller(me.id, { profile: hands === 'demo' && profiles[me.id]?.profile ? motorOf(profiles[me.id].profile) : {}, person: true }) : routeBots.get(me.id)(world.time));
+  // replay page of csbih-player has it, or fatalbot with that player's hand (`standins: 'fatal'`), and with that
+  // player's route too (`'fatal-route'`).
+  const routes = new Map();
+  const handoff = (me) => {
+    if (standins === 'ref') return routeBots.get(me.id)(world.time);
+    const profile = hands === 'demo' && profiles[me.id]?.profile ? motorOf(profiles[me.id].profile) : {};
+    return host.controller(me.id, { profile, person: true, route: standins === 'fatal-route' ? routes.get(me.id) : null });
+  };
   const rails = new Rails(world, { timeline, scenario, handoff });
   world.rails = rails;
   const kind = new Map();
@@ -53,6 +59,7 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
       const at = track(s);
       return at && !at.dead ? at : null;
     };
+    routes.set(p.id, route);
     const make = (start) => core.bot.botController({ route, start, profile: own?.profile, spots: own?.spots ?? [], throws: scenario.throws(p.id), views: mapData.views ?? null, lineups: mapData.lineups ?? [], story });
     routeBots.set(p.id, make);
     const bot = make(0);
@@ -74,6 +81,9 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
   const timed = new Set([...world.players.values()].map((p) => p.controller));
   let result = null;
   let planted = false;
+  // The stand-ins of fatalbot with a route: their seconds alive, the seconds of those on their route, and why each left it.
+  const routed = { seconds: 0, on: 0, why: {} };
+  const left = new Set();
   const limit = (round.seconds + PAST_CLOCK) / world.tickSeconds;
   for (let i = 0; i < limit && !result; i++) {
     const from = world.events.length;
@@ -91,6 +101,16 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
       }
     }
     g.sample(true);
+    for (const p of world.players.values()) {
+      const state = p.alive && p.controller?.fatal ? p.controller.state.route : null;
+      if (!state) continue;
+      routed.seconds += world.tickSeconds;
+      if (state === 'on') routed.on += world.tickSeconds;
+      else if (!left.has(p.id)) {
+        left.add(p.id);
+        routed.why[state] = (routed.why[state] ?? 0) + 1;
+      }
+    }
     result = core.round.roundResult(world, round.seconds);
   }
   const alive = (team) => [...world.players.values()].filter((p) => p.team === team && p.alive).length;
@@ -108,7 +128,7 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
   return {
     number: round.number, side, winner: result?.winner ?? null, reason: result?.reason ?? 'no end', seconds: ended.seconds, planted,
     demo: { winner: round.winner, reason: round.reason, seconds: round.end - round.t0 },
-    alive: { T: ended.T, CT: ended.CT }, derails: rails.derails.length, firstDerail: rails.derails[0]?.t ?? null, why: whyOf(rails.derails), measure: g.measure, aim: g.engagements(), bursts: g.bursts(),
+    alive: { T: ended.T, CT: ended.CT }, derails: rails.derails.length, firstDerail: rails.derails[0]?.t ?? null, why: whyOf(rails.derails), routed, measure: g.measure, aim: g.engagements(), bursts: g.bursts(),
   };
 }
 
