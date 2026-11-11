@@ -21,7 +21,9 @@ team, docs/measures/2026-11-11-economy.md).
 - **Gate G3 is not held on the wall share**: 0.48% against the reference bots' 0.39%. Before the change it was
   0.43% against 0.41%. Two fixes for it made it worse and went back (section 3).
 - A bot that plays on for a recorded player can now keep that player's route (section 4), and csbih-player has a
-  switch for fatalbot as a patch (section 5).
+  switch for fatalbot as a patch (section 5). A review of the patch found two faults before it went anywhere: old
+  events piled up in the adapter while no bot played, and the static build of csbih-player failed without the
+  copy of fatalbot. Both are fixed and have a test.
 
 ## 1. The measure: the bots stood
 
@@ -106,36 +108,46 @@ For a replay of csbih-player (the owner's order of 2026-11-11: fatalbot in the p
 retained paths from original players", and "each bot individually should exit route, not all because of a single
 event").
 
-`fab151a`, `009f079`: `brain.join` takes an optional `route(seconds)`. On it the bot walks at the player's pace,
-with the player's view and gun; off it by 300 units, or with no progress for 1 s, it walks back by the graph. A
-bot leaves its route for the rest of the round only by what it meets itself: it reacted to an enemy in its sight,
-it was hit, it heard an enemy within 900 units, the recording of its player ended, or the bomb is not the
-route's. The reference bot leaves its route when the count of the living differs from the recording by three, so
-every bot at once; fatalbot has no such rule.
+`fab151a`, `009f079`, `f76c639`: `brain.join` takes an optional `route(seconds)`. On it the bot walks at the
+player's pace, with the player's view and gun; off it by 300 units, or with no progress for 1 s, it walks back by
+the graph. A bot leaves its route for the rest of the round only by what it meets itself: it reacted to an enemy
+in its sight, it was hit, it heard an enemy within the hearing distance of its profile (350 units), the recording
+of its player ended, or the bomb is not the route's. The reference bot leaves its route when the count of the
+living differs from the recording by three, so every bot at once; fatalbot has no such rule.
 
 ```sh
 node tools/demo-arena.js --map <map> --count 6 --rounds 10 --seed 1 --standins fatal         # no route
 node tools/demo-arena.js --map <map> --count 6 --rounds 10 --seed 1 --standins fatal-route   # with the route
 ```
 
-Four maps, seeds 1 and 2 (948 rounds). The rule, written before the run: the route following stays as the
+Four maps, seeds 1 and 2 (948 rounds). The rule, written before the first run: the route following stays as the
 stand-in of a replay when the stand-ins with a route are stuck, and face a wall, no more than 1.5 times as often
 as without one, and fewer than 5% of them leave the route as lost. The owner asked for the route: the measure says
 what it costs.
 
-| Measure | No route | The route, a wait of 2 s | The route, a wait of 1 s (kept) |
-|---------|------|------|------|
-| The stand-ins are stuck | 0.91% | 1.63% | 1.22% |
-| The stand-ins face a wall | 0.68% | 1.25% | 1.06% |
-| The time alive on the route | | 21% | 20% |
-| Left the route: heard an enemy, the recording ended, a fight, the bomb, a hit, lost | | 50%, 23%, 12%, 11%, 2%, 1% | 50%, 23%, 13%, 11%, 2%, 1% |
-| The side of the stand-ins wins, of 948 rounds | 415 | 423 | 430 |
+| Measure | No route | A wait of 2 s, heard within 900 units | A wait of 1 s, heard within 900 | A wait of 1 s, heard within 350 (kept) |
+|---------|------|------|------|------|
+| The stand-ins are stuck | 0.91% | 1.63% | 1.22% | 1.61% |
+| The stand-ins face a wall | 0.68% | 1.25% | 1.06% | 1.55% |
+| The time alive on the route | | 21% | 20% | 31% |
+| Left the route: heard an enemy | | 50% | 50% | 13% |
+| Left: a fight, a hit | | 12%, 2% | 13%, 2% | 32%, 7% |
+| Left: the recording ended, the bomb, lost | | 23%, 11%, 1% | 23%, 11%, 1% | 31%, 14%, 3% |
+| Of the bots that left before their recording ended: within 1 s of a teammate that left its own | | not counted | 52% | 44% |
+| The side of the stand-ins wins, of 948 rounds | 415 | 423 | 430 | 426 |
 
-- Stuck holds the rule (1.34 times). **The wall share does not** (1.56 times). On a route the view is the
-  player's own, and the recorded players themselves face a wall 0.4 to 0.8% of the time; this is a guess at the
-  cause, not a measure.
-- Half of the bots leave their route because they hear an enemy. This is each bot's own event, as the owner
-  asked.
+- **With a reach of 900 units one shot took every bot about it off its route**: half of the leaves were "heard",
+  and 52% of the bots left within 1 s of a teammate. That is what the owner's rule is against. With the hearing
+  distance of the profile the bots keep their route for 31% of their time alive, and "heard" is 13% of the leaves.
+- **44% still leave within 1 s of a teammate.** No rule makes them: teammates that walk together, as their
+  players did, see the same enemy at the same moment. What this share is for the recorded players themselves is
+  not measured.
+- **The rule of this record does not hold for the kept build**: the stand-ins are stuck 1.8 times as often as
+  without a route and face a wall 2.3 times as often. The more of its time a bot is on a route, the higher both
+  are. On a route the view is the player's own, and the bot presses its keys for each small step of the player:
+  the gauge may count a player's shuffle in one place as stuck. This is a guess, not a measure. The measure that
+  would tell is how far a bot falls behind its route.
+- The side of the stand-ins wins as often with a route as without one (426, 430 and 415 of 948 rounds).
 - Not built: the grenades of the player at their seconds.
 
 ## 5. The switch for csbih-player (a patch, not applied)
@@ -144,27 +156,56 @@ csbih-player is read-only from this repository. The switch is a patch in `out/cs
 (git-ignored), made and tried in a copy of csbih-player made of links.
 
 - `src/shared/game/fatal.js` (new): the host of fatalbot for a world, loaded only when it is asked for.
-- `demo-match.js`: with a host, fatalbot plays the bots of a replay, each with the hand and the route of its
-  player. A recorded player joins the brain when it leaves its recording.
-- `match.js botRound`: with a host on the world, fatalbot plays and buys for the bots of a match.
-- `web/play.js`: `?bot=fatal` on the play page. Without it, and in a build without the copy, the bots of `bot.js`
-  play as before.
+- `src/shared/fatalbot/hosts/csbih/adapter.js` (new): a stand-in in the adapter's place, so that every build has
+  a file there. It says how to get the copy.
 - `tools/vendor-fatalbot.js` (new): copies the brain and the adapter of one commit of fatalbot into
-  `src/shared/fatalbot/`.
-- `test/game-fatal.test.js` (new): four tests; they skip without the copy.
+  `src/shared/fatalbot/`, over the stand-in.
+- `demo-match.js`: with a host, fatalbot plays the bots of a replay, each with the hand and the route of its
+  player. A recorded player joins the brain when it leaves its recording, and every bot leaves the brain at a
+  round's start.
+- `match.js botRound`: with a host on the world, fatalbot plays and buys for the bots of a match.
+- `web/play.js`: `?bot=fatal` on the play page. Without it, and in a build with the stand-in alone, the bots of
+  `bot.js` play as before. The page says which bots play (`data-bots` on the document, and "fatalbot" in the map
+  label).
+- `test/game-fatal.test.js` (new): six tests; four of them skip without the copy.
+
+Two faults that a review found before the patch went anywhere, both now fixed and under a test:
+
+1. **Old events as of now** (in this repository, `b41141b`). The adapter made a frame only when a bot of the
+   brain was asked for a command, and a frame holds the events since the frame before it. In a replay no bot
+   plays until the first recorded player leaves its recording, so the first frame held every shot and kill since
+   the round's start, and the brain takes the events of a frame as of now. The arena did not show it: one side of
+   it always plays. Now the events of a step that no frame took are gone, but for the last one that tells where
+   the bomb is. The test fails on the adapter as it was (300 old shots in the first frame).
+2. **A build that fails without the copy** (in the patch). The static build of csbih-player throws when a module
+   imports a file that is absent. With the first form of the patch and no copy of fatalbot the build failed:
+   "/shared/game/fatal.js imports ../fatalbot/hosts/csbih/adapter.js, which is not a static file". The stand-in
+   is the fix.
 
 What was checked, in the copy of links:
 
-- `git apply --check` passes against csbih-player at `fe89385`.
-- The four new tests pass. Of the 633 tests of the copy, 631 pass and one skips. The one that fails is a test of
-  Warcraft III maps, which uses none of the patched files; the cause in the copy was not looked for. In
-  csbih-player itself all 629 tests pass without the patch. The patched tests were not run in csbih-player
-  itself.
-- The play page opens with `?bot=fatal` (de_dust2, nine bots): the 21 files of the copy load and the console has
-  no message. Without the option none of the copy loads.
+- `git apply --check` passes against csbih-player at `fe89385`, and csbih-player is unchanged.
+- The six new tests: with the copy five pass and one skips; with the stand-in alone two pass and four skip. One
+  of them plays two rounds on one host: the second round starts on the recordings again, with no bot of the
+  first round left in the brain.
+- Of the 635 tests of the copy, 632 pass and two skip. The one that fails is a test of Warcraft III maps, which
+  uses none of the patched files; the cause in the copy was not looked for. In csbih-player itself all 629 tests
+  pass without the patch. The patched tests were not run in csbih-player itself.
+- The static build, for the code alone (`build()` of `tools/build-static.js` with the files of `web/` and
+  `src/shared/` of the copy, into a scratch folder): it fails with the first form of the patch, passes with the
+  stand-in (103 files), and passes with the copy (123 files, 22 of them fatalbot's). In the built `fatal.js` the
+  import names the hashed adapter. The build throws on an import cycle: the brain has none.
+- The play page of the copy opens with `?bot=fatal` (de_dust2, nine bots): the 21 files of the copy load and the
+  console has no message. Without the option none of the copy loads.
 
-What was not checked: that the bots of the page move by fatalbot (the page gives no handle on its world; the test
-of `botRound` covers the wiring), a replay on the page (`/igraj?demo=`), and a static build.
+What was not checked:
+
+- That the bots of the page move by fatalbot. This was checked before the page had its label; the test of
+  `botRound` covers the wiring.
+- A replay on the page (`/igraj?demo=`).
+- A full static build with the levels, the models and the timelines, and a page served from one. The checkout of
+  csbih-player has a static build, so its own `/igraj` answers 403 without a pass of gamerz.ba; the copy had no
+  static build and opened without one.
 
 One thing seen on the page and not from this patch: dark pointed shapes fill the right of the first view on
 de_dust2, with the option and without it.
