@@ -13,6 +13,9 @@ const LATER = 10;
 // Where the CTs stand is read at this second: a CT further than OUT from the middle of every site is out of the sites.
 const OUT_AT = 16;
 const OUT = 800;
+// A side is ahead with this many more players alive; the state is read from this second on, before a plant.
+const AHEAD = 2;
+const AHEAD_FROM = 20;
 
 const near = (p, site) => Math.hypot(p[0] - site.mid[0], p[1] - site.mid[1]) < SITE_NEAR && Math.abs(p[2] - site.mid[2]) < SITE_HIGH;
 const share = (n, of) => (of ? n / of : NaN);
@@ -20,7 +23,9 @@ const share = (n, of) => (of ? n / of : NaN);
 /**
  * The shape of one round: {winner, seconds, buy, first: {side, t} (the first death; 'both' when two sides lost a
  * player in one step), plant: {t, T, CT (alive)}, site, te, entry and later: {T, CT (alive), tAtSite, ctAtSite},
- * ctOut (the share of the living CTs out of the sites at second OUT_AT; null for a round that ends before it)}.
+ * ctOut (the share of the living CTs out of the sites at second OUT_AT; null for a round that ends before it),
+ * ahead ('CT', 'T' or null: the side that was first AHEAD players ahead from second AHEAD_FROM on, before a plant,
+ * with both sides alive)}.
  * `zones` are the sites of the level (strategies.js zonesOf).
  */
 export function shapeOf(zones, round) {
@@ -42,8 +47,15 @@ export function shapeOf(zones, round) {
   const seen = site !== null && te !== null;
   const cts = OUT_AT / STEP < steps ? round.CT.map((l) => l[OUT_AT / STEP]).filter(Boolean) : [];
   const ctOut = cts.length ? share(cts.filter((p) => zones.sites.every((s) => Math.hypot(p[0] - s.mid[0], p[1] - s.mid[1]) > OUT)).length, cts.length) : null;
+  let ahead = null;
+  const until = round.plant ? Math.min(steps, Math.floor(round.plant.t / STEP)) : steps;
+  for (let i = AHEAD_FROM / STEP; i < until && !ahead; i++) {
+    const t = alive('T', i);
+    const ct = alive('CT', i);
+    if (t && ct && Math.abs(ct - t) >= AHEAD) ahead = ct > t ? 'CT' : 'T';
+  }
   return {
-    winner: round.winner, seconds: round.seconds, buy: round.buy, first, ctOut,
+    winner: round.winner, seconds: round.seconds, buy: round.buy, first, ctOut, ahead,
     plant: round.plant ? { t: round.plant.t, T: alive('T', at(round.plant.t)), CT: alive('CT', at(round.plant.t)) } : null,
     site, te, entry: seen ? count(at(te)) : null, later: seen ? count(at(te + LATER)) : null,
   };
@@ -86,6 +98,11 @@ export function shapeTable(shapes) {
     [`${LATER} s later: Ts alive`, mean(entered.map((r) => r.later.T)), ''],
     [`${LATER} s later: CTs alive`, mean(entered.map((r) => r.later.CT)), ''],
     ['A round lasts, the middle', middle(shapes.map((r) => r.seconds)), 's'],
+    ...['CT', 'T'].flatMap((side) => {
+      const group = shapes.filter((r) => r.ahead === side);
+      const name = `the ${side}s were first ${AHEAD} players ahead before a plant`;
+      return [[`Rounds in which ${name}`, share(group.length, shapes.length), '%'], [`A plant follows when ${name}`, share(group.filter((r) => r.plant).length, group.length), '%'], [`The Ts win when ${name}`, won(group), '%']];
+    }),
     [`At second ${OUT_AT}: the CTs further than ${OUT} units from every site`, mean(shapes.filter((r) => r.ctOut !== null && r.ctOut !== undefined).map((r) => r.ctOut)), '%'],
   );
   return rows;

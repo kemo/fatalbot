@@ -28,6 +28,11 @@ test('the shape of a round: the first death, the numbers at the plant, the Ts in
   assert.ok(s.entry.tAtSite >= 1 && s.later.tAtSite >= s.entry.tAtSite, 'more Ts are in the site 10 s later');
   // A T and a CT die in one step: no side died first.
   assert.equal(shapeOf(zones, round('T', null, [5], [5])).first.side, 'both');
+  // Two CTs dead at second 24 with one T dead: no side is two ahead before the plant.
+  assert.equal(s.ahead, null);
+  // Three Ts die at steps 4 to 7 (before second 20): the CTs are two ahead when the state is first read.
+  assert.equal(shapeOf(zones, round('CT', { t: 50, at: [1010, 5, 0] }, [4, 6, 7], [20])).ahead, 'CT');
+  assert.equal(shapeOf(zones, round('T', null, [], [12, 13])).ahead, 'T');
   // The Ts die on the way: no plant, no site.
   const stopped = shapeOf(zones, round('CT', null, [8, 8, 8, 8, 8]));
   assert.deepEqual([stopped.plant, stopped.site, stopped.entry], [null, null, null]);
@@ -54,6 +59,10 @@ test('the table of many shapes: shares of the wins by the first death and by the
   assert.equal(table['The Ts win a plant with the CTs ahead'], 0);
   assert.equal(table['Rounds in which no T stood in a site'], 0.25);
   assert.equal(table['At second 16: the CTs further than 800 units from every site'], 1);
+  // One round of the four has the CTs two ahead before its plant, and the CTs win it.
+  assert.equal(table['Rounds in which the CTs were first 2 players ahead before a plant'], 0.25);
+  assert.equal(table['A plant follows when the CTs were first 2 players ahead before a plant'], 1);
+  assert.equal(table['The Ts win when the CTs were first 2 players ahead before a plant'], 0);
 });
 
 test('the buys of a side: by the result of the round before, and a new half starts the count again', () => {
