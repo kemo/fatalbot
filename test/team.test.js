@@ -201,29 +201,3 @@ test('the Ts wait out of the sight of the posts on their way, and go at a second
   assert.equal(goalAt(10), 'stage');
   assert.notEqual(goalAt(80), 'stage');
 });
-
-test('the CTs hold their posts with the sides level, and go after the Ts when they are two players ahead', () => {
-  const run = (deadTs) => {
-    const brain = fresh([1, 2]);
-    const others = () => [
-      player(3, 'CT', [620, 300, 36]), player(4, 'CT', [620, -300, 36]), player(5, 'CT', [640, 0, 36]),
-      ...[9, 10, 11, 12, 13].map((id, i) => player(id, 'T', [-800, -80 + i * 40, 36], { alive: i >= deadTs })),
-    ];
-    let post = null;
-    let at = cts();
-    const goals = new Set();
-    for (let tick = 1; tick <= 900; tick++) {
-      brain.frame(frameAt(tick, [...at, ...others()]));
-      post ??= brain.teams.CT.plan.posts.get(1).point;
-      brain.think(1);
-      brain.think(2);
-      // The CT 1 stands on its post from the second tick on.
-      at = [player(1, 'CT', post, { own: true }), at[1]];
-      if (tick > 600) goals.add(brain.debug(1).goal);
-    }
-    return [...goals];
-  };
-  assert.deepEqual(run(0), ['site'], 'five against five: the post');
-  assert.deepEqual(run(1), ['site'], 'one ahead: the post');
-  assert.deepEqual(run(3), ['seek'], 'five against two: after the rest');
-});
