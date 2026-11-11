@@ -102,14 +102,15 @@ export function hop(c, cmd, path, target, run, distance, kind) {
     if (abs(turn(run - (atan2(me.velocity[1], me.velocity[0]) * 180) / PI)) > ON_WAY) return false;
     // The profile counts a player's jumps over all its time, and a bot can hop on a part of its time only. So it
     // jumps the more readily the further its count of the round lies behind the profile's.
+    // In free time nothing keeps the count: a run that can hop, hops.
     const owed = (skill.jumpRate * (c.time - (s.liveAt ?? c.time))) / 60 - (s.jumps ?? 0);
-    if (random() >= (skill.jumpRate / 60) * clamp(1 + owed * HOP_EAGER, HOP_LAZY, HOP_KEEN) * dt) return false;
+    if (!c.free && random() >= (skill.jumpRate / 60) * clamp(1 + owed * HOP_EAGER, HOP_LAZY, HOP_KEEN) * dt) return false;
     // One jump needs a free corridor; the floors by a wall will do.
     if (straightAhead(c, path, s.pathIndex, run, false) < JUMP_STRAIGHT || !corridor(c, run)) return false;
     // How many hops follow the first jump: each one by the player's habit, and only from a view that lies on the
     // way (the air strafe of a chain swings the view across it).
     let more = 0;
-    if (abs(turn(run - me.yaw)) <= ON_VIEW) while (more < 6 && random() < skill.hopChain) more++;
+    if (abs(turn(run - me.yaw)) <= ON_VIEW) while (more < 6 && (c.free || random() < skill.hopChain)) more++;
     h = s.hop = { more, swing: more > 0, dir: random() < 0.5 ? 1 : -1, rate: SWING / AIR_SECONDS, air: false, late: 0, tick: c.tick };
     cmd.jump = true;
     return false;

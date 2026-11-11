@@ -98,9 +98,10 @@ export function walkTo(c, cmd, point, facing) {
     s.knifeOut = random() < skill.knifeRun;
   }
   if (s.walkNear && left < 500) cmd.walk = true;
-  const calm = time - s.seenAt > 5 && time - (s.alertAt ?? -Infinity) > 5;
+  // With no enemy left (free time) every run is a calm one.
+  const calm = c.free || (time - s.seenAt > 5 && time - (s.alertAt ?? -Infinity) > 5);
   if (facing && calm && s.knifeOut && left > 1200 && own.weapons.knife && cmd.weapon === undefined) cmd.weapon = 'knife';
-  else if (facing && me.weapon === 'knife' && (left < 800 || !calm)) cmd.weapon = bestGun(own);
+  else if (facing && !c.free && me.weapon === 'knife' && (left < 800 || !calm)) cmd.weapon = bestGun(own);
   // On a ladder the way holds: its floors lie far below and above, and a new search would pick a wrong one.
   if (nav && !me.onLadder && (s.pathKey !== key || time - s.pathAt > 4 || (s.stuckSince !== null && time - s.stuckSince > 1))) findWay(c, point, key);
   // Off the island: the way is found again at once.

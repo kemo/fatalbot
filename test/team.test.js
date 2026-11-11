@@ -239,3 +239,50 @@ test('the floors about a waiting place of the Ts are as hidden as the place', ()
   assert.ok(all >= 2, 'some floors');
   assert.deepEqual(stageSpots(brain, 0, [0, 0, 36]), [], 'a place that is none of the level has none');
 });
+
+test('with no enemy left and a teammate at the bomb, a CT has free time: it runs about with the knife out', () => {
+  const bombAt = [500, 400, 36];
+  /** Runs 4 s; from second 1 on the T is dead and the bomb is down, with `defuser` at it. Returns the last command and goal of CT 1. */
+  const play = (defuser, { tDies = true } = {}) => {
+    const brain = fresh([1, 2]);
+    let cmd = null;
+    for (let tick = 1; tick <= 400; tick++) {
+      const late = tick > 100;
+      const players = [
+        player(1, 'CT', [600, 100, 36], { own: true, yaw: 180 }), player(2, 'CT', [520, 400, 36], { own: true }),
+        // The T stands behind the CTs' backs, far off, and then dies.
+        player(9, 'T', [850, -800, 36], { alive: !(late && tDies) }),
+      ];
+      const bomb = late ? { state: 'planted', carrier: null, origin: bombAt, explodeAt: 40, defuser, arming: null } : null;
+      brain.frame(frameAt(tick, players, { bomb, events: tick === 101 ? [{ type: 'planted', at: bombAt }] : [] }));
+      cmd = brain.think(1);
+      brain.think(2);
+    }
+    return { cmd, goal: brain.debug(1).goal, point: brain.debug(1).point };
+  };
+  const free = play(2);
+  assert.equal(free.goal, 'free');
+  assert.ok(free.point && flat(free.point, [600, 100, 36]) >= 250, 'a floor to run to');
+  assert.ok(Math.hypot(free.cmd.forward, free.cmd.side) > 0.9, 'it runs');
+  assert.equal(free.cmd.weapon, 'knife');
+  // With the T alive the CT has no free time.
+  assert.notEqual(play(2, { tDies: false }).goal, 'free');
+  // The CT at the bomb goes on with it.
+  assert.notEqual(play(1).goal, 'free');
+});
+
+test('a round that is over is free time, and a round with no enemy from its start is not', () => {
+  const brain = fresh([1, 2]);
+  const at = (tick, phase) => brain.frame(frameAt(tick, [...cts(), player(9, 'T', [850, -800, 36])], { phase }));
+  for (let tick = 1; tick <= 50; tick++) { at(tick, 'live'); brain.think(1); }
+  assert.notEqual(brain.debug(1).goal, 'free');
+  for (let tick = 51; tick <= 100; tick++) { at(tick, 'over'); brain.think(1); }
+  assert.equal(brain.debug(1).goal, 'free');
+  // No enemy was ever alive (a level with nobody on the other side): the CT holds its post.
+  const alone = fresh([1, 2]);
+  for (let tick = 1; tick <= 50; tick++) {
+    alone.frame(frameAt(tick, [...cts(), player(9, 'T', [-800, 0, 36], { alive: false })]));
+    alone.think(1);
+  }
+  assert.equal(alone.debug(1).goal, 'site');
+});

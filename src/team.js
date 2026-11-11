@@ -39,6 +39,8 @@ export class Team {
     this.way = new Map();
     // The call of the round's buy: 'buy', 'force' or 'save' (buy.js teamCall).
     this.buyCall = null;
+    // True once an enemy was alive in this round: with none alive after that, the round is the team's.
+    this.enemiesLived = false;
   }
 
   /** A player of the team sees an enemy. */

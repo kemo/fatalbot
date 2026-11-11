@@ -80,6 +80,10 @@ const STAND_SPREAD = 1.1;
 const STAND_ENDS = [0.5, 30];
 // With an enemy seen or heard this fresh a player keeps its floor.
 const SHIFT_CALM = 4;
+// Free time: a run to a floor this far off (units), for this long at most (s).
+const FREE_REACH = [250, 800];
+const FREE_SECONDS = [2, 6];
+const FREE_TRIES = 8;
 
 const over = (p) => [p[0], p[1], p[2] + 36];
 const eyeAt = (p) => [p[0], p[1], p[2] + EYE];
@@ -102,12 +106,44 @@ function quietToPlant(c) {
   return !team.enemiesSeen(time, PLANT_QUIET).some((g) => flat(g.point, me.origin) < PLANT_RANGE);
 }
 
+/**
+ * Free time: the round is the team's (no enemy is left alive, or its clock ran out) and nothing waits for this
+ * player. It runs about, with the knife out and in hops (brain.js, moves.js hop), as players do: the recorded CTs
+ * that are left after the last T died stand in 31% of the steps of 2 s (about the one at the bomb) and run in 36%.
+ */
+function freeGoal(c) {
+  const { me, s, time, random, brain } = c;
+  const { nav } = brain;
+  const o = me.origin;
+  if (!s.free || time >= s.free.until || (s.free.point && flat(s.free.point, o) < 48)) {
+    const near = [];
+    for (let i = 0; i < nav.count; i++) {
+      const d = hypot(nav.xyz[i * 3] - o[0], nav.xyz[i * 3 + 1] - o[1]);
+      if (d >= FREE_REACH[0] && d <= FREE_REACH[1] && abs(nav.xyz[i * 3 + 2] - o[2]) < 100) near.push(i);
+    }
+    let point = null;
+    for (let t = 0; t < FREE_TRIES && near.length && !point; t++) {
+      const p = nodePoint(nav, near.splice(Math.floor(random() * near.length), 1)[0]);
+      if (reaches(nav, o, p)) point = p;
+    }
+    s.free = { point, until: time + random(FREE_SECONDS[0], FREE_SECONDS[1]) };
+  }
+  return s.free.point ? { kind: 'goto', task: 'free', point: s.free.point } : { kind: 'hold', task: 'free', point: null };
+}
+
+/** True when the round is decided for the bot's team and the bomb asks for nothing: no enemy is left alive, or the clock ran out. */
+function roundDone(c, bomb) {
+  if (bomb?.state === 'planted') return false;
+  return (c.team.enemiesLived && !c.enemyCount) || c.frame.round.phase === 'over';
+}
+
 /** What the bot does now. */
 export function decide(c) {
   const { me, team, brain } = c;
   const { map } = brain;
   const bomb = bombFor(c);
   c.post = null;
+  if (roundDone(c, bomb)) return freeGoal(c);
   // A bot that plays on for a recorded player keeps that player's route while its own round is the recording's
   // (route.js). The bomb comes first, as for every bot.
   const route = routeGoal(c, bomb);
@@ -274,6 +310,9 @@ function retake(c, bomb) {
   const { me, own, time, brain } = c;
   const o = me.origin;
   const left = (bomb.explodeAt ?? Infinity) - time;
+  // With no T left alive and a teammate at the bomb, the others have nobody to guard it from: their time is free.
+  const alone = c.team.enemiesLived && !c.enemyCount;
+  if (alone && bomb.defuser !== null && bomb.defuser !== me.id) return freeGoal(c);
   if (!bomb.point) {
     // Not seen yet: to the site that the team knows, else the nearest one that nobody found empty.
     const open = brain.map.bombSites.map((site, k) => ({ k, mid: siteMid(site) })).filter(({ k }) => !c.team.noBomb.has(k));
@@ -286,6 +325,8 @@ function retake(c, bomb) {
   const mine = bomb.defuser === me.id;
   const need = (own.kit ? DEFUSE_KIT : DEFUSE_BARE) + (mine ? -Infinity : (toBomb * PATH_STRETCH) / RUN_SPEED);
   if (!mine && left < need) return { kind: 'goto', task: 'escape', point: fleeSpot(c, bomb) };
+  // Nobody is at the bomb yet: the CT nearest to it goes, and the others are free.
+  if (alone && !mine && nearestMate(c.mates, bomb.point) !== me) return freeGoal(c);
   if (bomb.defuser !== null && !mine && toBomb < GUARD * 2) {
     const at = guardSpot(c, bomb.point);
     return { kind: 'hold', task: 'guard', point: at, look: flat(at, o) < 32 ? { yaw: me.yaw, pitch: 0 } : null, rest: true };
@@ -304,6 +345,8 @@ function afterPlant(c, bomb) {
   if (bomb.defuseHeard) return { kind: 'goto', task: 'stop-defuse', point: over(bomb.point) };
   // Once on the run from this bomb, a T stays on it: out of the range it took a post again and walked back in.
   if (left < T_LEAVES && (toBomb < T_LEAVES_RANGE || s.flee?.key === pointKey(bomb.point))) return { kind: 'goto', task: 'escape', point: fleeSpot(c, bomb) };
+  // No CT is left to defuse it: the round is the Ts'.
+  if (c.team.enemiesLived && !c.enemyCount) return freeGoal(c);
   const post = postPlant(c, bomb);
   const there = flat(post.spot, o) < 32;
   return { kind: 'hold', task: 'post', point: post.spot, look: there ? post.look : null, rest: there };

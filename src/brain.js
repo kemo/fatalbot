@@ -140,8 +140,9 @@ export function createBrain({ map, ports, seed = 1 }) {
           bot.s.buyAt = frame.time + bot.random(BUY_AFTER[0], BUY_AFTER[1]);
         }
       }
+        for (const side of ['T', 'CT']) if (brain.census[side === 'T' ? 'CT' : 'T'].alive > 0) brain.teams[side].enemiesLived = true;
       listen(brain, frame);
-      if (brain.tick % Math.max(1, Math.round(PLAN_EVERY / frame.dt)) === 0) updatePlan(brain, frame.time);
+  if (brain.tick % Math.max(1, Math.round(PLAN_EVERY / frame.dt)) === 0) updatePlan(brain, frame.time);
     },
 
     /** The command of the bot `id` for this tick. */
@@ -238,8 +239,10 @@ function command(c) {
     // The pistol of a fight goes back for the rifle once it is quiet.
     else if (isPistol(me.weapon) && bestGun(own) !== me.weapon && time - s.seenAt > RIFLE_BACK) cmd.weapon = bestGun(own);
   }
+  // Free time (tactics.js freeGoal): nothing waits, and the player hops as it likes.
+  c.free = goal.task === 'free';
   // No hop on a run that the round waits for (moves.js hop).
-  c.hurry = HURRY.has(goal.task) || goal.kind === 'defuse' || c.team.bomb?.state === 'planted' || frame.round.timeLeft < HURRY_CLOCK;
+  c.hurry = !c.free && (HURRY.has(goal.task) || goal.kind === 'defuse' || c.team.bomb?.state === 'planted' || frame.round.timeLeft < HURRY_CLOCK);
   if (!feet && goal.point) {
     walkTo(c, cmd, goal.point, !fighting && !goal.look && !heard);
     if (goal.walk && !fighting) cmd.walk = true;
@@ -255,7 +258,9 @@ function command(c) {
   // Danger near (an enemy heard or seen, a hit taken): no knife in the hand.
   const alert = time - (s.alertAt ?? -Infinity) < ALERT_SECONDS || (own.hurt !== null && time - own.hurt.at < ALERT_SECONDS);
   const knives = frame.round.knives;
-  if (!fighting && !knives && goal.kind !== 'plant' && isMelee(cmd.weapon ?? me.weapon) && bestGun(own) !== 'knife' && (alert || !((s.knifeOut && goal.point) || goal.kind === 'route'))) cmd.weapon = bestGun(own);
+  if (!fighting && !knives && !c.free && goal.kind !== 'plant' && isMelee(cmd.weapon ?? me.weapon) && bestGun(own) !== 'knife' && (alert || !((s.knifeOut && goal.point) || goal.kind === 'route'))) cmd.weapon = bestGun(own);
+  // In free time the knife is out: a player runs fastest with it.
+  if (c.free && !fighting && own.weapons.knife && me.weapon !== 'knife') cmd.weapon = 'knife';
   // A quiet moment: a clip under half is filled again, as players did between fights.
   const gun = own.weapons[me.weapon];
   const full = WEAPONS[me.weapon]?.clip ?? 0;
