@@ -229,8 +229,8 @@ function postsOf(brain, mid, entries) {
 
 /**
  * The floors about `point` that a player who holds it steps to: within SPOT_REACH by plain steps of the graph, at
- * the height of the point, with a free straight walk from it, and good by `good(floor)`. At most SPOTS, the
- * furthest first, SPOT_APART from the point and from each other.
+ * the height of the point, not by a wall or on an edge, with a free straight walk from the point, and good by
+ * `good(floor)`. At most SPOTS, the furthest first, SPOT_APART from the point and from each other.
  */
 function spotsAbout(brain, point, good) {
   const { nav, ports } = brain;
@@ -247,6 +247,8 @@ function spotsAbout(brain, point, good) {
       const p = nodePoint(nav, next);
       if (flat(p, point) > SPOT_REACH || abs(p[2] - point[2]) > SPOT_RISE) continue;
       queue.push(next);
+      // A floor by a wall or on an edge is no place to stand (as for a post).
+      if (nav.offsets[next + 1] - nav.offsets[next] < 5) continue;
       if (flat(p, point) >= SPOT_APART && ports.traceHull(point, p, false) >= 1 && good(p)) found.push(p);
     }
   }
