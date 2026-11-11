@@ -95,7 +95,7 @@ G1 alone is easy to cheat: a faster hand wins. So both sides take the same motor
 numbers of csbih-player), and G6 must hold.
 
 The state of the gates on 2026-11-11 (docs/measures/2026-11-11-night.md): G1, G3 and G6 are met. G2 is open by
-a hair: the Ts win 54.3% of 2,592 rounds (error 1.5), and 52.1% without the pace of the Ts (commit `a7858e1`,
+a hair: the Ts win 54.4% of 2,592 rounds (error 1.5), and 51.5% without the pace of the Ts (commit `a7858e1`,
 the owner's decision). G4 is not met: fatalbot plants in 66% of its rounds and the players in 44%
 (`tools/rounds.js` measures the shape of a round for both); the pace of a round is the players'. G5 is met: 0.065 ms
 for ten bots a tick alone on the processor, the longest command of one bot 6 ms. G7 is met for the kills with a shot to the head and for the jumps on a
