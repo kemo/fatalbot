@@ -107,7 +107,9 @@ A claim that a bot is better needs a number. Spec 01 holds the gates. In short:
    them as files: the owner decides if they enter this repository.
 6. **The graph of csbih-player** has floors with no way to them (a platform on de_nuke, box tops, a roof on
    de_inferno). Players of the demos stand there. fatalbot leaves such a floor by a straight walk (spec 03,
-   section 4). A fix belongs in `tools/build-nav.js` of csbih-player, which is read-only from here. Its
+   section 4). A fix belongs in `tools/build-nav.js` of csbih-player, which is read-only from here. One
+   recording is named after the map that its server changed to at the end; the patch that cuts it is in
+   `out/csbih-player/` (docs/measures/2026-11-11-night.md, section 7). Its
    `doors.js` takes the place where the last world left a door as the door's closed place; fatalbot's host puts
    the doors back before each world (adapter.js `restLevel`). By that graph
    the CTs need 16 s to the upper site of de_nuke, which is as long as the Ts need
