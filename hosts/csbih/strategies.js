@@ -53,33 +53,49 @@ function buyOf(players) {
   return primaries <= 1 ? 'pistol' : rifles >= 4 ? 'full' : 'force';
 }
 
+// A player this far from every spawn of a level did not start a round of that level there (units).
+const FIT_SPAWN = 96;
+
 /**
- * The share of the players of a round that start in free space of the level. A recording that goes on into another
- * map keeps the name of its first one: the players of those rounds start inside the walls of this level. No bot
- * can play such a round, and its places say nothing of this map.
+ * The rounds of a recording that are played on this level. A round is of another map when half of its players or
+ * more start inside a wall and far from every spawn of the level. A recording is of another map, or of another
+ * build of this one, when most of its rounds start far from every spawn: then only the rounds that start at the
+ * spawns stay. The two tests go together, because each alone is wrong: players at their spawns can start a few
+ * units inside the floor, and the start of a round can be read late, after the players ran off.
  */
-export function demoFits(core, level, timeline, round) {
+export function fitRounds(core, level, timeline, rounds) {
   const { HULL_STAND, newTrace, traceBox } = core.hull;
   const tr = newTrace();
-  const scenario = core.demoRound.demoRound(timeline, round, { spawns: level.rules.spawns ?? null });
-  let free = 0;
-  for (const p of scenario.players) {
-    traceBox(level.hulls, HULL_STAND, p.origin, p.origin, tr);
-    if (!tr.startSolid) free++;
-  }
-  return scenario.players.length ? free / scenario.players.length : 0;
+  const spawns = level.rules.spawns ?? [];
+  if (!spawns.length) return rounds;
+  const starts = rounds.map((round) => {
+    // The players as the recording has them: a player with no place of its own counts for nothing.
+    const players = core.demoRound.demoRound(timeline, round, { spawns: null }).players;
+    let far = 0;
+    let lost = 0;
+    for (const p of players) {
+      const o = p.origin;
+      if (!spawns.some((s) => Math.hypot(s.origin[0] - o[0], s.origin[1] - o[1], s.origin[2] - o[2]) <= FIT_SPAWN)) {
+        far++;
+        traceBox(level.hulls, HULL_STAND, o, o, tr);
+        if (tr.startSolid) lost++;
+      }
+    }
+    return { far: players.length > 0 && far * 2 >= players.length, lost: players.length > 0 && lost * 2 >= players.length };
+  });
+  const elsewhere = starts.filter((s) => s.far).length * 2 > rounds.length;
+  return rounds.filter((_, i) => (elsewhere ? !starts[i].far : !starts[i].lost));
 }
 
 /**
  * The facts of the rounds of one timeline: for each round of five against five the winner, the plant, the buys,
  * and each player's place and view ([x, y, z, yaw]) every STEP seconds (null once dead). No name and no entity
- * number goes in. With `level`, a round that does not fit it (demoFits) is left out.
+ * number goes in. With `level`, a round that is not played on it (fitRounds) is left out.
  */
 export function roundFacts(core, timeline, level = null) {
   const out = [];
-  for (const round of core.demoRound.demoRounds(timeline)) {
-    if (round.empty || (round.winner !== 'T' && round.winner !== 'CT')) continue;
-    if (level && demoFits(core, level, timeline, round) < 0.5) continue;
+  const played = core.demoRound.demoRounds(timeline).filter((round) => !round.empty && (round.winner === 'T' || round.winner === 'CT'));
+  for (const round of level ? fitRounds(core, level, timeline, played) : played) {
     const scenario = core.demoRound.demoRound(timeline, round);
     const sides = { T: scenario.players.filter((p) => p.team === 'T'), CT: scenario.players.filter((p) => p.team === 'CT') };
     if (scenario.knives || sides.T.length !== 5 || sides.CT.length !== 5) continue;

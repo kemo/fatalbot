@@ -122,7 +122,7 @@ export function shotsOfKill(tracks, byPlayer, kill) {
  * The facts of the players of one demo: [{kills, heads, groups: {group: [kills, heads]}, fights: [{e0, toShot,
  * peak, shotErr, low, group}], bursts: [{group, head, shots: shotsOfKill}]}], one for each player with a kill of
  * an enemy. `hulls` is the level of the demo. `skip` holds spans of the demo's time ([from, to]) whose kills are
- * left out: the rounds that do not fit the level (strategies.js demoFits).
+ * left out: the rounds that are not played on the level (strategies.js fitRounds).
  */
 export function playerFacts(aimStats, hulls, timeline, skip = []) {
   const tracks = tracksOf(timeline);

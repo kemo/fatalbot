@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { csbihMissing, csbihRoot, loadAimStats, loadCore, loadLevel, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
 import { MEASURES, MIN_FIGHTS, MIN_KILLS, aimOf, burstSteps, playerFacts, turnsBySight } from '../hosts/csbih/players.js';
-import { demoFits } from '../hosts/csbih/strategies.js';
+import { fitRounds } from '../hosts/csbih/strategies.js';
 import { seeded } from '../src/random.js';
 
 const args = { maps: null, shard: null, fresh: false, json: null };
@@ -34,7 +34,7 @@ const core = await loadCore();
 const aimStats = await loadAimStats();
 const CACHE = join(dirname(fileURLToPath(import.meta.url)), '..', 'out', 'players', 'cache');
 mkdirSync(CACHE, { recursive: true });
-const VERSION = 4;
+const VERSION = 5;
 
 // Which demo is of which map: the index of the player's server knows without a read of each timeline.
 let index = null;
@@ -76,9 +76,11 @@ timelineIds().forEach((id, n) => {
     if (usable) {
       const key = `${timeline.map}:${v16}`;
       if (!levels.has(key)) levels.set(key, loadLevel(core, timeline.map, { v16 }));
-      // A recording that goes on into another map: the rounds that do not fit this level are left out.
+      // A recording that goes on into another map: the rounds that are not played on this level are left out.
       const level = levels.get(key);
-      const skip = core.demoRound.demoRounds(timeline).filter((r) => !r.empty && demoFits(core, level, timeline, r) < 0.5).map((r) => [r.t0, r.end]);
+      const played = core.demoRound.demoRounds(timeline).filter((r) => !r.empty);
+      const kept = new Set(fitRounds(core, level, timeline, played));
+      const skip = played.filter((r) => !kept.has(r)).map((r) => [r.t0, r.end]);
       facts.players = playerFacts(aimStats, level.hulls, timeline, skip);
     }
     writeFileSync(file, JSON.stringify(facts));

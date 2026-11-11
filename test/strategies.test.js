@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { attackOf, formationGap, groupFormations, plansOf, strategiesOf, STEP } from '../hosts/csbih/strategies.js';
+import { attackOf, fitRounds, formationGap, groupFormations, plansOf, strategiesOf, STEP } from '../hosts/csbih/strategies.js';
 
 const five = (x, y) => [0, 1, 2, 3, 4].map((i) => [x + i * 40, y, 36, 0]);
 
@@ -57,4 +57,29 @@ test('the strategies of a map: shares, wins, the site, and the plans for the bot
   assert.equal(plans.T[0].points.length, 5);
   assert.ok(plans.T[0].te > 0);
   assert.equal(plans.CT.length, 1);
+});
+
+// A stand-in for the game core: a round holds its players, and a place is in a wall where the level says so.
+const fakeCore = {
+  hull: { HULL_STAND: 0, newTrace: () => ({ startSolid: false }), traceBox: (hulls, _hull, from, _to, tr) => { tr.startSolid = hulls.solid(from); } },
+  demoRound: { demoRound: (_timeline, round) => ({ players: round.players }) },
+};
+// The level: two spawns, and a wall everywhere under z = 0 and beyond x = 5000.
+const fakeLevel = { hulls: { solid: (o) => o[2] < 0 || o[0] > 5000 }, rules: { spawns: [{ side: 'T', origin: [0, 0, 36] }, { side: 'CT', origin: [2000, 0, 36] }] } };
+const startAt = (...places) => ({ players: places.map((origin) => ({ origin })) });
+
+test('the rounds of a recording that are played on its level: both signs of another map are needed', () => {
+  const atSpawns = startAt([0, 10, 36], [20, 0, 36], [2000, 10, 36], [1990, 0, 36]);
+  // At their spawns, a few units inside the floor: the sample of the respawn.
+  const sunk = startAt([0, 10, -5], [20, 0, -5], [2000, 10, -5], [1990, 0, -5]);
+  // The start of the round read late: the players ran off, into free space.
+  const late = startAt([600, 300, 36], [700, 300, 36], [1400, 300, 36], [1500, 300, 36]);
+  // Another map: far from every spawn, and inside the walls of this level.
+  const other = startAt([6000, 0, 36], [6100, 0, 36], [7000, 0, 36], [7100, 0, 36]);
+  assert.deepEqual(fitRounds(fakeCore, fakeLevel, null, [atSpawns, sunk, late, atSpawns, other]), [atSpawns, sunk, late, atSpawns]);
+  // Most rounds start far from every spawn: the recording is of another map, and only the rounds at the spawns stay.
+  const elsewhere = startAt([900, 900, 36], [950, 900, 36], [1000, 900, 36]);
+  assert.deepEqual(fitRounds(fakeCore, fakeLevel, null, [atSpawns, elsewhere, elsewhere, other]), [atSpawns]);
+  // A round with no player of its own counts for nothing and stays.
+  assert.deepEqual(fitRounds(fakeCore, fakeLevel, null, [startAt(), atSpawns]).length, 2);
 });

@@ -29,8 +29,8 @@ if (missing) {
 }
 const core = await loadCore();
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'out', 'strategies');
-// The facts in the cache: 4 leaves out the rounds that do not fit the level of their map.
-const VERSION = 4;
+// The facts in the cache: 5 leaves out the rounds that are not played on the level of their map.
+const VERSION = 5;
 
 // Which demo is of which map: the index of the player's server knows without a read of each timeline.
 let index = null;
@@ -147,7 +147,7 @@ for (const map of wanted) {
   }
   const level = loadLevel(core, map);
   const zones = zonesOf(core, level);
-  // The level of a demo by its protocol: a round that does not fit it is left out (strategies.js demoFits).
+  // The level of a demo by its protocol: a round that is not played on it is left out (strategies.js fitRounds).
   const levels = new Map();
   if (!zones.sites.length) {
     skipped.push(`${map}: ${ids.length} demos, no bomb site`);
