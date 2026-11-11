@@ -29,6 +29,8 @@ if (missing) {
 }
 const core = await loadCore();
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'out', 'strategies');
+// The facts in the cache: 4 leaves out the rounds that do not fit the level of their map.
+const VERSION = 4;
 
 // Which demo is of which map: the index of the player's server knows without a read of each timeline.
 let index = null;
@@ -145,6 +147,8 @@ for (const map of wanted) {
   }
   const level = loadLevel(core, map);
   const zones = zonesOf(core, level);
+  // The level of a demo by its protocol: a round that does not fit it is left out (strategies.js demoFits).
+  const levels = new Map();
   if (!zones.sites.length) {
     skipped.push(`${map}: ${ids.length} demos, no bomb site`);
     continue;
@@ -159,16 +163,19 @@ for (const map of wanted) {
     let facts = null;
     if (!args.fresh && existsSync(file)) {
       const kept = JSON.parse(readFileSync(file, 'utf8'));
-      if (kept.id === ids[n] && kept.version === 3) facts = kept.rounds;
+      if (kept.id === ids[n] && kept.version === VERSION) facts = kept.rounds;
     }
     if (!facts) {
       try {
-        facts = roundFacts(core, loadTimeline(ids[n]));
+        const timeline = loadTimeline(ids[n]);
+        const v16 = (timeline.source?.netProtocol ?? 0) >= 47;
+        if (!levels.has(v16)) levels.set(v16, loadLevel(core, map, { v16 }));
+        facts = roundFacts(core, timeline, levels.get(v16));
       } catch (e) {
         facts = [];
         console.error(`  ${map}: demo ${n} gave no rounds (${e.message})`);
       }
-      writeFileSync(file, JSON.stringify({ id: ids[n], version: 3, rounds: facts }));
+      writeFileSync(file, JSON.stringify({ id: ids[n], version: VERSION, rounds: facts }));
       read++;
     }
     rounds.push(...facts);

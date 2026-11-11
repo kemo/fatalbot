@@ -12,6 +12,7 @@ import { writeFileSync } from 'node:fs';
 import { csbihMissing, loadAimStats, loadBody, loadCore, loadLevel, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
 import { addMeasures, aimLine, burstLines, feetLine, measureLine, turnLines, useBody } from '../hosts/csbih/arena.js';
 import { playDemoRound } from '../hosts/csbih/demo.js';
+import { demoFits } from '../hosts/csbih/strategies.js';
 
 const args = { demos: null, map: 'de_dust2', count: '4', rounds: '10', sides: 'both', seed: '1', hands: 'demo', json: null, nades: false, plans: false, standins: 'ref' };
 const argv = process.argv.slice(2);
@@ -60,7 +61,10 @@ for (const id of wanted) {
   if (csbihMissing(timeline.map)) continue;
   const level = loadLevel(core, timeline.map, { v16 });
   if (!level.rules.bombTargets?.length && !level.rules.bombPoints?.length) continue;
-  const rounds = core.demoRound.demoRounds(timeline).filter((r) => !r.empty && (r.winner === 'T' || r.winner === 'CT')).slice(0, Number(args.rounds));
+  // A recording that goes on into another map keeps the name of its first one: the players of those rounds start
+  // inside the walls of this level, and the rounds are left out.
+  const whole = core.demoRound.demoRounds(timeline).filter((r) => !r.empty && (r.winner === 'T' || r.winner === 'CT'));
+  const rounds = whole.filter((r) => demoFits(core, level, timeline, r) >= 0.5).slice(0, Number(args.rounds));
   if (rounds.length < 3) continue;
   used++;
   const profiles = loadProfiles(id);

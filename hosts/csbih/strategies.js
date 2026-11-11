@@ -53,14 +53,32 @@ function buyOf(players) {
 }
 
 /**
+ * The share of the players of a round that start in free space of the level. A recording that goes on into another
+ * map keeps the name of its first one: the players of those rounds start inside the walls of this level. No bot
+ * can play such a round, and its places say nothing of this map.
+ */
+export function demoFits(core, level, timeline, round) {
+  const { HULL_STAND, newTrace, traceBox } = core.hull;
+  const tr = newTrace();
+  const scenario = core.demoRound.demoRound(timeline, round, { spawns: level.rules.spawns ?? null });
+  let free = 0;
+  for (const p of scenario.players) {
+    traceBox(level.hulls, HULL_STAND, p.origin, p.origin, tr);
+    if (!tr.startSolid) free++;
+  }
+  return scenario.players.length ? free / scenario.players.length : 0;
+}
+
+/**
  * The facts of the rounds of one timeline: for each round of five against five the winner, the plant, the buys,
  * and each player's place and view ([x, y, z, yaw]) every STEP seconds (null once dead). No name and no entity
- * number goes in.
+ * number goes in. With `level`, a round that does not fit it (demoFits) is left out.
  */
-export function roundFacts(core, timeline) {
+export function roundFacts(core, timeline, level = null) {
   const out = [];
   for (const round of core.demoRound.demoRounds(timeline)) {
     if (round.empty || (round.winner !== 'T' && round.winner !== 'CT')) continue;
+    if (level && demoFits(core, level, timeline, round) < 0.5) continue;
     const scenario = core.demoRound.demoRound(timeline, round);
     const sides = { T: scenario.players.filter((p) => p.team === 'T'), CT: scenario.players.filter((p) => p.team === 'CT') };
     if (scenario.knives || sides.T.length !== 5 || sides.CT.length !== 5) continue;
