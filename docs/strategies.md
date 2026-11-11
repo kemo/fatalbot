@@ -56,112 +56,112 @@ The CTs at second 15 (all five alive in 68% of the rounds): 125 formations, 21 o
 
 ## de_inferno
 
-150 demos, 3433 rounds of five against five. The Ts won 50%. In 31% of the rounds the Ts reached no site.
+150 demos, 3426 rounds of five against five. The Ts won 50%. In 31% of the rounds the Ts reached no site.
 
 | Site | Share of the rounds | Ts won | Planted | First T in the site (median) |
 |------|------|------|------|------|
 | A | 42% | 63% | 61% | 40 s |
 | B | 27% | 61% | 74% | 42 s |
 
-Tempo: fast 555 rounds (Ts won 56%); mid 1015 rounds (Ts won 70%); late 801 rounds (Ts won 55%).
+Tempo: fast 555 rounds (Ts won 56%); mid 1014 rounds (Ts won 70%); late 800 rounds (Ts won 55%).
 
-Buys, the Ts' against the CTs': full against full 1340 rounds (Ts won 46%); full against force 470 rounds (Ts won 64%); full against pistol 330 rounds (Ts won 95%); force against full 305 rounds (Ts won 30%); pistol against pistol 285 rounds (Ts won 48%); pistol against full 230 rounds (Ts won 1%); force against pistol 167 rounds (Ts won 90%); force against force 160 rounds (Ts won 55%); pistol against force 146 rounds (Ts won 9%).
+Buys, the Ts' against the CTs': full against full 1339 rounds (Ts won 46%); full against force 469 rounds (Ts won 64%); full against pistol 330 rounds (Ts won 95%); force against full 303 rounds (Ts won 29%); pistol against pistol 285 rounds (Ts won 48%); pistol against full 229 rounds (Ts won 1%); force against pistol 167 rounds (Ts won 90%); force against force 160 rounds (Ts won 55%); pistol against force 144 rounds (Ts won 9%).
 
-The Ts at second 20 (all five alive in 65% of the rounds): 69 formations, 25 of them played in 1.5% of the rounds or more.
+The Ts at second 20 (all five alive in 65% of the rounds): 69 formations, 24 of them played in 1.5% of the rounds or more.
 
 | Where the five stand | Rounds | Share | Ts won | Went to | First T in the site | Planted |
 |------|------|------|------|------|------|------|
-| 5 between | 190 | 8% | 54% | A 66%, B 16% | 44 s | 53% |
-| 5 between | 173 | 8% | 58% | A 53%, B 25% | 60 s | 51% |
-| 5 between | 165 | 7% | 62% | A 56%, B 24% | 46 s | 53% |
-| 5 between | 153 | 7% | 44% | A 52%, B 25% | 58 s | 46% |
-| 5 between | 102 | 5% | 46% | A 72% | 34 s | 52% |
-| 5 between | 90 | 4% | 64% | A 20%, B 62% | 48 s | 61% |
-| 5 between | 85 | 4% | 48% | A 60%, B 12% | 54 s | 46% |
+| 5 between | 222 | 10% | 55% | A 66%, B 16% | 48 s | 50% |
+| 5 between | 160 | 7% | 59% | A 54%, B 26% | 60 s | 51% |
+| 5 between | 149 | 7% | 62% | A 53%, B 28% | 44 s | 60% |
+| 5 between | 132 | 6% | 43% | A 50%, B 25% | 58 s | 43% |
+| 5 between | 108 | 5% | 46% | A 71% | 36 s | 50% |
+| 5 between | 89 | 4% | 65% | A 20%, B 63% | 48 s | 62% |
+| 5 between | 89 | 4% | 51% | A 60%, B 10% | 52 s | 45% |
+| 5 between | 77 | 3% | 58% | A 77% | 24 s | 58% |
 | 4 between, 1 near the T spawn | 76 | 3% | 50% | A 37%, B 32% | 64 s | 49% |
-| 5 between | 75 | 3% | 61% | A 76% | 24 s | 60% |
-| 5 between | 73 | 3% | 68% | A 47%, B 34% | 54 s | 60% |
-| 5 between | 70 | 3% | 41% | A 57%, B 11% | 48 s | 40% |
-| 5 between | 67 | 3% | 70% | A 55%, B 21% | 30 s | 51% |
+| 5 between | 70 | 3% | 39% | A 54%, B 10% | 48 s | 39% |
+| 5 between | 67 | 3% | 69% | A 46%, B 36% | 58 s | 60% |
+| 5 between | 65 | 3% | 71% | A 57%, B 20% | 30 s | 51% |
 
 The CTs at second 15 (all five alive in 82% of the rounds): 83 formations, 22 of them played in 1.5% of the rounds or more.
 
 | Where the five stand | Rounds | Share | CTs won |
 |------|------|------|------|
-| 2 between, 2 at A, 1 at B | 221 | 8% | 53% |
-| 2 at A, 2 at B, 1 between | 163 | 6% | 58% |
-| 3 at A, 2 at B | 158 | 6% | 57% |
-| 2 at A, 2 between, 1 at B | 150 | 5% | 58% |
-| 3 at A, 2 at B | 117 | 4% | 56% |
-| 2 at A, 2 at B, 1 between | 96 | 3% | 64% |
-| 3 at A, 1 between, 1 at B | 90 | 3% | 58% |
-| 3 at A, 2 at B | 87 | 3% | 46% |
-| 3 at A, 1 between, 1 at B | 86 | 3% | 59% |
-| 2 at A, 2 between, 1 at B | 86 | 3% | 56% |
+| 2 between, 2 at A, 1 at B | 209 | 7% | 54% |
+| 2 at B, 2 between, 1 at A | 164 | 6% | 57% |
+| 2 at A, 2 at B, 1 between | 159 | 6% | 57% |
+| 3 at A, 2 at B | 154 | 5% | 60% |
+| 2 at A, 2 between, 1 at B | 152 | 5% | 60% |
+| 3 at A, 1 at B, 1 between | 88 | 3% | 57% |
+| 3 at A, 1 between, 1 at B | 86 | 3% | 58% |
+| 2 at A, 2 between, 1 at B | 83 | 3% | 71% |
+| 2 at A, 2 between, 1 at B | 83 | 3% | 57% |
+| 3 at A, 1 between, 1 at B | 82 | 3% | 59% |
 
 ## de_train
 
-84 demos, 2100 rounds of five against five. The Ts won 44%. In 41% of the rounds the Ts reached no site.
+84 demos, 2069 rounds of five against five. The Ts won 44%. In 41% of the rounds the Ts reached no site.
 
 | Site | Share of the rounds | Ts won | Planted | First T in the site (median) |
 |------|------|------|------|------|
-| site 1 | 32% | 68% | 64% | 34 s |
+| site 1 | 32% | 69% | 64% | 34 s |
 | site 2 | 27% | 57% | 75% | 34 s |
 
-Tempo: fast 314 rounds (Ts won 59%); mid 611 rounds (Ts won 69%); late 322 rounds (Ts won 57%).
+Tempo: fast 307 rounds (Ts won 59%); mid 601 rounds (Ts won 69%); late 315 rounds (Ts won 57%).
 
-Buys, the Ts' against the CTs': full against full 849 rounds (Ts won 40%); full against force 260 rounds (Ts won 61%); full against pistol 217 rounds (Ts won 99%); pistol against full 186 rounds (Ts won 2%); pistol against pistol 177 rounds (Ts won 44%); force against full 161 rounds (Ts won 24%); pistol against force 114 rounds (Ts won 1%); force against pistol 70 rounds (Ts won 96%); force against force 66 rounds (Ts won 44%).
+Buys, the Ts' against the CTs': full against full 836 rounds (Ts won 40%); full against force 256 rounds (Ts won 61%); full against pistol 216 rounds (Ts won 99%); pistol against full 183 rounds (Ts won 2%); pistol against pistol 176 rounds (Ts won 44%); force against full 160 rounds (Ts won 24%); pistol against force 110 rounds (Ts won 1%); force against pistol 68 rounds (Ts won 96%); force against force 64 rounds (Ts won 44%).
 
-The Ts at second 20 (all five alive in 54% of the rounds): 60 formations, 26 of them played in 1.5% of the rounds or more.
+The Ts at second 20 (all five alive in 54% of the rounds): 59 formations, 25 of them played in 1.5% of the rounds or more.
 
 | Where the five stand | Rounds | Share | Ts won | Went to | First T in the site | Planted |
 |------|------|------|------|------|------|------|
-| 5 between | 120 | 11% | 48% | site 2 63% | 36 s | 54% |
-| 5 between | 84 | 7% | 54% | site 1 24%, site 2 52% | 48 s | 57% |
-| 5 between | 72 | 6% | 39% | site 1 36%, site 2 18% | 68 s | 38% |
-| 5 between | 55 | 5% | 45% | site 1 51% | 54 s | 40% |
-| 5 between | 51 | 5% | 45% | site 2 80% | 26 s | 57% |
-| 5 between | 46 | 4% | 67% | site 1 24%, site 2 43% | 44 s | 61% |
-| 5 between | 41 | 4% | 83% | site 1 83% | 26 s | 66% |
+| 5 between | 105 | 9% | 48% | site 2 64% | 36 s | 54% |
+| 5 between | 92 | 8% | 55% | site 1 23%, site 2 52% | 46 s | 55% |
+| 5 between | 76 | 7% | 41% | site 1 37%, site 2 18% | 66 s | 39% |
+| 5 between | 52 | 5% | 44% | site 1 48% | 54 s | 40% |
+| 5 between | 51 | 5% | 45% | site 2 80% | 26 s | 55% |
+| 5 between | 42 | 4% | 83% | site 1 83% | 26 s | 67% |
+| 5 between | 42 | 4% | 64% | site 1 24%, site 2 43% | 54 s | 60% |
 | 5 between | 41 | 4% | 49% | site 1 22%, site 2 54% | 40 s | 61% |
-| 5 between | 39 | 3% | 49% | site 1 23%, site 2 36% | 76 s | 36% |
-| 5 between | 38 | 3% | 53% | site 1 26%, site 2 45% | 58 s | 53% |
-| 5 between | 33 | 3% | 85% | site 1 64% | 26 s | 55% |
-| 5 between | 31 | 3% | 58% | site 1 61% | 38 s | 42% |
+| 5 between | 39 | 4% | 49% | site 1 23%, site 2 36% | 76 s | 36% |
+| 5 between | 37 | 3% | 51% | site 1 27%, site 2 43% | 58 s | 54% |
+| 5 between | 33 | 3% | 61% | site 1 64% | 38 s | 45% |
+| 5 between | 32 | 3% | 84% | site 1 66% | 26 s | 53% |
 
-The CTs at second 15 (all five alive in 75% of the rounds): 71 formations, 23 of them played in 1.5% of the rounds or more.
+The CTs at second 15 (all five alive in 75% of the rounds): 73 formations, 23 of them played in 1.5% of the rounds or more.
 
 | Where the five stand | Rounds | Share | CTs won |
 |------|------|------|------|
-| 3 between, 1 at site 2, 1 at site 1 | 106 | 7% | 64% |
-| 3 between, 1 at site 2, 1 at site 1 | 93 | 6% | 60% |
-| 3 at site 1, 1 at site 2, 1 between | 70 | 4% | 61% |
-| 5 between | 69 | 4% | 57% |
-| 2 at site 1, 2 between, 1 at site 2 | 69 | 4% | 65% |
-| 3 at site 1, 1 between, 1 at site 2 | 67 | 4% | 67% |
-| 2 at site 2, 2 at site 1, 1 between | 66 | 4% | 70% |
-| 3 between, 1 at site 1, 1 at site 2 | 64 | 4% | 58% |
-| 3 between, 1 at site 2, 1 at site 1 | 58 | 4% | 69% |
-| 2 at site 1, 2 between, 1 at site 2 | 56 | 4% | 77% |
+| 3 between, 1 at site 2, 1 at site 1 | 94 | 6% | 67% |
+| 3 between, 1 at site 2, 1 at site 1 | 90 | 6% | 60% |
+| 2 at site 1, 2 between, 1 at site 2 | 74 | 5% | 70% |
+| 3 between, 1 at site 1, 1 at site 2 | 69 | 4% | 59% |
+| 2 at site 1, 2 between, 1 at site 2 | 63 | 4% | 65% |
+| 3 at site 1, 1 between, 1 at site 2 | 62 | 4% | 66% |
+| 2 at site 2, 2 at site 1, 1 between | 60 | 4% | 67% |
+| 4 between, 1 at site 2 | 60 | 4% | 67% |
+| 5 between | 58 | 4% | 57% |
+| 3 between, 2 at site 1 | 54 | 3% | 67% |
 
 ## de_nuke
 
-84 demos, 1884 rounds of five against five. The Ts won 47%. In 16% of the rounds the Ts reached no site.
+84 demos, 1856 rounds of five against five. The Ts won 46%. In 15% of the rounds the Ts reached no site.
 
 | Site | Share of the rounds | Ts won | Planted | First T in the site (median) |
 |------|------|------|------|------|
-| A | 53% | 38% | 16% | 18 s |
+| A | 53% | 37% | 15% | 18 s |
 | B | 32% | 74% | 92% | 42 s |
 
-Tempo: fast 769 rounds (Ts won 38%); mid 522 rounds (Ts won 65%); late 299 rounds (Ts won 63%).
+Tempo: fast 768 rounds (Ts won 38%); mid 518 rounds (Ts won 64%); late 289 rounds (Ts won 62%).
 
-Buys, the Ts' against the CTs': full against full 760 rounds (Ts won 44%); full against force 254 rounds (Ts won 57%); full against pistol 187 rounds (Ts won 98%); pistol against pistol 165 rounds (Ts won 45%); pistol against full 143 rounds (Ts won 1%); force against full 134 rounds (Ts won 29%); pistol against force 111 rounds (Ts won 9%); force against pistol 76 rounds (Ts won 92%); force against force 54 rounds (Ts won 44%).
+Buys, the Ts' against the CTs': full against full 747 rounds (Ts won 43%); full against force 250 rounds (Ts won 58%); full against pistol 183 rounds (Ts won 98%); pistol against pistol 164 rounds (Ts won 45%); pistol against full 142 rounds (Ts won 1%); force against full 134 rounds (Ts won 29%); pistol against force 109 rounds (Ts won 9%); force against pistol 74 rounds (Ts won 92%); force against force 53 rounds (Ts won 43%).
 
-The Ts at second 20 (all five alive in 61% of the rounds): 37 formations, 14 of them played in 1.5% of the rounds or more.
+The Ts at second 20 (all five alive in 61% of the rounds): 30 formations, 14 of them played in 1.5% of the rounds or more.
 
 | Where the five stand | Rounds | Share | Ts won | Went to | First T in the site | Planted |
 |------|------|------|------|------|------|------|
-| 3 at A, 2 between | 224 | 19% | 50% | A 60%, B 33% | 18 s | 41% |
+| 3 at A, 2 between | 224 | 20% | 50% | A 60%, B 33% | 18 s | 41% |
 | 3 between, 2 at A | 160 | 14% | 54% | A 53%, B 40% | 20 s | 46% |
 | 5 between | 107 | 9% | 42% | A 59%, B 31% | 30 s | 39% |
 | 4 between, 1 at A | 100 | 9% | 64% | A 50%, B 36% | 20 s | 43% |
@@ -174,7 +174,7 @@ The Ts at second 20 (all five alive in 61% of the rounds): 37 formations, 14 of 
 | 5 between | 32 | 3% | 53% | A 50%, B 22% | 30 s | 22% |
 | 5 between | 26 | 2% | 50% | A 73%, B 23% | 16 s | 35% |
 
-The CTs at second 15 (all five alive in 85% of the rounds): 38 formations, 14 of them played in 1.5% of the rounds or more.
+The CTs at second 15 (all five alive in 85% of the rounds): 29 formations, 14 of them played in 1.5% of the rounds or more.
 
 | Where the five stand | Rounds | Share | CTs won |
 |------|------|------|------|
@@ -186,8 +186,8 @@ The CTs at second 15 (all five alive in 85% of the rounds): 38 formations, 14 of
 | 4 between, 1 at A | 105 | 7% | 46% |
 | 4 between, 1 at A | 98 | 6% | 59% |
 | 4 between, 1 at A | 69 | 4% | 58% |
-| 4 between, 1 at A | 54 | 3% | 35% |
 | 4 at A, 1 between | 54 | 3% | 50% |
+| 4 between, 1 at A | 53 | 3% | 34% |
 
 ## de_cbble
 
@@ -281,82 +281,79 @@ The CTs at second 15 (all five alive in 64% of the rounds): 27 formations, 16 of
 
 ## de_aztec
 
-8 demos, 97 rounds of five against five. The Ts won 38%. In 59% of the rounds the Ts reached no site.
+8 demos, 78 rounds of five against five. The Ts won 36%. In 62% of the rounds the Ts reached no site.
 
 | Site | Share of the rounds | Ts won | Planted | First T in the site (median) |
 |------|------|------|------|------|
-| site 1 | 30% | 62% | 48% | 28 s |
-| site 2 | 11% | 45% | 82% | 42 s |
+| site 1 | 27% | 57% | 52% | 28 s |
+| site 2 | 12% | 44% | 89% | 42 s |
 
-Tempo: fast 13 rounds (Ts won 54%); mid 18 rounds (Ts won 56%); late 9 rounds (Ts won 67%).
+Tempo: fast 10 rounds (Ts won 60%); mid 13 rounds (Ts won 38%); late 7 rounds (Ts won 71%).
 
-Buys, the Ts' against the CTs': full against full 45 rounds (Ts won 31%); pistol against full 11 rounds (Ts won 0%); force against full 10 rounds (Ts won 30%); full against pistol 9 rounds (Ts won 78%); full against force 9 rounds (Ts won 56%); pistol against pistol 6 rounds (Ts won 50%).
+Buys, the Ts' against the CTs': full against full 36 rounds (Ts won 31%); pistol against full 9 rounds (Ts won 0%); full against force 9 rounds (Ts won 56%); force against full 7 rounds (Ts won 29%); full against pistol 7 rounds (Ts won 71%); pistol against pistol 5 rounds (Ts won 40%).
 
-The Ts at second 20 (all five alive in 52% of the rounds): 10 formations, 4 of them played in 1.5% of the rounds or more.
+The Ts at second 20 (all five alive in 47% of the rounds): 8 formations, 3 of them played in 1.5% of the rounds or more.
 
 | Where the five stand | Rounds | Share | Ts won | Went to | First T in the site | Planted |
 |------|------|------|------|------|------|------|
-| 3 near the T spawn, 2 between | 14 | 28% | 50% | site 1 14%, site 2 14% | 86 s | 29% |
-| 5 between | 12 | 24% | 58% | site 1 58% | 24 s | 25% |
-| 5 between | 12 | 24% | 42% | site 1 33% | 74 s | 17% |
-| 5 between | 5 | 10% | 40% | site 2 20% | 62 s | 20% |
+| 5 between | 11 | 30% | 55% | site 1 45% | 24 s | 27% |
+| 3 near the T spawn, 2 between | 9 | 24% | 44% | site 1 22%, site 2 11% | 86 s | 33% |
+| 4 between, 1 near the T spawn | 8 | 22% | 50% | site 2 25% | 118 s | 25% |
 
-The CTs at second 15 (all five alive in 77% of the rounds): 12 formations, 6 of them played in 1.5% of the rounds or more.
+The CTs at second 15 (all five alive in 74% of the rounds): 11 formations, 4 of them played in 1.5% of the rounds or more.
 
 | Where the five stand | Rounds | Share | CTs won |
 |------|------|------|------|
-| 3 between, 2 at site 1 | 20 | 27% | 70% |
-| 5 between | 14 | 19% | 64% |
-| 3 between, 1 at site 2, 1 at site 1 | 9 | 12% | 56% |
-| 3 between, 2 at site 1 | 7 | 9% | 86% |
-| 2 between, 2 at site 1, 1 at site 2 | 7 | 9% | 100% |
-| 4 between, 1 at site 1 | 5 | 7% | 60% |
+| 3 between, 2 at site 1 | 21 | 36% | 86% |
+| 5 between | 14 | 24% | 64% |
+| 3 between, 1 at site 2, 1 at site 1 | 6 | 10% | 67% |
+| 4 between, 1 at site 1 | 5 | 9% | 60% |
 
 ## de_prodigy
 
-4 demos, 57 rounds of five against five. The Ts won 61%. In 25% of the rounds the Ts reached no site.
+4 demos, 54 rounds of five against five. The Ts won 65%. In 26% of the rounds the Ts reached no site.
 
 | Site | Share of the rounds | Ts won | Planted | First T in the site (median) |
 |------|------|------|------|------|
-| site 1 | 14% | 63% | 100% | 76 s |
-| site 2 | 51% | 72% | 72% | 38 s |
+| site 1 | 15% | 63% | 100% | 76 s |
+| site 2 | 48% | 81% | 73% | 46 s |
 | site 3 | 0% | - | - | - |
 | site 4 | 11% | 50% | 0% | 42 s |
 
-Tempo: fast 7 rounds (Ts won 29%); mid 19 rounds (Ts won 89%); late 17 rounds (Ts won 59%).
+Tempo: fast 6 rounds (Ts won 33%); mid 18 rounds (Ts won 94%); late 16 rounds (Ts won 63%).
 
-Buys, the Ts' against the CTs': full against full 22 rounds (Ts won 55%); full against force 14 rounds (Ts won 79%); force against force 7 rounds (Ts won 100%); force against full 5 rounds (Ts won 20%).
+Buys, the Ts' against the CTs': full against full 21 rounds (Ts won 57%); full against force 14 rounds (Ts won 79%); force against force 7 rounds (Ts won 100%).
 
-The Ts at second 20 (all five alive in 81% of the rounds): 16 formations, 3 of them played in 1.5% of the rounds or more.
+The Ts at second 20 (all five alive in 81% of the rounds): 14 formations, 3 of them played in 1.5% of the rounds or more.
 
 | Where the five stand | Rounds | Share | Ts won | Went to | First T in the site | Planted |
 |------|------|------|------|------|------|------|
 | 5 between | 9 | 20% | 67% | site 1 33%, site 2 22% | 108 s | 44% |
-| 5 between | 8 | 17% | 88% | site 1 13%, site 2 75%, site 4 13% | 62 s | 75% |
+| 5 between | 8 | 18% | 88% | site 1 13%, site 2 75%, site 4 13% | 62 s | 75% |
 | 5 between | 5 | 11% | 80% | site 1 20%, site 2 80% | 48 s | 80% |
 
-The CTs at second 15 (all five alive in 65% of the rounds): 4 formations, 3 of them played in 1.5% of the rounds or more.
+The CTs at second 15 (all five alive in 63% of the rounds): 4 formations, 3 of them played in 1.5% of the rounds or more.
 
 | Where the five stand | Rounds | Share | CTs won |
 |------|------|------|------|
-| 5 at site 2 | 16 | 43% | 38% |
-| 3 between, 2 at site 4 | 12 | 32% | 42% |
-| 3 between, 2 at site 2 | 6 | 16% | 67% |
+| 5 at site 2 | 16 | 47% | 38% |
+| 3 between, 2 at site 4 | 10 | 29% | 30% |
+| 3 between, 2 at site 2 | 6 | 18% | 67% |
 
 ## de_cpl_mill
 
-3 demos, 59 rounds of five against five. The Ts won 44%. In 32% of the rounds the Ts reached no site.
+3 demos, 58 rounds of five against five. The Ts won 45%. In 31% of the rounds the Ts reached no site.
 
 | Site | Share of the rounds | Ts won | Planted | First T in the site (median) |
 |------|------|------|------|------|
-| site 1 | 51% | 50% | 33% | 32 s |
+| site 1 | 52% | 50% | 33% | 32 s |
 | site 2 | 17% | 50% | 80% | 54 s |
 
 Tempo: fast 13 rounds (Ts won 46%); mid 13 rounds (Ts won 54%); late 14 rounds (Ts won 50%).
 
-Buys, the Ts' against the CTs': full against full 23 rounds (Ts won 39%); full against pistol 8 rounds (Ts won 100%); pistol against force 7 rounds (Ts won 0%); pistol against full 6 rounds (Ts won 0%); pistol against pistol 5 rounds (Ts won 40%).
+Buys, the Ts' against the CTs': full against full 22 rounds (Ts won 41%); full against pistol 8 rounds (Ts won 100%); pistol against force 7 rounds (Ts won 0%); pistol against full 6 rounds (Ts won 0%); pistol against pistol 5 rounds (Ts won 40%).
 
-The Ts at second 20 (all five alive in 59% of the rounds): 8 formations, 3 of them played in 1.5% of the rounds or more.
+The Ts at second 20 (all five alive in 60% of the rounds): 8 formations, 3 of them played in 1.5% of the rounds or more.
 
 | Where the five stand | Rounds | Share | Ts won | Went to | First T in the site | Planted |
 |------|------|------|------|------|------|------|
@@ -364,12 +361,11 @@ The Ts at second 20 (all five alive in 59% of the rounds): 8 formations, 3 of th
 | 5 between | 9 | 26% | 22% | site 1 78%, site 2 11% | 34 s | 22% |
 | 5 between | 5 | 14% | 60% | site 1 20%, site 2 60% | 30 s | 40% |
 
-The CTs at second 15 (all five alive in 73% of the rounds): 7 formations, 2 of them played in 1.5% of the rounds or more.
+The CTs at second 15 (all five alive in 72% of the rounds): 7 formations, 1 of them played in 1.5% of the rounds or more.
 
 | Where the five stand | Rounds | Share | CTs won |
 |------|------|------|------|
-| 3 at site 1, 1 between, 1 at site 2 | 30 | 70% | 73% |
-| 4 at site 1, 1 between | 6 | 14% | 67% |
+| 3 at site 1, 1 between, 1 at site 2 | 32 | 76% | 72% |
 
 ## Maps left out
 
