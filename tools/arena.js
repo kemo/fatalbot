@@ -9,7 +9,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { csbihMissing, loadBody, loadCore, loadLevel, loadMapData, loadPlans } from '../hosts/csbih/load.js';
-import { measureLine, referenceKind, runMatch, summarize, useBody } from '../hosts/csbih/arena.js';
+import { feetLine, measureLine, referenceKind, runMatch, summarize, useBody } from '../hosts/csbih/arena.js';
 
 const args = { a: 'fatal', b: 'ref', maps: 'de_dust2', rounds: '12', seeds: '1', sides: 'both', json: null, spells: '0' };
 const argv = process.argv.slice(2);
@@ -70,6 +70,7 @@ console.log(`G2 sides: T ${pct(s.bySide.T, s.rounds)}  CT ${pct(s.bySide.CT, s.r
 if (Object.keys(s.byKind).length > 1 || args.a !== args.b) console.log(`G1 kinds: ${Object.entries(s.byKind).map(([k, n]) => `${k} ${pct(n, s.rounds)}`).join('  ')}`);
 console.log(`G4 rounds: plants ${pct(s.plants, s.rounds)}; ${Object.entries(s.reasons).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ${n}`).join(', ')}; on the clock with no kill ${s.noKillTimeouts}`);
 for (const [kind, m] of Object.entries(s.measure)) console.log(measureLine(kind, m));
+for (const [kind, m] of Object.entries(s.measure)) console.log(feetLine(kind, m));
 if (Number(args.spells)) {
   const all = matches.flatMap((m) => m.spells.map((x) => ({ ...x, map: m.map, seed: m.seed })));
   const byGoal = {};

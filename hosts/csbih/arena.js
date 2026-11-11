@@ -39,7 +39,21 @@ const JUMP_RISE = 200;
 const ROUND_LIMIT = 240;
 
 const now = () => globalThis.performance.now();
-const blank = () => ({ alive: 0, wall: 0, stuck: 0, ms: 0, commands: 0, kills: 0, deaths: 0, headshots: 0, jumps: 0, hops: 0, shots: 0, shotsMoving: 0, rifleShots: 0, rifleShotsMoving: 0, throws: 0, blinded: 0 });
+const blank = () => ({
+  alive: 0, wall: 0, stuck: 0, ms: 0, commands: 0, kills: 0, deaths: 0, headshots: 0, jumps: 0, hops: 0, shots: 0, shotsMoving: 0, rifleShots: 0, rifleShotsMoving: 0, throws: 0, blinded: 0,
+  // The jumps by what they were: in a fight, up onto a ledge, down off one, or on the flat (a habit of the run).
+  jumpsFight: 0, jumpsUp: 0, jumpsDown: 0, jumpsFlat: 0,
+  // Of the jumps on the flat: those in the first EARLY seconds of a round, and those from under SLOW units a second.
+  jumpsFlatEarly: 0, jumpsFlatSlow: 0, aliveEarly: 0,
+  // The rifle shots by the distance to the nearest enemy (RANGES), and those of them fired on the run.
+  rifleNear: 0, rifleMid: 0, rifleFar: 0, rifleRunNear: 0, rifleRunMid: 0, rifleRunFar: 0,
+});
+// A landing this much higher or lower than the take-off is a jump onto or off a ledge (units).
+const LEDGE = 16;
+const EARLY = 15;
+const SLOW = 150;
+// The nearest enemy of a shot is near under the first of these distances, far over the second (units).
+const RANGES = [400, 1000];
 // The guns that spread wide over 140 units a second (the game's weapon code): a shot on the run with one is a choice.
 const RIFLES = new Set(['ak47', 'm4a1', 'galil', 'famas', 'aug', 'sg552', 'm249']);
 // A jump this soon after a landing is a hop of a chain (ticks).
@@ -63,6 +77,8 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
   };
   const timed = new WeakSet();
   let ticks = 0;
+  let liveAt = 0;
+  let wasLive = false;
   // For the aim measure (load.js loadAimStats): each player's track 20 times a second, the shots, and the kills
   // with the kind of the killer at that moment.
   const tracks = new Map();
@@ -105,6 +121,13 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
             if (RIFLES.has(e.weapon)) {
               m.rifleShots++;
               if (moving) m.rifleShotsMoving++;
+              let nearest = Infinity;
+              for (const q of world.players.values()) {
+                if (q.alive && q.team !== p.team && (q.team === 'T' || q.team === 'CT')) nearest = Math.min(nearest, Math.hypot(q.body.origin[0] - p.body.origin[0], q.body.origin[1] - p.body.origin[1], q.body.origin[2] - p.body.origin[2]));
+              }
+              const range = nearest < RANGES[0] ? 'Near' : nearest < RANGES[1] ? 'Mid' : 'Far';
+              m[`rifle${range}`]++;
+              if (moving) m[`rifleRun${range}`]++;
             }
           }
         } else if (e.type === 'hurt') of(e.player).fightAt = world.time;
@@ -152,6 +175,9 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
     },
     sample(live) {
       ticks++;
+      // The start of the round's live time: the first live sample after a sample that was not live.
+      if (live && !wasLive) liveAt = world.time;
+      wasLive = live;
       if (aimStats && ticks % AIM_TICKS === 0) {
         for (const p of world.players.values()) {
           if (p.team !== 'T' && p.team !== 'CT') continue;
@@ -165,13 +191,25 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
         const m = measure[kindOf(p.id)];
         if (!m || !p.alive) continue;
         const w = of(p.id);
+        if (live && world.time - liveAt < EARLY) m.aliveEarly += world.tickSeconds;
         // A jump: off the floor with the speed of one. Right after a landing, it is a hop of a chain.
         // A climb onto a ladder rises as fast and is no jump.
         if (live && w.ground && !p.body.onGround && !p.body.onLadder && p.body.velocity[2] > JUMP_RISE) {
           m.jumps++;
           if (ticks - (w.landed ?? -Infinity) <= HOP_TICKS) m.hops++;
+          w.jump = { z: p.body.origin[2], fight: world.time - w.fightAt < FIGHT_MEMORY, early: world.time - liveAt < EARLY, slow: Math.hypot(p.body.velocity[0], p.body.velocity[1]) < SLOW };
         }
-        if (!w.ground && p.body.onGround) w.landed = ticks;
+        if (!w.ground && p.body.onGround) {
+          w.landed = ticks;
+          if (w.jump) {
+            const rise = p.body.origin[2] - w.jump.z;
+            const what = w.jump.fight ? 'jumpsFight' : rise > LEDGE ? 'jumpsUp' : rise < -LEDGE ? 'jumpsDown' : 'jumpsFlat';
+            m[what]++;
+            if (what === 'jumpsFlat' && w.jump.early) m.jumpsFlatEarly++;
+            if (what === 'jumpsFlat' && w.jump.slow) m.jumpsFlatSlow++;
+            w.jump = null;
+          }
+        }
         w.ground = Boolean(p.body.onGround);
       }
       if (ticks % SAMPLE_TICKS) return;
@@ -334,6 +372,16 @@ const pct = (n, of) => (of ? `${((n / of) * 100).toFixed(1)}%` : '-');
 export function measureLine(kind, m) {
   const minutes = Math.max(1, m.alive / 60);
   return `${kind.padEnd(8)} G3 wall ${pct(m.wall, m.alive)}  stuck ${pct(m.stuck, m.alive)}  |  G5 ${((m.ms / Math.max(1, m.commands)) * 10).toFixed(3)} ms for ten bots a tick  |  kills ${m.kills} deaths ${m.deaths} headshots ${pct(m.headshots, m.kills)}  |  G7 jumps a minute ${(m.jumps / minutes).toFixed(1)} (in a chain ${(m.hops / minutes).toFixed(2)})  shots on the run ${pct(m.shotsMoving, m.shots)} (rifles ${pct(m.rifleShotsMoving, m.rifleShots)})  grenades a minute ${(m.throws / minutes).toFixed(2)} (enemies blinded ${m.blinded})`;
+}
+
+/** One line of the feet of a kind: its jumps a minute by what they were, and its rifle shots on the run by the range. */
+export function feetLine(kind, m) {
+  const minutes = Math.max(1, m.alive / 60);
+  const rate = (n) => (n / minutes).toFixed(2);
+  const run = (range) => `${pct(m[`rifleRun${range}`], m[`rifle${range}`])} of ${m[`rifle${range}`]}`;
+  const early = m.aliveEarly > 0 ? (m.jumpsFlatEarly / (m.aliveEarly / 60)).toFixed(2) : '-';
+  const late = m.alive - m.aliveEarly > 0 ? ((m.jumpsFlat - m.jumpsFlatEarly) / ((m.alive - m.aliveEarly) / 60)).toFixed(2) : '-';
+  return `${kind.padEnd(8)} G7 jumps a minute: in a fight ${rate(m.jumpsFight)}, up a ledge ${rate(m.jumpsUp)}, down a ledge ${rate(m.jumpsDown)}, on the flat ${rate(m.jumpsFlat)} (in the first ${EARLY} s ${early}, later ${late}; from under ${SLOW} units a second ${pct(m.jumpsFlatSlow, m.jumpsFlat)})  |  rifle shots on the run, the nearest enemy under ${RANGES[0]}: ${run('Near')}, to ${RANGES[1]}: ${run('Mid')}, further: ${run('Far')}`;
 }
 
 const quantile = (list, p) => {
