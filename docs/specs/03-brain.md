@@ -180,7 +180,7 @@ For a replay: a bot that plays on for a recorded player can get that player's ro
 - On the route the bot walks to the place of the route a moment ahead, at the route's pace: it runs when it is
   behind, walks where the player walked, stands where the player stood, and jumps where the track rises as a
   jump. Its view is the player's view, and it holds the gun that the player held.
-- Off the route by 300 units, or with no progress for 2 s, it walks back by the graph to the first place of the
+- Off the route by 300 units, or with no progress for 1 s, it walks back by the graph to the first place of the
   route ahead that the graph reaches. Three walks back that fail end the route.
 - **Each bot leaves its route by what it meets itself**, for the rest of the round: it reacted to an enemy in its
   sight, it was hit, it heard an enemy within 900 units, the recording of its player ended, it carries a bomb

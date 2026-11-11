@@ -29,7 +29,7 @@ const JUMP_SLOWS = 5;
 // A bot this far from its route, or with no progress on it for STALL seconds, walks back to it by the graph: to
 // the first point from AHEAD seconds on, within LOOK seconds, that the graph reaches. Within REJOINED it is back.
 const OFF_ROUTE = 300;
-const STALL = 2;
+const STALL = 1;
 const AHEAD = 1;
 const LOOK = 12;
 const REJOINED = 48;
