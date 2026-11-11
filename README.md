@@ -5,11 +5,14 @@ players of the time, and it wins fair. One brain plays in two hosts:
 
 | Host | What | State |
 |------|------|-------|
-| csbih | The game core of [csbih-player](../csbih-player) (`/igraj`), in the browser and in Node | adapter built |
+| csbih | The game core of csbih-player (`/igraj`), in the browser and in Node | adapter built |
 | goldsrc | A real CS 1.6 server (HLDS, ReHLDS) | not built: see "Open decisions" |
 
 The brain is plain JavaScript (ES modules) with no dependency. A host gives it a frame of the game and a few
 queries (ports), and takes a command for each bot. The specifications are in [docs/specs/](docs/specs/README.md).
+
+csbih-player is a private repository of the same owner: it is expected beside this one (`../csbih-player`). Without
+it the brain and its unit tests run; the arena tools and the tests that need its levels do not.
 
 ## Run
 
