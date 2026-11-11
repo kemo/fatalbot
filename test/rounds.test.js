@@ -34,6 +34,9 @@ test('the shape of a round: the first death, the numbers at the plant, the Ts in
   // then three), each of 65 to 75 units: no stand, all small steps.
   const walked = shapeOf(zones, round('T', null, [], [12, 13])).quiet;
   assert.deepEqual(walked, { T: [20, 0, 20], CT: [19, 0, 19] });
+  // After that death the round goes on to its end at step 30: the steps of the living players count apart.
+  const after = shapeOf(zones, round('T', null, [], [12, 13])).loud;
+  assert.deepEqual(after, { T: [90, 0, 90], CT: [54, 0, 54] });
   // Two CTs dead at second 24 with one T dead: no side is two ahead before the plant.
   assert.equal(s.ahead, null);
   // Three Ts die at steps 4 to 7 (before second 20): the CTs are two ahead when the state is first read.
