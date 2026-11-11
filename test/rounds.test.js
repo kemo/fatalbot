@@ -28,6 +28,12 @@ test('the shape of a round: the first death, the numbers at the plant, the Ts in
   assert.ok(s.entry.tAtSite >= 1 && s.later.tAtSite >= s.entry.tAtSite, 'more Ts are in the site 10 s later');
   // A T and a CT die in one step: no side died first.
   assert.equal(shapeOf(zones, round('T', null, [5], [5])).first.side, 'both');
+  // No death before second 10: the round has no quiet part from second 16 on.
+  assert.deepEqual(s.quiet, { T: [0, 0, 0], CT: [0, 0, 0] });
+  // With the first death at second 24, each player walks four steps of 2 s from second 16 on (the CT that dies
+  // then three), each of 65 to 75 units: no stand, all small steps.
+  const walked = shapeOf(zones, round('T', null, [], [12, 13])).quiet;
+  assert.deepEqual(walked, { T: [20, 0, 20], CT: [19, 0, 19] });
   // Two CTs dead at second 24 with one T dead: no side is two ahead before the plant.
   assert.equal(s.ahead, null);
   // Three Ts die at steps 4 to 7 (before second 20): the CTs are two ahead when the state is first read.
