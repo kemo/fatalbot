@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createBrain } from '../src/brain.js';
 import { flat } from '../src/geometry.js';
-import { choosePost, siteInfo, stagePlaces } from '../src/sites.js';
+import { choosePost, postSpots, siteInfo, stagePlaces, stageSpots } from '../src/sites.js';
 import { flatMap, flatPorts, frameAt, player } from './support/flat-host.js';
 
 // A wide floor with no wall in it: the Ts spawn in the west, two sites lie in the east.
@@ -200,4 +200,42 @@ test('the Ts wait out of the sight of the posts on their way, and go at a second
   };
   assert.equal(goalAt(10), 'stage');
   assert.notEqual(goalAt(80), 'stage');
+});
+
+test('a CT that holds its post steps between the floors about it', () => {
+  // A CT at its post for 60 s, with no enemy alive to see. Each frame puts it on the floor that it wants to stand on.
+  const brain = fresh([1, 2]);
+  const floors = [];
+  let post = null;
+  for (let tick = 1; tick <= 6000; tick++) {
+    const at = brain.debug(1)?.point ?? [600, 100, 36];
+    brain.frame(frameAt(tick, [player(1, 'CT', at, { own: true, yaw: 180 }), cts()[1], player(9, 'T', [-800, 0, 36], { alive: false })]));
+    post ??= brain.teams.CT.plan.posts.get(1);
+    brain.think(1);
+    const point = brain.debug(1).point;
+    if (tick > 300 && point && !floors.some((f) => flat(f, point) < 8)) floors.push(point);
+  }
+  const spots = postSpots(fresh([]), post.site, post.point);
+  assert.ok(spots.length >= 2, 'floors about the post');
+  assert.ok(floors.length >= 3, `it stood on ${floors.length} floors in 60 s`);
+  for (const f of floors) assert.ok(flat(f, post.point) < 8 || spots.some((p) => flat(p, f) < 8), 'each is the post or a floor about it');
+  for (const p of spots) assert.ok(flat(p, post.point) >= 48 && flat(p, post.point) <= 176);
+});
+
+test('the floors about a waiting place of the Ts are as hidden as the place', () => {
+  const sites = [{ mins: [1200, -50, 0], maxs: [1300, 50, 72] }];
+  const ports = flatPorts({ half: 600 });
+  const brain = createBrain({ map: flatMap({ sites, size: 96, spawns: [-1200, 1400], wall: 600 }), ports, seed: 4 });
+  const info = siteInfo(brain, 0);
+  const sees = (a, b) => ports.traceLine([a[0], a[1], 53], [b[0], b[1], 53]) >= 1;
+  let all = 0;
+  for (const place of stagePlaces(brain, 0)) {
+    for (const p of stageSpots(brain, 0, place)) {
+      all++;
+      assert.ok(!sees(p, info.mid) && info.posts.every((post) => !sees(post.point, p)), 'no post and no site sees the floor');
+      assert.ok(flat(p, place) <= 176);
+    }
+  }
+  assert.ok(all >= 2, 'some floors');
+  assert.deepEqual(stageSpots(brain, 0, [0, 0, 36]), [], 'a place that is none of the level has none');
 });

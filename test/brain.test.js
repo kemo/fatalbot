@@ -209,7 +209,8 @@ test('a bot that waits at its place jumps now and then, by the count of its prof
     brain.think(1);
     const { point: post, watch } = brain.teams.CT.plan.posts.get(1);
     const enemy = enemyAt(post, watch);
-    return run(brain, 1, 3000, () => [player(1, 'CT', post, { own: true }), player(2, 'T', enemy)], () => ({ phase }));
+    // The bot stands on the floor of its post that it wants to stand on (it steps between them, tactics.js restless).
+    return run(brain, 1, 3000, () => [player(1, 'CT', brain.debug(1).point ?? post, { own: true }), player(2, 'T', enemy)], () => ({ phase }));
   };
   // On the other side of the wall from the post.
   const hidden = (post) => [post[0] < WALL_X ? WALL_X + 300 : WALL_X - 300, post[1], 36];

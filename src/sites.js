@@ -4,7 +4,7 @@
 // the posts later (spec 01, section 6).
 
 import { PI, abs, cos, flat, hypot, sin, yawTo, turn } from './geometry.js';
-import { distancesFrom, findPath, nearestNode, nodePoint, pathLength, reaches } from './nav.js';
+import { WALK, distancesFrom, findPath, nearestNode, nodePoint, pathLength, reaches } from './nav.js';
 
 // A way in is named by the point of the attackers' path this far from the site's middle.
 const ENTRY_DISTANCE = 650;
@@ -43,6 +43,12 @@ const BACK_REACH = 1600;
 const STAGE_SIGHT = 2000;
 const STAGE_EACH = 3;
 const STAGE_APART = 90;
+
+// A player that holds a place steps between floors this near it and at its height, so many of them, this far apart.
+const SPOT_REACH = 176;
+const SPOT_RISE = 24;
+const SPOTS = 4;
+const SPOT_APART = 48;
 
 const eyeAt = (p) => [p[0], p[1], p[2] + EYE];
 
@@ -222,6 +228,74 @@ function postsOf(brain, mid, entries) {
 }
 
 /**
+ * The floors about `point` that a player who holds it steps to: within SPOT_REACH by plain steps of the graph, at
+ * the height of the point, with a free straight walk from it, and good by `good(floor)`. At most SPOTS, the
+ * furthest first, SPOT_APART from the point and from each other.
+ */
+function spotsAbout(brain, point, good) {
+  const { nav, ports } = brain;
+  const start = nearestNode(nav, point, 2, 40);
+  if (start < 0) return [];
+  const seen = new Set([start]);
+  const found = [];
+  for (const queue = [start]; queue.length; ) {
+    const at = queue.shift();
+    for (let e = nav.offsets[at]; e < nav.offsets[at + 1]; e++) {
+      const next = nav.to[e];
+      if (nav.kinds[e] !== WALK || seen.has(next)) continue;
+      seen.add(next);
+      const p = nodePoint(nav, next);
+      if (flat(p, point) > SPOT_REACH || abs(p[2] - point[2]) > SPOT_RISE) continue;
+      queue.push(next);
+      if (flat(p, point) >= SPOT_APART && ports.traceHull(point, p, false) >= 1 && good(p)) found.push(p);
+    }
+  }
+  found.sort((a, b) => flat(b, point) - flat(a, point) || a[0] - b[0] || a[1] - b[1]);
+  const kept = [];
+  for (const p of found) {
+    if (kept.length === SPOTS) break;
+    if (!kept.some((q) => flat(q, p) < SPOT_APART)) kept.push(p);
+  }
+  return kept;
+}
+
+/**
+ * The floors about a post of site `k` that watch what the post watches: a way in that it sees, or the site for a
+ * post further back. Found once for each post; empty for a place that is no post of the site.
+ */
+export function postSpots(brain, k, point) {
+  const info = siteInfo(brain, k);
+  const post = info.posts.find((p) => flat(p.point, point) < 8);
+  if (!post) return [];
+  if (post.spots) return post.spots;
+  const { ports } = brain;
+  const watched = info.entries.filter((_, i) => post.sees[i]);
+  post.spots = spotsAbout(brain, post.point, (p) => {
+    if (info.entries.some((e) => flat(p, e) < 250)) return false;
+    const eye = eyeAt(p);
+    return watched.length ? watched.some((e) => ports.traceLine(eye, eyeAt(e)) >= 1) : ports.traceLine(eye, eyeAt(info.mid)) >= 1;
+  });
+  return post.spots;
+}
+
+/** True when no post of the site sees the floor `p` within STAGE_SIGHT, and `p` does not see the site. */
+function hiddenFrom(brain, info, p) {
+  const { ports } = brain;
+  if (ports.traceLine(eyeAt(info.mid), eyeAt(p)) >= 1) return false;
+  return !info.posts.some((post) => !post.back && flat(post.point, p) < STAGE_SIGHT && ports.traceLine(eyeAt(post.point), eyeAt(p)) >= 1);
+}
+
+/** The floors about a waiting place of the attackers of site `k` that are as hidden as it. Found once for each place. */
+export function stageSpots(brain, k, place) {
+  const info = siteInfo(brain, k);
+  const index = (info.stage ?? []).findIndex((p) => flat(p, place) < 8);
+  if (index < 0) return [];
+  const known = (info.stageSpots ??= new Map());
+  if (!known.has(index)) known.set(index, spotsAbout(brain, info.stage[index], (p) => hiddenFrom(brain, info, p)));
+  return known.get(index);
+}
+
+/**
  * The places where the attackers of site `k` wait before they go in (cached): on each of their ways to it, the
  * floors short of the way in that no post of the site sees and that do not see the site, STAGE_EACH a way,
  * STAGE_APART from each other. Empty when the site has no way in or no such floor.
@@ -229,12 +303,11 @@ function postsOf(brain, mid, entries) {
 export function stagePlaces(brain, k) {
   const info = siteInfo(brain, k);
   if (info.stage) return info.stage;
-  const { nav, ports } = brain;
+  const { nav } = brain;
   info.stage = [];
   const from = brain.spawnMid.T ? nearestNode(nav, brain.spawnMid.T, 8, 200) : -1;
   if (from < 0) return info.stage;
-  const posts = info.posts.filter((post) => !post.back);
-  const hidden = (p) => ports.traceLine(eyeAt(info.mid), eyeAt(p)) < 1 && !posts.some((post) => flat(post.point, p) < STAGE_SIGHT && ports.traceLine(eyeAt(post.point), eyeAt(p)) >= 1);
+  const hidden = (p) => hiddenFrom(brain, info, p);
   for (const entry of info.entries) {
     const path = findPath(nav, from, nearestNode(nav, entry, 4, 64), nav.count + 1);
     if (!path) continue;

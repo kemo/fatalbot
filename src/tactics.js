@@ -3,13 +3,13 @@
 // (bot.js decide, tactics.js), with the bomb as the senses give it (senses.js bombFor): a CT that does not know
 // where the bomb lies looks for it.
 
-import { abs, distance, eyeOf, flat, hypot, toward } from './geometry.js';
+import { abs, clamp, distance, exp, eyeOf, flat, hypot, toward } from './geometry.js';
 import { bombFor, nearestMate } from './senses.js';
 import { findPath, nearestNode, nodePoint, reaches } from './nav.js';
 import { approachPoint } from './watch.js';
 import { placeAt, placesOf } from './places.js';
 import { pointKey } from './walk.js';
-import { choosePost, inBombSite, siteMid, touches } from './sites.js';
+import { choosePost, inBombSite, postSpots, siteMid, stageSpots, touches } from './sites.js';
 import { lineupGoal } from './grenades.js';
 
 // A defuser stops this near the bomb, from its body: the game takes the use key 64 from the player.
@@ -70,6 +70,15 @@ const SEEK_SECONDS = 25;
 const SEEK_NEAR = 128;
 const STILL_RANGE = 96;
 const SEEK_TRIES = 12;
+// A player that holds a place stands this long on one floor of it, then steps to another: the middle (s) by side,
+// the spread of its logarithm, and the ends of the draw. In the quiet part of a round the recorded CTs stand in
+// 33% of the steps of 2 s and the Ts in 16%; a stand lasts 2 s in the middle and 14 s at the ninth tenth
+// (docs/measures/2026-11-11-economy.md).
+const STAND_MIDDLE = { CT: 3, T: 2 };
+const STAND_SPREAD = 1.1;
+const STAND_ENDS = [0.5, 30];
+// With an enemy seen or heard this fresh a player keeps its floor.
+const SHIFT_CALM = 4;
 
 const over = (p) => [p[0], p[1], p[2] + 36];
 const eyeAt = (p) => [p[0], p[1], p[2] + EYE];
@@ -121,6 +130,32 @@ export function decide(c) {
   // An enemy known: hunt it, wait for it or fall back. Else the place of the plan before its second. Else a look
   // around when nothing happens. Else the plan.
   return contactTask(c) ?? stage ?? seek(c) ?? objective(c);
+}
+
+/**
+ * The floor that a player who holds the place `base` stands on now: `base` or one of `spots` about it. It stands
+ * a drawn time, then takes another floor that no teammate stands on. An enemy seen or heard keeps it where it is.
+ */
+function restless(c, base, spots) {
+  const { me, s, time, random } = c;
+  const key = pointKey(base);
+  if (s.shift?.key !== key) s.shift = { key, at: base, until: null };
+  const shift = s.shift;
+  if (!spots.length) return base;
+  const free = (p) => !c.mates.some((m) => m.id !== me.id && m.alive && flat(m.origin, p) < 40);
+  const there = flat(shift.at, me.origin) < 24;
+  // From its first stand on, the bot walks between the floors; the run to the place is a run.
+  if (there) shift.settled = true;
+  if (there) shift.until ??= time + clamp(STAND_MIDDLE[me.team] * exp(random.gauss() * STAND_SPREAD), STAND_ENDS[0], STAND_ENDS[1]);
+  const calm = time - s.seenAt > SHIFT_CALM && !(s.noise && time - s.noise.at < SHIFT_CALM);
+  if ((there && calm && time >= shift.until) || (!there && !free(shift.at))) {
+    const others = [base, ...spots].filter((p) => flat(p, shift.at) > 8 && free(p));
+    if (others.length) {
+      shift.at = others[Math.floor(random() * others.length)];
+      shift.until = null;
+    }
+  }
+  return shift.at;
 }
 
 function nearestSite(map, o) {
@@ -189,6 +224,13 @@ function stageGoal(c) {
     s.go = true;
     return null;
   }
+  // A place of the level has floors about it that are as hidden: the bot steps between them while it waits.
+  const spots = stageSpots(brain, plan.site, spot);
+  if (spots.length) {
+    const at = restless(c, spot, spots);
+    const there = flat(at, me.origin) < 40;
+    return { kind: 'hold', task: 'stage', point: at, look: null, rest: there, walk: !there && Boolean(s.shift.settled) };
+  }
   // A teammate on the bot's place: near enough is there.
   const taken = flat(spot, me.origin) < NEAR_ENOUGH && c.mates.some((p) => p.id !== me.id && p.alive && flat(p.origin, spot) < 48);
   // At its place a T looks where the player of the formation looked (the fourth number of the place).
@@ -204,11 +246,14 @@ function objective(c) {
   if (me.team === 'CT') {
     const post = c.post;
     if (!post?.point) return { kind: 'hold', point: null };
-    // At the post the view rests on the way in that it watches; the walk there looks along its own way.
-    const there = flat(post.point, me.origin) < 40;
-    // A post of a mined setup has the view of the player who stood there; a post of the level watches its way in.
-    const look = !there ? null : post.yaw !== null && post.yaw !== undefined ? { yaw: post.yaw, pitch: 0 } : post.watch ? toward(eyeAt(post.point), eyeAt(post.watch)) : null;
-    return { kind: 'hold', task: plan.rotate && post.site === plan.rotate.site && plan.posts.get(c.bot.id)?.site !== post.site ? 'rotate' : 'site', point: post.point, look, rest: there };
+    // A post of the level has floors about it that watch the same way in: the bot steps between them.
+    const at = restless(c, post.point, postSpots(c.brain, post.site, post.point));
+    const there = flat(at, me.origin) < 40;
+    // Once at the post the view stays on the way in that it watches, also on a step to the next floor; the run
+    // to the post looks along its own way. A post of a mined setup has the view of the player who stood there.
+    const settled = there || Boolean(c.s.shift.settled);
+    const look = !settled ? null : post.yaw !== null && post.yaw !== undefined ? { yaw: post.yaw, pitch: 0 } : post.watch ? toward(eyeOf(me), eyeAt(post.watch)) : null;
+    return { kind: 'hold', task: plan.rotate && post.site === plan.rotate.site && plan.posts.get(c.bot.id)?.site !== post.site ? 'rotate' : 'site', point: at, look, rest: there, walk: settled && !there };
   }
   const at = time >= plan.goAt ? siteSpot(c, plan.site) : null;
   if (at) return { kind: 'hold', task: 'site', point: at, look: null };
@@ -531,6 +576,7 @@ export function forgetGoal(c, goal = null) {
   }
   s.lastSeen = null;
   s.siteSpot = null;
+  s.shift = null;
   s.task = null;
   s.seek = null;
   s.post = null;
