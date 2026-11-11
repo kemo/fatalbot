@@ -163,10 +163,19 @@ them to the brain as `map.plans` (spec 02). With them:
   wall or on an edge, with a free straight walk from the place. About a post it sees a way in that the post sees;
   about a waiting place it is as hidden as the place.
 - The run to the place is a run. The steps between the floors are a walk, and a CT keeps its view on the way in.
-- An enemy seen or heard in the last 4 s keeps the bot where it is.
-- Measured (docs/measures/2026-11-11-hold-and-route.md): before the first death of a round a CT stands in 43% of
-  the steps of 2 s (90% before, the players 33%) and a T in 22% (63%, 16%). Open: the bot faces a wall a little
-  more often than the reference bots, and the floors are found inside a tick.
+- An enemy in its sight in the last 1.5 s keeps the bot where it is. A shot that it hears does not.
+- A bot that waits for a known enemy (at its post, where the contact found it, or in cover) and a T at its post
+  after the plant step in the same way, with the view where the enemy comes into sight. A bot that waits plants
+  its feet when a sign of that enemy is under 2 s old and within 700 units. The floors about a cover are out of the
+  enemy's sight; the floors about a post after the plant see the bomb.
+- Each place has its own stand: a T that waits for an enemy still has its waiting place of the plan.
+- **Free time** (`tactics.js freeGoal`): a round is the team's when no enemy is left alive after one lived, or
+  when its clock ran out with no bomb down. Then a player runs to floors about it, with the knife out, and a run
+  that can hop, hops. With the bomb down and no T alive, the CTs go for the bomb as before; once a teammate is at
+  it, the others are free.
+- Measured (docs/measures/2026-11-11-hold-and-route.md): before the first death of a round a CT stands in 35% of
+  the steps of 2 s (90% before, the players 33%) and a T in 17% (63%, 16%); after it in 36% and 20% (50% and 29%
+  before, the players 18% and 10%). Open: the floors are found inside a tick.
 
 ### 6.2 The buy of a team (`buy.js`)
 

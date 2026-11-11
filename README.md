@@ -105,7 +105,7 @@ A claim that a bot is better needs a number. Spec 01 holds the gates. In short:
 4. **The pace of the Ts** (commit `a7858e1`): the Ts wait out of sight and go at a second drawn as the players'
    was. A round then has the players' pace, and the Ts win 54.4% of the rounds of fatalbot against itself (the
    gate is 39 to 54%; 51.5% without the pace). With the buy of a team they won 55.2%, and with the steps of a bot that
-   holds a place they win 51.5%: inside the gate, with the pace in. `git revert a7858e1` takes the pace away
+   holds a place they win 53.2%: inside the gate, with the pace in. `git revert a7858e1` takes the pace away
    (docs/measures/2026-11-11-night.md, sections 6 and 8; 2026-11-11-economy.md; 2026-11-11-hold-and-route.md).
 5. **The data of the maps.** The plans and the lineups come from the recorded matches. They name no player, and
    they are places on Valve's maps. They are made into `out/` and are not committed. A host on a real server needs

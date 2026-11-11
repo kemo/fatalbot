@@ -6,24 +6,29 @@ team, docs/measures/2026-11-11-economy.md).
 
 ## 0. In short
 
-| Measure | The recorded matches | Before | After |
-|---------|------|------|------|
-| Quiet part of a round: the steps of 2 s in which a CT stands | 33% | 90% | 43% |
-| The same for a T | 16% | 63% | 22% |
-| Gate G2: the Ts win, by match, 36 seeds (the gate: 39 to 54%) | 49.7% | 55.2% (error 1.5) | 51.5% (error 1.5) |
-| Gate G1: fatalbot against the reference bots, 384 rounds | | 70.8% | 68.8% |
-| Gate G3: fatalbot faces a wall, against the reference bots | | 0.43% (the reference bots 0.41%) | 0.48% (0.39%) |
-| Gate G3: fatalbot is stuck | | 0.59% (0.88%) | 0.34% (0.96%) |
-| fatalbot in the places of recorded Ts and CTs, 474 rounds each | | 283 and 276 | 282 and 281 |
+| Measure | The recorded matches | Before | The steps before a contact (`2d3c129`) | The head (`362beb4`) |
+|---------|------|------|------|------|
+| To the first death of a round: the steps of 2 s in which a CT stands, a T stands | 33%, 16% | 90%, 63% | 43%, 22% | 35%, 17% |
+| From the first death to the plant: a CT stands, a T stands | 18%, 10% | 73%, 39% | not run | 35%, 18% |
+| Gate G2: the Ts win, by match, 36 seeds (the gate: 39 to 54%) | 49.7% | 55.2% (error 1.5) | 51.5% (error 1.5) | 53.2% (error 1.6) |
+| Gate G1: fatalbot against the reference bots, 384 rounds | | 70.8% | 68.8% | 72.7% |
+| Gate G3: fatalbot faces a wall (the reference bots in the same run) | | 0.43% (0.41%) | 0.48% (0.39%) | 0.47% (0.46%) |
+| Gate G3: fatalbot is stuck | | 0.59% (0.88%) | 0.34% (0.96%) | 0.46% (1.10%) |
+| fatalbot in the places of recorded Ts and CTs, 474 rounds each | | 283 and 276 | 282 and 281 | 282 and 274 |
 
-- **Gate G2 is met for the first time**: the Ts win 51.5% of the rounds over 36 seeds, 3.8 points less than before
-  (the error of the difference is 2.1). The pace of the Ts (commit `a7858e1`) is still in.
-- **Gate G3 is not held on the wall share**: 0.48% against the reference bots' 0.39%. Before the change it was
-  0.43% against 0.41%. Two fixes for it made it worse and went back (section 3).
+- **The bots do not stand as they did.** Before a contact they move as the recorded players do. After the first
+  death they stand in about a third of the steps of 2 s, half as often as before, and still twice as often as the
+  players (sections 2 and 7).
+- **Gate G2 is met**: the Ts win 53.2% of the rounds over 36 seeds (55.2% before this work). The pace of the Ts
+  (commit `a7858e1`) is still in. The share is near the upper end of the gate: with its error it reaches 54.8%.
+- **Gate G3**: the wall share is at the level of the reference bots (0.47% against 0.46%), and fatalbot is stuck
+  less than half as often as they are. On the way there the wall share was not held, and two fixes for it made it
+  worse and went back (section 3).
 - A bot that plays on for a recorded player can now keep that player's route (section 4), and csbih-player has a
   switch for fatalbot as a patch (section 5). A review of the patch found two faults before it went anywhere: old
   events piled up in the adapter while no bot played, and the static build of csbih-player failed without the
   copy of fatalbot. Both are fixed and have a test.
+- After a round is decided the bots run about and hop (section 7.1).
 
 ## 1. The measure: the bots stood
 
@@ -227,9 +232,80 @@ After a plant the same side wins as often with the same numbers alive (docs/meas
 3). What is missing: the CTs' save when a retake has no chance, the Ts' spread after the plant, a change of site
 before the plant, and a choice of the site by the map.
 
-## 7. Next
+## 7. Free time, and the wait for a known enemy (the owner's reports of 2026-11-11)
+
+The owner played with the bots and reported two things: "they just stand there after win (while teammate is
+defusing), they should bunny hop around", and "standing is what makes them look like bots: at the start of the
+round I killed an enemy and 3 of my guys just stood there until the next event".
+
+### 7.1 Free time (`466c83f`, `fe98812`)
+
+After the last enemy died, with the bomb still down, the recorded CTs that are left stand in 31% of the steps of
+2 s (about the one at the bomb) and run in 36%, at 95 units a second in the middle. The bots stood in 43% of the
+steps and moved at 38 units a second (four maps, seeds 7 to 12; a count of the session).
+
+Now a round is the team's when no enemy is left alive after one lived, or when its clock ran out with no bomb
+down. Then a player runs to floors about it, with the knife out, and a run that can hop, hops. With the bomb down
+and no T alive, the CTs go for the bomb as before, and once a teammate is at it the others are free.
+
+The rule, written before the run: on set B the CTs' stands in that time fall; the rounds that the CTs win after
+a plant do not fall by more than 2 points of all rounds, and the Ts' share by match does not rise by more than
+the error; gate G1 does not fall by more than 5 points; stuck and wall rise by no more than 0.1 point each.
+
+| Measure | Before | `466c83f` | `fe98812` (kept) |
+|---------|------|------|------|
+| Set B: the CTs that are left stand, and their speed in the middle | 43%, 38 | 31%, 95 | 32%, 96 |
+| The CTs win after a plant, of all rounds: set A, set B | 18%, 19% | 14%, 16% | 18%, 15% |
+| The same over 36 seeds | 19% | | 17% |
+| The Ts win, by match, 36 seeds | 51.5% (error 1.5) | | 50.9% (error 1.6) |
+| Gate G1, 384 rounds | 68.8% | 69.8% | 71.6% |
+
+- `466c83f` also sent only the nearest CT to a bomb with nobody at it, and left the others free. The CTs then won
+  fewer rounds after a plant on both sets. That part went out in `fe98812`.
+- For `fe98812` the row of the CTs' wins after a plant fell by 4 points on set B and by nothing on set A, so 24
+  more seeds were played: over 36 seeds it is 2 points lower, the CTs win 2 points more rounds with no plant, and
+  the Ts' share is the same (0.5 points less, error 2.2). The free time costs no rounds, and it stays.
+
+### 7.2 The wait for a known enemy (`f48a2ce`, `362beb4`)
+
+From the first death of a round to the plant the bots stood in 50% (CTs) and 29% (Ts) of the steps of 2 s; the
+recorded players in 18% and 10%. A bot that knows of an enemy and waits for it stood on one floor for 3 to 12 s,
+and the steps of a bot at its place stopped for 4 s after each shot that it heard.
+
+Now a bot that waits for an enemy (at its post, where the contact found it, or in cover), and a T at its post
+after the plant, steps between the floors about its place, with its view where the enemy comes into sight. Only an
+enemy in its sight in the last 1.5 s stops the steps; and a bot that waits plants its feet when a sign of that
+enemy is under 2 s old and within 700 units.
+
+A fault found by the new test: a T that waited for an enemy never took a step. It still had its waiting place of
+the plan, and both holds used one stand; the two reset each other's time in every tick. Each place has its own
+stand now.
+
+The rule, written before the run: on set B the stands after the first death fall by a third of the gap to the
+players or more for the CTs and for the Ts (to 39% and 22% or under), and the Ts' share by match does not rise by
+more than the error; over both sets gate G1 does not fall by more than 5 points, fatalbot in the places of
+recorded Ts and CTs does not fall by more than 10 rounds each, and stuck and wall rise by no more than 0.1 point.
+
+| Measure | Before (`fe98812`) | Steps at every moment (`f48a2ce`) | With the feet planted for a near enemy (`362beb4`, kept) |
+|---------|------|------|------|
+| Set B, after the first death: a CT stands, a T stands | 50%, 29% | 31%, 17% | 36%, 20% |
+| Set B, before the first death: a CT stands, a T stands | 44%, 19% | 36%, 17% | 35%, 17% |
+| Set B: the Ts win, by match | 57.6% | 48.8% | 50.5% |
+| Gate G1, 384 rounds | 71.6% | 71.4% | 72.7% |
+| In the places of recorded Ts and CTs, of 474 | 282 and 281 | 280 and 262 | 282 and 274 |
+| Stuck (the reference bots) | 0.41% (1.14%) | 0.28% (1.07%) | 0.46% (1.10%) |
+| Faces a wall (the reference bots) | 0.54% (0.45%) | 0.53% (0.43%) | 0.47% (0.46%) |
+
+- With steps at every moment of a wait fatalbot won 19 rounds fewer in the places of recorded CTs: a bot is caught
+  in a step when the enemy comes. With the feet planted for a near and fresh enemy it is 7 fewer, inside the rule,
+  and every point of the rule holds.
+- The bots still stand more than the players after the first death (36% and 20%; the players 18% and 10%).
+- The wall share is now at the level of the reference bots (0.47% against 0.46%).
+
+## 8. Next
 
 1. The cause of the wall share with the steps (section 3), and gate G5 with the floors made at the brain's start.
-2. The hold after a contact: the bots stand in 73% of the steps after the first death (the players 18%).
+2. The rest of the standing after the first death (36% and 20% of the steps; the players 18% and 10%), and the
+   jumps of a player that steps.
 3. The bomb play of section 6, the CTs' save first.
 4. On the owner's word: the patch of section 5 into csbih-player, and the replay page tried with it.

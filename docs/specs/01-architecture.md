@@ -95,14 +95,15 @@ G1 alone is easy to cheat: a faster hand wins. So both sides take the same motor
 numbers of csbih-player), and G6 must hold.
 
 The state of the gates on 2026-11-11 (docs/measures/2026-11-11-night.md, 2026-11-11-economy.md and
-2026-11-11-hold-and-route.md): G1 and G6 are met. G2 is met: the Ts win 51.5% of 2,592 rounds (error 1.5), with
-the pace of the Ts in (commit `a7858e1`). G3 is met for the stuck share and open for the wall share: with the steps
-of a bot that holds a place, fatalbot faces a wall 0.48% of the time and the reference bots 0.39%. G4 is not met:
-fatalbot plants in 64% of its rounds and the players in 44% (`tools/rounds.js` measures the shape of a round for
-both). G5 was 0.065 ms for ten bots a tick before the steps and is not read with them. G7 is met for the kills
-with a shot to the head, the jumps on a run, the buys of a team, and the steps of a player that holds a place
-before the first contact; after a contact the bots still stand (73% of the steps of 2 s, the players 18%), they
-jump less than the players after the first seconds of a round, and they fire fewer shots on the run at a distance.
+2026-11-11-hold-and-route.md): G1 and G6 are met. G2 is met, near its upper end: the Ts win 53.2% of 2,592 rounds
+(error 1.6), with the pace of the Ts in (commit `a7858e1`). G3: fatalbot is stuck 0.46% of the time (the
+reference bots 1.10%) and faces a wall 0.47% (0.46%). G4 is not met: fatalbot plants in 64% of its rounds and the
+players in 44% (`tools/rounds.js` measures the shape of a round for both). G5 was 0.065 ms for ten bots a tick
+before the steps of a bot that holds a place and is not read with them. G7 is met for the kills with a shot to
+the head, the jumps on a run, the buys of a team, and the steps of a player that holds a place before the first
+contact. After the first death the bots stand in 35% (CTs) and 18% (Ts) of the steps of 2 s, the players in 18%
+and 10%; they jump less than the players after the first seconds of a round, and they fire fewer shots on the run
+at a distance.
 
 To come for G7, with the demo data (section 6): the likeness to the players as `tools/compare-fights.js` and
 `tools/aim-stats.js` of csbih-player measure it.
