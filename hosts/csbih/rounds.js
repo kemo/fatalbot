@@ -20,6 +20,9 @@ const AHEAD_FROM = 20;
 // step of STEP seconds under STAND units is a stand, one under SHIFT a small step.
 const STAND = 16;
 const SHIFT = 100;
+// After a plant: a T is at the bomb within BOMB_NEAR units of it, read BOMB_LATER seconds after the plant.
+const BOMB_NEAR = 500;
+const BOMB_LATER = 10;
 
 const near = (p, site) => Math.hypot(p[0] - site.mid[0], p[1] - site.mid[1]) < SITE_NEAR && Math.abs(p[2] - site.mid[2]) < SITE_HIGH;
 const share = (n, of) => (of ? n / of : NaN);
@@ -30,7 +33,9 @@ const share = (n, of) => (of ? n / of : NaN);
  * ctOut (the share of the living CTs out of the sites at second OUT_AT; null for a round that ends before it),
  * ahead ('CT', 'T' or null: the side that was first AHEAD players ahead from second AHEAD_FROM on, before a plant,
  * with both sides alive), quiet and loud ({T, CT}: [steps, stands, small steps] of the living players of a side
- * from second OUT_AT to the first death, and from the first death to the plant)}.
+ * from second OUT_AT to the first death, and from the first death to the plant), saved (after a plant that the Ts
+ * win: the CTs alive at the round's end; null for another round), tsAtBomb ([Ts within BOMB_NEAR of the bomb,
+ * Ts alive] BOMB_LATER seconds after the plant, with a CT alive then; null when the round is over by then)}.
  * `zones` are the sites of the level (strategies.js zonesOf).
  */
 export function shapeOf(zones, round) {
@@ -73,8 +78,15 @@ export function shapeOf(zones, round) {
       }
     }
   }
+  const saved = round.plant && round.winner === 'T' ? alive('CT', steps - 1) : null;
+  let tsAtBomb = null;
+  const later = round.plant ? Math.round((round.plant.t + BOMB_LATER) / STEP) : steps;
+  if (later < steps - 1 && alive('CT', later)) {
+    const ts = round.T.map((l) => l[later]).filter(Boolean);
+    tsAtBomb = [ts.filter((p) => Math.hypot(p[0] - round.plant.at[0], p[1] - round.plant.at[1]) < BOMB_NEAR).length, ts.length];
+  }
   return {
-    winner: round.winner, seconds: round.seconds, buy: round.buy, first, ctOut, ahead, quiet, loud,
+    winner: round.winner, seconds: round.seconds, buy: round.buy, first, ctOut, ahead, quiet, loud, saved, tsAtBomb,
     plant: round.plant ? { t: round.plant.t, T: alive('T', at(round.plant.t)), CT: alive('CT', at(round.plant.t)) } : null,
     site, te, entry: seen ? count(at(te)) : null, later: seen ? count(at(te + LATER)) : null,
   };
@@ -127,6 +139,8 @@ export function shapeTable(shapes) {
       const name = `${title}: the steps of ${STEP} s in which a ${side}`;
       return [[`${name} stands (under ${STAND} units)`, share(sum(1), sum(0)), '%'], [`${name} moves under ${SHIFT} units`, share(sum(2), sum(0)), '%']];
     })),
+    ['Plants after which the Ts win and a CT is alive at the end', share(planted.filter((r) => r.saved > 0).length, planted.length), '%'],
+    [`${BOMB_LATER} s after the plant: the living Ts within ${BOMB_NEAR} units of the bomb`, share(planted.reduce((n, r) => n + (r.tsAtBomb?.[0] ?? 0), 0), planted.reduce((n, r) => n + (r.tsAtBomb?.[1] ?? 0), 0)), '%'],
     [`At second ${OUT_AT}: the CTs further than ${OUT} units from every site`, mean(shapes.filter((r) => r.ctOut !== null && r.ctOut !== undefined).map((r) => r.ctOut)), '%'],
   );
   return rows;

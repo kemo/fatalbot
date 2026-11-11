@@ -26,6 +26,13 @@ test('the shape of a round: the first death, the numbers at the plant, the Ts in
   assert.ok(s.te > 20 && s.te <= 60, 'a T stood in the site');
   assert.equal(s.entry.T, 4);
   assert.ok(s.entry.tAtSite >= 1 && s.later.tAtSite >= s.entry.tAtSite, 'more Ts are in the site 10 s later');
+  // The Ts win after the plant with three CTs alive at the end: a save. No 10 s of the round are left after the plant.
+  assert.equal(s.saved, 3);
+  assert.equal(s.tsAtBomb, null);
+  // A plant at 30 s: 10 s later (step 20) four Ts live, at 1000 units and more from a bomb at the other site.
+  const far = shapeOf(zones, round('CT', { t: 30, at: [-1000, 0, 0] }, [10], [5, 12]));
+  assert.equal(far.saved, null);
+  assert.deepEqual(far.tsAtBomb, [0, 4]);
   // A T and a CT die in one step: no side died first.
   assert.equal(shapeOf(zones, round('T', null, [5], [5])).first.side, 'both');
   // No death before second 10: the round has no quiet part from second 16 on.
