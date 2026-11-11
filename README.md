@@ -22,7 +22,7 @@ node tools/arena.js --maps de_dust2 --rounds 12   # fatalbot against the bots of
 node tools/arena.js --help
 node tools/strategies.js --report docs/strategies.md   # the strategies of every recorded match, by map
 node tools/players.js                                  # the aim of the recorded players, with spread and error
-node tools/rounds.js --kinds fatal --by-map            # the shape of the rounds: the recorded matches beside the bots
+node tools/rounds.js --kinds fatal --by-map            # the shape of the rounds and the buys: the recorded matches beside the bots
 ```
 
 `tools/arena.js` takes a kind of bot for each team (`--a`, `--b`): `ref` (the bots of csbih-player), `fatal`,

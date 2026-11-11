@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { shapeOf, shapeTable } from '../hosts/csbih/rounds.js';
+import { buyTable, shapeOf, shapeTable } from '../hosts/csbih/rounds.js';
 import { STEP } from '../hosts/csbih/strategies.js';
 
 // Two sites; the Ts walk east to site 0. A lane is a player's place each STEP seconds, null once dead.
@@ -51,4 +51,23 @@ test('the table of many shapes: shares of the wins by the first death and by the
   assert.ok(Math.abs(table['Plants with the sides level'] - 1 / 3) < 1e-9);
   assert.equal(table['The Ts win a plant with the CTs ahead'], 0);
   assert.equal(table['Rounds in which no T stood in a site'], 0.25);
+});
+
+test('the buys of a side: by the result of the round before, and a new half starts the count again', () => {
+  const r = (winner, T, CT) => ({ winner, buy: { T, CT } });
+  // A half of five rounds, then a half that starts on pistols.
+  const match = [r('T', 'pistol', 'pistol'), r('T', 'force', 'pistol'), r('CT', 'full', 'pistol'), r('T', 'full', 'full'), r('T', 'full', 'force'), r('CT', 'pistol', 'pistol'), r('CT', 'pistol', 'force')];
+  const table = buyTable([match]);
+  const row = (side, when) => table.find((x) => x.side === side && x.when === when);
+  assert.equal(row('CT', 'all').rounds, 7);
+  assert.ok(Math.abs(row('CT', 'all').pistol - 4 / 7) < 1e-9);
+  // The CTs lost rounds 1 and 2, won round 3, lost round 4: their buys of rounds 2, 3, 4 and 5.
+  assert.deepEqual([row('CT', 'after 1 loss').rounds, row('CT', 'after 1 loss').pistol, row('CT', 'after 1 loss').force], [2, 0.5, 0.5]);
+  assert.deepEqual([row('CT', 'after 2 losses').rounds, row('CT', 'after 2 losses').pistol], [1, 1]);
+  // Round 6 starts a half: it counts for no row but 'all'. Round 7 follows a win of the CTs, as round 4 does.
+  assert.deepEqual([row('CT', 'after a win').rounds, row('CT', 'after a win').full, row('CT', 'after a win').force], [2, 0.5, 0.5]);
+  assert.equal(row('CT', 'after 3 losses or more').rounds, 0);
+  // The Ts lost rounds 3 and 6: their buys of rounds 4 and 7.
+  assert.deepEqual([row('T', 'after 1 loss').rounds, row('T', 'after 1 loss').full, row('T', 'after 1 loss').pistol], [2, 0.5, 0.5]);
+  assert.equal(row('T', 'after a win').rounds, 3);
 });

@@ -84,6 +84,43 @@ export function shapeTable(shapes) {
   return rows;
 }
 
+const BUYS = ['full', 'force', 'pistol'];
+
+/**
+ * The buys of each side through its matches: [{side, when, rounds, full, force, pistol}], the last three as
+ * shares. `when` is 'all', 'after a win', or the losses in a row before the round ('after 1 loss' to 'after 3
+ * losses or more'). `matches` are lists of shapes in the order of play. A round with both sides on pistols after
+ * a round with a gun starts a half: it counts for 'all' only, and the count of losses starts again.
+ */
+export function buyTable(matches) {
+  const WHEN = ['all', 'after a win', 'after 1 loss', 'after 2 losses', 'after 3 losses or more'];
+  const out = [];
+  for (const side of ['T', 'CT']) {
+    const cells = new Map(WHEN.map((when) => [when, { full: 0, force: 0, pistol: 0 }]));
+    for (const rounds of matches) {
+      let lost = 0;
+      rounds.forEach((r, i) => {
+        if (!r.buy) return;
+        cells.get('all')[r.buy[side]]++;
+        const last = rounds[i - 1];
+        if (!last?.buy) return;
+        const pistols = (x) => x.buy.T === 'pistol' && x.buy.CT === 'pistol';
+        if (pistols(r) && !pistols(last)) {
+          lost = 0;
+          return;
+        }
+        lost = last.winner === side ? 0 : lost + 1;
+        cells.get(WHEN[Math.min(lost, 3) + 1])[r.buy[side]]++;
+      });
+    }
+    for (const [when, cell] of cells) {
+      const rounds = cell.full + cell.force + cell.pistol;
+      out.push({ side, when, rounds, ...Object.fromEntries(BUYS.map((k) => [k, share(cell[k], rounds)])) });
+    }
+  }
+  return out;
+}
+
 const PRIMARY = new Set(['ak47', 'm4a1', 'galil', 'famas', 'aug', 'sg552', 'awp', 'scout', 'g3sg1', 'sg550', 'm249', 'mp5navy', 'mp5', 'p90', 'ump45', 'mac10', 'tmp', 'm3', 'xm1014']);
 const RIFLE = new Set(['ak47', 'm4a1', 'aug', 'sg552', 'awp', 'g3sg1', 'sg550', 'm249']);
 

@@ -10,7 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { csbihMissing, loadBody, loadCore, loadLevel, loadMapData, loadPlans } from '../hosts/csbih/load.js';
 import { runMatch, useBody } from '../hosts/csbih/arena.js';
 import { fatalKind } from '../hosts/csbih/kind.js';
-import { shapeOf, shapeTable } from '../hosts/csbih/rounds.js';
+import { buyTable, shapeOf, shapeTable } from '../hosts/csbih/rounds.js';
 import { zonesOf } from '../hosts/csbih/strategies.js';
 
 const args = { kinds: 'fatal', maps: 'de_dust2,de_inferno,de_nuke,de_train,de_aztec,de_cbble', seeds: '1,2,3,4,5,6', rounds: '12', 'by-map': false, json: null };
@@ -33,8 +33,9 @@ useBody(await loadBody());
 const CACHE = join(dirname(fileURLToPath(import.meta.url)), '..', 'out', 'strategies', 'cache');
 const kinds = args.kinds === 'none' ? [] : args.kinds.split(',');
 const columns = ['The recorded matches', ...kinds];
-// By column, then by map: the shapes of the rounds.
+// By column, then by map: the shapes of the rounds. By column: the matches, each a list of shapes in the order of play.
 const shapes = columns.map(() => ({}));
+const matches = columns.map(() => []);
 for (const map of args.maps.split(',')) {
   if (csbihMissing(map)) {
     console.error(`Skipped ${map}: ${csbihMissing(map)}.`);
@@ -43,17 +44,21 @@ for (const map of args.maps.split(',')) {
   const level = loadLevel(core, map);
   const zones = zonesOf(core, level);
   const dir = join(CACHE, map);
-  const recorded = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.json')).sort().flatMap((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')).rounds) : [];
+  const files = existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith('.json')).sort().map((f) => JSON.parse(readFileSync(join(dir, f), 'utf8')).rounds.map((r) => shapeOf(zones, r))) : [];
+  matches[0].push(...files);
+  const recorded = files.flat();
   if (!recorded.length) console.error(`${map}: no recorded rounds in ${dir}. Run tools/strategies.js first.`);
-  shapes[0][map] = recorded.map((r) => shapeOf(zones, r));
+  shapes[0][map] = recorded;
   kinds.forEach((name, k) => {
     if (!/^fatal(-plans)?(-nades)?$/.test(name)) throw new Error(`Unknown kind of bots: ${name}.`);
     const rounds = [];
     for (const seed of args.seeds.split(',').map(Number)) {
       const kind = fatalKind(core, level, { name, lineups: name.includes('-nades') ? loadMapData(map).lineups : [], plans: name.includes('-plans') ? loadPlans(map) : null });
-      rounds.push(...runMatch({ core, level, sides: { T: kind, CT: kind }, seed, rounds: Number(args.rounds), facts: true }).facts);
+      const match = runMatch({ core, level, sides: { T: kind, CT: kind }, seed, rounds: Number(args.rounds), facts: true }).facts.map((r) => shapeOf(zones, r));
+      matches[k + 1].push(match);
+      rounds.push(...match);
     }
-    shapes[k + 1][map] = rounds.map((r) => shapeOf(zones, r));
+    shapes[k + 1][map] = rounds;
   });
   console.error(`${map}: ${recorded.length} recorded rounds${kinds.map((name, k) => `, ${shapes[k + 1][map].length} of ${name}`).join('')}`);
 }
@@ -82,4 +87,10 @@ for (const map of Object.keys(shapes[0])) {
     console.log(`| ${map} | ${site === null ? 'none' : site} | ${cells.join(' | ')} |`);
   }
 }
-if (args.json) writeFileSync(args.json, JSON.stringify({ args, columns, shapes }, null, 1));
+// The buys of each side, and how they follow the result of the round before.
+const buys = matches.map((list) => buyTable(list));
+console.log('\n### The buys of each side: rounds, then the share with a full buy, a force buy and pistols\n');
+console.log(`| Side | Rounds | ${columns.join(' | ')} |`);
+console.log(`|------|--------|${columns.map(() => '------').join('|')}|`);
+buys[0].forEach((row, i) => console.log(`| ${row.side} | ${row.when} | ${buys.map((t) => `${t[i].rounds}: ${['full', 'force', 'pistol'].map((key) => show(t[i][key], '%')).join(', ')}`).join(' | ')} |`));
+if (args.json) writeFileSync(args.json, JSON.stringify({ args, columns, shapes, matches, buys }, null, 1));
