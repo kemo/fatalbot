@@ -107,9 +107,9 @@ export function player(id, team, origin, { yaw = 0, own = false, ...rest } = {})
   };
 }
 
-/** A frame at `tick` of a 10 ms clock. */
-export function frameAt(tick, players, { bomb = null, events = [], phase = 'live' } = {}) {
-  return { time: tick * 0.01, dt: 0.01, round: { number: 1, phase, timeLeft: 100, c4Timer: 35, knives: false }, players, bomb, smokes: [], events };
+/** A frame at `tick` of a 10 ms clock; `number` and `score` are the round's. */
+export function frameAt(tick, players, { bomb = null, events = [], phase = 'live', number = 1, score = null } = {}) {
+  return { time: tick * 0.01, dt: 0.01, round: { number, phase, timeLeft: 100, c4Timer: 35, knives: false, score }, players, bomb, smokes: [], events };
 }
 
 /**

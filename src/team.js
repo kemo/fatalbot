@@ -8,8 +8,10 @@ export const SIGHTING_SECONDS = 15;
 const CLEAR_SECONDS = 20;
 
 export class Team {
-  constructor(side) {
+  /** `random`: the team's own stream, for the draws that a team makes as one (buy.js teamCall). */
+  constructor(side, random = null) {
     this.side = side;
+    this.random = random;
     this.reset();
   }
 
@@ -35,7 +37,7 @@ export class Team {
     this.flashes = [];
     // The teammates asked to make way: bot id -> {dir, until, to} (walk.js makeWay).
     this.way = new Map();
-    // The call of the round's buy: 'buy' or 'save' (buy.js teamCall).
+    // The call of the round's buy: 'buy', 'force' or 'save' (buy.js teamCall).
     this.buyCall = null;
   }
 

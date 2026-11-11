@@ -54,8 +54,8 @@ export function mapOf(core, level, { lineups = [], plans = null } = {}) {
  * The host of one world. `level` is {map, nav, rules}; `seed` gives the brain's random; `lineups` are the map's
  * throws (load.js loadMapData).
  * Use: `host.controller(id)` as the controller of each bot's player. The host reads the world's events by itself.
- * A match tells the clock with `host.clock = () => secondsLeft` and its end with `host.over = () => boolean`, and
- * sets `host.round` at each round's start.
+ * A match tells the clock with `host.clock = () => secondsLeft`, its end with `host.over = () => boolean` and its
+ * score with `host.score = () => ({T, CT})`, and sets `host.round` at each round's start.
  */
 export function csbihHost(core, world, level, { seed = 1, lineups = [], plans = null } = {}) {
   const { HULL_POINT, HULL_STAND, HULL_DUCK, newTrace, traceBox } = core.hull;
@@ -103,6 +103,7 @@ export function csbihHost(core, world, level, { seed = 1, lineups = [], plans = 
     round: 1,
     clock: null,
     over: null,
+    score: null,
 
     /** The frame of the world now (spec 02). */
     frame() {
@@ -127,7 +128,7 @@ export function csbihHost(core, world, level, { seed = 1, lineups = [], plans = 
       return {
         time,
         dt: world.tickSeconds,
-        round: { number: host.round, phase: time < world.freezeUntil ? 'freeze' : left <= 0 || host.over?.() ? 'over' : 'live', timeLeft: Math.max(0, left), c4Timer: world.c4Timer ?? core.bomb.C4_SECONDS, knives: Boolean(world.knifeRound) },
+        round: { number: host.round, phase: time < world.freezeUntil ? 'freeze' : left <= 0 || host.over?.() ? 'over' : 'live', timeLeft: Math.max(0, left), c4Timer: world.c4Timer ?? core.bomb.C4_SECONDS, knives: Boolean(world.knifeRound), score: scoreNow() },
         players,
         bomb: b ? {
           state: b.state, carrier: b.carrier ?? null, origin: b.origin ?? null, explodeAt: b.explodeAt ?? null,
@@ -179,6 +180,11 @@ export function csbihHost(core, world, level, { seed = 1, lineups = [], plans = 
       }
     },
   };
+
+  function scoreNow() {
+    const score = host.score?.();
+    return score ? { T: score.T ?? 0, CT: score.CT ?? 0 } : null;
+  }
 
   function ownOf(p, gun) {
     const weapons = {};

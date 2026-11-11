@@ -84,11 +84,14 @@ export function createBrain({ map, ports, seed = 1 }) {
   const brain = {
     map, ports, nav, seed,
     random: seeded(seed),
-    teams: { T: new Team('T'), CT: new Team('CT') },
+    teams: { T: new Team('T', seeded(seed).fork(-1)), CT: new Team('CT', seeded(seed).fork(-2)) },
     bots: new Map(),
     joined: 0,
     tick: 0,
     round: null,
+    // The score as the last frame had it, and the side that won the last round (null while no frame told).
+    score: null,
+    lastWinner: null,
     now: null,
     census: null,
     // Who fired and who reloads, by player: what every player in earshot hears (senses.js listen).
@@ -115,6 +118,11 @@ export function createBrain({ map, ports, seed = 1 }) {
       brain.now = frame;
       brain.census = census(frame);
       for (const bot of brain.bots.values()) bot.side = brain.census.byId.get(bot.id)?.team ?? bot.side;
+      const score = frame.round.score ?? null;
+      if (score) {
+        if (brain.score) for (const side of ['T', 'CT']) if (score[side] > brain.score[side]) brain.lastWinner = side;
+        brain.score = { T: score.T, CT: score.CT };
+      }
       if (frame.round.number !== brain.round) {
         brain.round = frame.round.number;
         brain.shots.clear();

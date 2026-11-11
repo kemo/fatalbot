@@ -16,6 +16,7 @@ export function fatalKind(core, level, { profile = {}, name = 'fatal', lineups =
       if (match && !host.clock) {
         host.clock = () => match.clock();
         host.over = () => match.result !== null;
+        host.score = () => match.score;
       }
       if (match) host.round = match.number;
       if (!controllers.has(player.id)) controllers.set(player.id, host.controller(player.id, { profile }));

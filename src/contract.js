@@ -62,7 +62,8 @@
  * @typedef {Object} Frame The game at one tick.
  * @property {number} time Seconds; never goes back in a match.
  * @property {number} dt Seconds since the frame before.
- * @property {{number: number, phase: 'freeze'|'live'|'over', timeLeft: number, c4Timer: number, knives: boolean}} round
+ * @property {{number: number, phase: 'freeze'|'live'|'over', timeLeft: number, c4Timer: number, knives: boolean, score?: ({T: number, CT: number}|null)}} round
+ *   `score`: the rounds that each side won, as the scoreboard shows them; null or absent when the host has none.
  * @property {Player[]} players
  * @property {{state: 'carried'|'dropped'|'planted'|'defused'|'exploded', carrier: (number|string|null), origin: (Vec3|null), explodeAt: (number|null), defuser: (number|string|null), arming: (number|string|null)}|null} bomb
  *   `defuser` and `arming` name the player who defuses or arms the bomb now.
@@ -143,6 +144,7 @@ export function checkFrame(frame) {
   if (!num(frame?.dt) || frame.dt <= 0) bad.push('frame.dt');
   const r = frame?.round;
   if (!r || !num(r.number) || !PHASES.includes(r.phase) || !num(r.timeLeft) || !num(r.c4Timer) || !bool(r.knives)) bad.push('frame.round');
+  else if (r.score !== undefined && r.score !== null && !(num(r.score.T) && num(r.score.CT))) bad.push('frame.round.score');
   if (!Array.isArray(frame?.players)) bad.push('frame.players');
   else {
     frame.players.forEach((p, i) => {

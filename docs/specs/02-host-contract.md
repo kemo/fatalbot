@@ -62,6 +62,7 @@ Players are never in a trace: the level and its solid brush models only.
 | `round.timeLeft` | Seconds on the round clock | `match.clock()` | the `RoundTime` message and the time since it |
 | `round.c4Timer` | Seconds from the plant to the blast | `world.c4Timer` | `mp_c4timer` |
 | `round.knives` | A knife round | `world.knifeRound` | false |
+| `round.score` | The rounds that each side won: `{T, CT}`, or null when the host has none | `match.score` | the `TeamScore` message (the scoreboard) |
 | `players[]` | Every player of a side | `world.players` | the edicts 1 to `maxClients` |
 | `.id`, `.team`, `.alive` | | the player | the edict index; the `TeamInfo` message; `pev->deadflag` |
 | `.origin`, `.velocity` | | `body.origin`, `body.velocity` | `pev->origin`, `pev->velocity` |
