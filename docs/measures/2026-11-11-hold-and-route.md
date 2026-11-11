@@ -223,9 +223,23 @@ The choice of the bots is one word of `web/play.js`: `const BOTS = 'fatal'`. It 
 address brings the bots of `bot.js` back for that page, and `?bot=fatal` asks for fatalbot in a build whose word
 is `'bot.js'`.
 
+- **A replay on the page of the copy, in Chrome** (`/igraj?demo=<a recording of out/watch>&runda=2&igrac=5&debug=1`,
+  the copy of fatalbot at `362beb4`): the page says "fatalbot", the round runs for two minutes and into the next
+  round, and the console has no message. Nothing takes a recorded player off its recording while the member
+  stands at its start. With the member put on an enemy by a script (body to body, the rule "blocked" of
+  `rails.js`), the five Ts of that spawn went to fatalbot within 6 s: four were on their routes and one had left
+  its route to fight. The pointer of an automated browser does not lock, so the start panel was hidden by a
+  script; no hand played the round.
+- **The switch as one script** (`out/csbih-player/switch.sh`, git-ignored): it stops on a tree that is not clean,
+  applies the patch, copies fatalbot in, runs the tests, and commits the named files only (`git add -A` would take
+  the stray `.DS_Store` of that checkout into the commit). On a clone of csbih-player at `fe89385`, with the tests
+  off: one commit of 28 files, with the copy of fatalbot at `11622ae`; the six new tests there: five pass, one
+  skips (the clone has no levels). The static build of the code of that clone: 123 files, the built `fatal.js`
+  imports the hashed adapter, and the built adapter loads with the brain in Node.
+
 What was not checked:
 
-- A replay on the page in a browser (`/igraj?demo=`). The same code ran in Node, above.
+- The full test run of csbih-player with the patch in the real checkout: the script runs it before the commit.
 - The deploy itself (`deploy/deploy.sh`): it works on the live server, and this repository changes nothing
   outside itself.
 - A full static build with the levels, the models and the timelines, and a page served from one. The patch
