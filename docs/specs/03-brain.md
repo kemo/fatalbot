@@ -155,6 +155,19 @@ them to the brain as `map.plans` (spec 02). With them:
 - To come (csbih-player spec 12): the execute after the formation (the order of the entries, the trades, the
   grenades at its second), fakes, the retake together, the save of the guns at the end of a lost round.
 
+### 6.1b The steps of a player that holds a place (`tactics.js restless`, `sites.js postSpots`)
+
+- A CT at a post of the level, and a T at its waiting place, stands a drawn time on one floor (1.2 s in the
+  middle, between 0.5 and 30 s) and then walks to another floor about the place.
+- A floor about a place is within 176 units by plain steps of the graph, at the height of the place, not by a
+  wall or on an edge, with a free straight walk from the place. About a post it sees a way in that the post sees;
+  about a waiting place it is as hidden as the place.
+- The run to the place is a run. The steps between the floors are a walk, and a CT keeps its view on the way in.
+- An enemy seen or heard in the last 4 s keeps the bot where it is.
+- Measured (docs/measures/2026-11-11-hold-and-route.md): before the first death of a round a CT stands in 43% of
+  the steps of 2 s (90% before, the players 33%) and a T in 22% (63%, 16%). Open: the bot faces a wall a little
+  more often than the reference bots, and the floors are found inside a tick.
+
 ### 6.2 The buy of a team (`buy.js`)
 
 - The first bot of a team that buys makes the call of the round from what the bots of the team have, as players

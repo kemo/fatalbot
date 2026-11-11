@@ -18,6 +18,7 @@ Node 22 or newer. No install step: there are no packages.
 ```sh
 npm test                                          # the tests; those that need csbih-player skip without it
 node tools/demo-arena.js --map de_dust2 --count 4 # fatalbot in the place of one side of recorded matches
+node tools/demo-arena.js --map de_dust2 --count 4 --standins fatal-route   # and as the bot that plays on for a player, on that player's route
 node tools/arena.js --maps de_dust2 --rounds 12   # fatalbot against the bots of csbih-player
 node tools/arena.js --help
 node tools/strategies.js --report docs/strategies.md   # the strategies of every recorded match, by map
@@ -93,15 +94,19 @@ A claim that a bot is better needs a number. Spec 01 holds the gates. In short:
    JavaScript engine inside the plugin, or a Node process beside the server. `hosts/goldsrc/README.md` compares
    them. Nothing of this is fetched or built yet.
 2. **The licence** of this repository. None is set.
-3. **How csbih-player takes the brain**: a copy at a pinned commit, a git submodule, or a path. Its own `bot.js`
+3. **How csbih-player takes the brain**: a copy at a pinned commit, a git submodule, or a path. A patch with a
+   switch is ready and not applied (`out/csbih-player/fatal-switch.patch`, git-ignored): `?bot=fatal` on the play
+   page, a copy of the brain made by a script, the current bots as the default
+   (docs/measures/2026-11-11-hold-and-route.md, section 5). Its own `bot.js`
    stays the bot of `/igraj` until the owner decides. fatalbot is measured as the bot that takes over in a replay
    (docs/measures/2026-11-10-replay-takeover.md). The change itself is in `demo-match.js` and `match.js` of
-   csbih-player, which is read-only from here. Also open: if the bot of a replay must follow the route and the
-   grenades of the player that it plays on for. fatalbot does not.
+   csbih-player, which is read-only from here. A bot of fatalbot can keep the route of the player that it plays on
+   for, and leaves it by what it meets itself (spec 03, section 6.3). It does not throw that player's grenades.
 4. **The pace of the Ts** (commit `a7858e1`): the Ts wait out of sight and go at a second drawn as the players'
    was. A round then has the players' pace, and the Ts win 54.4% of the rounds of fatalbot against itself (the
-   gate is 39 to 54%; 51.5% without the pace). With the buy of a team they win 55.2%. `git revert a7858e1` takes
-   the pace away (docs/measures/2026-11-11-night.md, sections 6 and 8; 2026-11-11-economy.md).
+   gate is 39 to 54%; 51.5% without the pace). With the buy of a team they won 55.2%, and with the steps of a bot that
+   holds a place they win 51.5%: inside the gate, with the pace in. `git revert a7858e1` takes the pace away
+   (docs/measures/2026-11-11-night.md, sections 6 and 8; 2026-11-11-economy.md; 2026-11-11-hold-and-route.md).
 5. **The data of the maps.** The plans and the lineups come from the recorded matches. They name no player, and
    they are places on Valve's maps. They are made into `out/` and are not committed. A host on a real server needs
    them as files: the owner decides if they enter this repository.
