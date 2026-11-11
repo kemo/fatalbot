@@ -12,6 +12,25 @@ const NO_CLOCK = 9999;
 const TEAM = { 1: 'T', 2: 'CT' };
 const EVENTS = new Set(['shot', 'hurt', 'kill', 'reload', 'planted', 'dropped', 'picked', 'defusing', 'defused', 'exploded']);
 
+/**
+ * Puts the doors of a level back where its file has them; call it before each `new World` of the level. The game
+ * core moves a door by the origin and the turn of its hull model, which every world of the level shares, and a new
+ * world takes the place where the last one left a door as that door's closed place. So without this a match
+ * depends on the matches before it (de_nuke has 17 doors). The first call keeps the places of the file: make it
+ * before any world of the level runs.
+ */
+export function restLevel(level) {
+  const models = level.hulls.models;
+  level.rest ??= models.map((m) => ({ origin: m.origin ? [...m.origin] : null, rot: m.rot }));
+  models.forEach((m, i) => {
+    const rest = level.rest[i];
+    if (rest.origin) for (let k = 0; k < 3; k++) m.origin[k] = rest.origin[k];
+    if (rest.rot === undefined) delete m.rot;
+    else m.rot = rest.rot;
+  });
+  return level;
+}
+
 /** The map of the brain from a built level: {map, nav, rules} (load.js loadLevel, or the page's own load). */
 export function mapOf(core, level, { lineups = [], plans = null } = {}) {
   const { rules, nav } = level;

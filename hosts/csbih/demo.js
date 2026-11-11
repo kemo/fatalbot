@@ -4,7 +4,7 @@
 // From then on it plays as the reference bot with that player's own route and profile, as on the /igraj page.
 // fatalbot starts where the demo's players started, with their weapons; there is no buy.
 
-import { csbihHost } from './adapter.js';
+import { csbihHost, restLevel } from './adapter.js';
 import { body, gauge } from './arena.js';
 
 // A round goes on this long past its clock (a planted bomb), then counts as not ended.
@@ -21,6 +21,8 @@ export function playDemoRound({ core, level, timeline, round, side, seed = 1, pr
   const { World } = core.world;
   const { Rails, railsFor } = core.rails;
   const scenario = core.demoRound.demoRound(timeline, round, { spawns: level.rules.spawns ?? null });
+  // The doors of the level where its file has them: a round does not depend on the rounds before it.
+  restLevel(level);
   const world = new World(level.hulls, { nav: level.nav, rules: level.rules, seed });
   world.plan = core.match.planFor(world, scenario.plantedAt);
   world.knifeRound = scenario.knives;

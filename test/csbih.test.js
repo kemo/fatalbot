@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { checkCommand, checkFrame, checkMap } from '../src/contract.js';
 import { csbihMissing, loadCore, loadLevel } from '../hosts/csbih/load.js';
-import { mapOf } from '../hosts/csbih/adapter.js';
+import { mapOf, restLevel } from '../hosts/csbih/adapter.js';
 import { runMatch } from '../hosts/csbih/arena.js';
 import { fatalKind } from '../hosts/csbih/kind.js';
 
@@ -134,4 +134,16 @@ test('a recorded round is a timeline of the player, with the fatalbot team named
   assert.equal(entry.info.kind, 'hltv');
   assert.equal(entry.summary.rounds, 2);
   assert.ok(entry.summary.teams.some((team) => team.tag === 'FatalBot' && team.players.length === 5));
+});
+
+test('the doors of a level go back to the places of its file before a new world', () => {
+  // A level of two hull models: the second is a door that a world slid and turned.
+  const level = { hulls: { models: [{ origin: [0, 0, 0] }, { origin: [10, 20, 30] }, { origin: [5, 5, 5], rot: 0 }] } };
+  restLevel(level);
+  level.hulls.models[1].origin[0] = 74;
+  level.hulls.models[1].rot = 90;
+  level.hulls.models[2].rot = -45;
+  restLevel(level);
+  assert.deepEqual(level.hulls.models[1], { origin: [10, 20, 30] }, 'the slide and the turn are gone');
+  assert.deepEqual(level.hulls.models[2], { origin: [5, 5, 5], rot: 0 });
 });

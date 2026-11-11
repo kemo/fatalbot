@@ -4,6 +4,7 @@
 
 import { burstSteps, groupOf, shotsBy, shotsOfKill, turnsBySight } from './players.js';
 import { roundSampler } from './rounds.js';
+import { restLevel } from './adapter.js';
 
 const ID = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 /**
@@ -328,6 +329,8 @@ export function referenceKind(core, { views = null, lineups = [] } = {}) {
 export function runMatch({ core, level, sides, seed = 1, rounds = 12, options = {}, facts = false }) {
   const { World } = core.world;
   const { Match } = core.match;
+  // The doors of the level where its file has them: a match does not depend on the matches before it.
+  restLevel(level);
   const world = new World(level.hulls, { seed, nav: level.nav, rules: level.rules });
   world.bodyOf = body;
   const kindOf = new Map();

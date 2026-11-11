@@ -5,6 +5,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { brotliDecompressSync } from 'node:zlib';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { restLevel } from './adapter.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -49,7 +50,8 @@ export function loadLevel(core, map, { v16 = true } = {}) {
   if (!dir) throw new Error(`No built level ${map} in ${csbihRoot()}/assets.`);
   const rules = JSON.parse(readFileSync(join(dir, `${map}.play.json`), 'utf8'));
   rules.map ??= map;
-  return { map, hulls: core.hull.readHulls(buffer(join(dir, `${map}.hull.bin`))), nav: core.nav.readNav(buffer(join(dir, `${map}.nav.bin`))), rules };
+  // restLevel keeps the places of the doors as the file has them.
+  return restLevel({ map, hulls: core.hull.readHulls(buffer(join(dir, `${map}.hull.bin`))), nav: core.nav.readNav(buffer(join(dir, `${map}.nav.bin`))), rules });
 }
 
 /**

@@ -4,7 +4,7 @@
 // strategy. For each: how often the teams played it, how often it won, which site it led to, and when.
 // The result holds places and numbers only: no player, no team, no demo's name.
 
-import { csbihHost } from './adapter.js';
+import { csbihHost, restLevel } from './adapter.js';
 import { siteInfo } from '../../src/sites.js';
 
 // A sample of every player this often (s). The facts of a round keep the places, so an analysis can change without
@@ -34,6 +34,7 @@ const median = (list) => {
 
 /** The sites of a level as the brain reads them, and the spawns: {sites: [{mid, mins, maxs}], spawn: {T, CT}}. */
 export function zonesOf(core, level) {
+  restLevel(level);
   const world = new core.world.World(level.hulls, { seed: 1, nav: level.nav, rules: level.rules });
   const brain = csbihHost(core, world, level).brain;
   return {
