@@ -164,7 +164,7 @@ export function planRound(brain, side, time) {
   for (const bot of bots) {
     if (posts.has(bot.id)) continue;
     const k = i++ % sites.length;
-    const post = choosePost(brain, k, taken[k], random()) ?? { point: null, watch: null, site: k };
+    const post = choosePost(brain, k, taken[k], random(), true) ?? { point: null, watch: null, site: k };
     if (post.point) {
       taken[k].push(post.point);
       team.take('post', bot.id, post.point);

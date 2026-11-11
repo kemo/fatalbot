@@ -108,3 +108,28 @@ test('a CT that comes into a round after its start takes a post at the site near
   assert.equal(post.site, 1, 'at the site nearer to it');
   assert.equal(brain.debug(2).goal, 'site');
 });
+
+test('where the attackers come to a site first, the defenders take posts that they reach unseen', () => {
+  // The site lies in the open, near the end of the wall (x = 320, y from -200 to 200). The CTs spawn behind the wall.
+  const sites = [{ mins: [220, 410, 0], maxs: [300, 510, 72] }];
+  const ports = flatPorts();
+  const brain = createBrain({ map: flatMap({ sites, size: 40, spawns: [-600, 420] }), ports, seed: 3 });
+  const info = siteInfo(brain, 0);
+  const seenFromSpawn = (p) => ports.traceLine([-600, 0, 53], [p[0], p[1], p[2] + 17]) >= 1;
+  const late = info.posts.filter((p) => p.late);
+  const inTime = info.posts.filter((p) => !p.late);
+  assert.ok(late.length >= 3 && late.every((p) => seenFromSpawn(p.point)), 'a post in the open is late: an attacker sees it from the spawn');
+  assert.ok(inTime.length >= 2, 'posts in time');
+  for (const p of inTime) {
+    assert.ok(!seenFromSpawn(p.point), 'a post in time lies behind the wall');
+    assert.ok(ports.traceLine([p.point[0], p.point[1], 53], [info.mid[0], info.mid[1], 53]) >= 1 || p.sees.some(Boolean), 'and sees the site or a way in');
+  }
+  const taken = [];
+  for (let i = 0; i < 2; i++) {
+    const post = choosePost(brain, 0, taken, 0.5, true);
+    assert.ok(!seenFromSpawn(post.point) && post.watch, 'from their spawn the defenders take the posts in time');
+    taken.push(post.point);
+  }
+  // Later in a round (a rotation, a bot that takes over) the race from the spawns is over: a post near the site.
+  assert.ok(flat(choosePost(brain, 0, [], 0.5).point, info.mid) <= 800);
+});

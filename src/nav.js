@@ -40,7 +40,7 @@ function index(raw) {
     if (list) list.push(i);
     else cells.set(key, [i]);
   }
-  return { count, xyz, offsets, to, kinds, cells, search: null, floods: null, floodStack: null, parts: null, main: null, places: null, sites: null };
+  return { count, xyz, offsets, to, kinds, cells, search: null, floods: null, floodStack: null, parts: null, main: null, dists: null, runs: undefined, places: null, sites: null };
 }
 
 const cellKey = (x, y) => Math.floor(x / CELL + 0.5) * 65536 + Math.floor(y / CELL + 0.5);
@@ -225,6 +225,39 @@ export function findPath(nav, from, to, limit = 20000, avoid = null, cost = null
     }
   }
   return null;
+}
+
+/**
+ * The price of the cheapest way from `from` to every node, in units of walk (Infinity where no way leads): one
+ * flood with the prices of findPath, kept for the last few starts.
+ */
+export function distancesFrom(nav, from) {
+  const kept = (nav.dists ??= new Map());
+  let out = kept.get(from);
+  if (out) return out;
+  const { xyz, offsets } = nav;
+  out = new Float64Array(nav.count).fill(Infinity);
+  const heap = { prio: new Float64Array(1024), node: new Int32Array(1024), size: 0 };
+  out[from] = 0;
+  heapPush(heap, from, 0);
+  while (heap.size) {
+    const d = heap.prio[0];
+    const at = heapPop(heap);
+    if (d > out[at]) continue;
+    for (let e = offsets[at]; e < offsets[at + 1]; e++) {
+      const next = nav.to[e];
+      const narrow = 8 - (offsets[next + 1] - offsets[next]);
+      const length = hypot(xyz[at * 3] - xyz[next * 3], xyz[at * 3 + 1] - xyz[next * 3 + 1], xyz[at * 3 + 2] - xyz[next * 3 + 2]);
+      const step = d + length * (1 + Math.max(0, narrow) * 0.08) + KIND_COST[nav.kinds[e]];
+      if (step < out[next]) {
+        out[next] = step;
+        heapPush(heap, next, step);
+      }
+    }
+  }
+  if (kept.size >= 8) kept.clear();
+  kept.set(from, out);
+  return out;
 }
 
 /** The length of a way of findPath, in units. */
