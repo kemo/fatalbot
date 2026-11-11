@@ -81,11 +81,6 @@ const STAND_ENDS = [0.5, 30];
 // stood there once walks, with its view where the place looks; from further off it runs back as to any place.
 const SHIFT_CALM = 4;
 const SHIFT_NEAR = 240;
-// A bot stands on a floor, or is near a place, only at its height: under a platform it is not on the platform.
-const SAME_LEVEL = 48;
-
-/** True when the bot is within `reach` of `point` flat, and on its level. */
-const isAt = (c, point, reach) => flat(point, c.me.origin) < reach && abs(point[2] - c.me.origin[2]) < SAME_LEVEL;
 
 const over = (p) => [p[0], p[1], p[2] + 36];
 const eyeAt = (p) => [p[0], p[1], p[2] + EYE];
@@ -150,7 +145,7 @@ function restless(c, base, spots) {
   const shift = s.shift;
   if (!spots.length) return base;
   const free = (p) => !c.mates.some((m) => m.id !== me.id && m.alive && flat(m.origin, p) < 40);
-  const there = isAt(c, shift.at, 24);
+  const there = flat(shift.at, me.origin) < 24;
   // From its first stand on, the bot walks between the floors; the run to the place is a run.
   if (there) shift.settled = true;
   if (there) shift.until ??= time + clamp(STAND_MIDDLE[me.team] * exp(random.gauss() * STAND_SPREAD), STAND_ENDS[0], STAND_ENDS[1]);
@@ -169,7 +164,7 @@ function restless(c, base, spots) {
 function heldFloor(c) {
   const post = c.post?.point ?? null;
   const shift = c.s.shift;
-  return post && shift?.key === pointKey(post) && isAt(c, post, SHIFT_NEAR) ? shift.at : post;
+  return post && shift?.key === pointKey(post) && flat(post, c.me.origin) < SHIFT_NEAR ? shift.at : post;
 }
 
 function nearestSite(map, o) {
@@ -242,8 +237,8 @@ function stageGoal(c) {
   const spots = stageSpots(brain, plan.site, spot);
   if (spots.length) {
     const at = restless(c, spot, spots);
-    const there = isAt(c, at, 40);
-    return { kind: 'hold', task: 'stage', point: at, look: null, rest: there, walk: !there && Boolean(s.shift.settled) && isAt(c, spot, SHIFT_NEAR) };
+    const there = flat(at, me.origin) < 40;
+    return { kind: 'hold', task: 'stage', point: at, look: null, rest: there, walk: !there && Boolean(s.shift.settled) && flat(spot, me.origin) < SHIFT_NEAR };
   }
   // A teammate on the bot's place: near enough is there.
   const taken = flat(spot, me.origin) < NEAR_ENOUGH && c.mates.some((p) => p.id !== me.id && p.alive && flat(p.origin, spot) < 48);
@@ -262,10 +257,10 @@ function objective(c) {
     if (!post?.point) return { kind: 'hold', point: null };
     // A post of the level has floors about it that watch the same way in: the bot steps between them.
     const at = restless(c, post.point, postSpots(c.brain, post.site, post.point));
-    const there = isAt(c, at, 40);
+    const there = flat(at, me.origin) < 40;
     // Once at the post the view stays on the way in that it watches, also on a step to the next floor; the run
     // to the post looks along its own way. A post of a mined setup has the view of the player who stood there.
-    const settled = there || (Boolean(c.s.shift.settled) && isAt(c, post.point, SHIFT_NEAR));
+    const settled = there || (Boolean(c.s.shift.settled) && flat(post.point, me.origin) < SHIFT_NEAR);
     const look = !settled ? null : post.yaw !== null && post.yaw !== undefined ? { yaw: post.yaw, pitch: 0 } : post.watch ? toward(eyeOf(me), eyeAt(post.watch)) : null;
     return { kind: 'hold', task: plan.rotate && post.site === plan.rotate.site && plan.posts.get(c.bot.id)?.site !== post.site ? 'rotate' : 'site', point: at, look, rest: there, walk: settled && !there };
   }
