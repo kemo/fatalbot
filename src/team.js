@@ -41,6 +41,8 @@ export class Team {
     this.buyCall = null;
     // True once an enemy was alive in this round: with none alive after that, the round is the team's.
     this.enemiesLived = false;
+    // The time of the first kill of the round that the feed showed, or null.
+    this.firstKill = null;
   }
 
   /** A player of the team sees an enemy. */

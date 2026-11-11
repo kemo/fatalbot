@@ -230,6 +230,21 @@ test('the Ts wait out of the sight of the posts on their way, and go at a second
   };
   assert.equal(goalAt(10), 'stage');
   assert.notEqual(goalAt(80), 'stage');
+  // The first kill of the round ends the wait: a T goes within 8 s of it, long before the plan's second.
+  const afterKill = (seconds) => {
+    const b = make(4);
+    let goal = null;
+    for (let tick = 1; tick <= seconds * 100; tick += 10) {
+      const events = tick === 501 ? [{ type: 'kill', victim: 8, killer: 2 }] : [];
+      const players = [...ts([b.teams.T.plan?.spots.get(1) ?? [-1200, 0, 36], b.teams.T.plan?.spots.get(2) ?? [-1200, 64, 36]]), player(8, 'CT', [1400, 200, 36], { alive: tick < 501 })];
+      b.frame(frameAt(tick, players, { events }));
+      b.think(1);
+      goal = b.debug(1).goal;
+    }
+    return goal;
+  };
+  assert.equal(afterKill(6), 'stage', 'it waits right after the kill');
+  assert.notEqual(afterKill(14), 'stage', 'and goes within 8 s of it');
 });
 
 test('a CT that holds its post steps between the floors about it', () => {
@@ -347,7 +362,9 @@ test('a player that waits for a known enemy steps between floors, and plants its
   const far = wait(900);
   assert.ok(far, 'a seed drew a wait for the far enemy');
   assert.ok(far.length >= 2, `it stood on ${far.length} floors`);
-  for (const f of far) assert.ok(flat(f, [0, 0, 36]) <= 420, 'about the place where it heard the enemy');
+  // Each floor is a step from one that it stood on (a new wait starts where the bot is), and none is a run at the enemy.
+  far.forEach((f, i) => assert.ok(i === 0 || far.slice(0, i).some((g) => flat(f, g) <= 240), 'a step from a floor that it stood on'));
+  for (const f of far) assert.ok(f[0] < 300, 'not on a run at the enemy');
   // The enemy runs 500 units off, heard all the time: the feet stay where they are.
   const near = wait(500);
   assert.ok(near, 'a seed drew a wait for the near enemy');

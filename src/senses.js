@@ -72,6 +72,7 @@ export function listen(brain, frame) {
       if (!victim) continue;
       const own = teams[victim.team];
       const other = teams[victim.team === 'T' ? 'CT' : 'T'];
+      for (const team of [own, other]) if (team) team.firstKill ??= time;
       own?.died(placeAt(nav, map, victim.origin), time);
       other?.lost(e.victim);
       // The victim saw who killed it, and says so.

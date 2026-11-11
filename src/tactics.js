@@ -29,6 +29,8 @@ const NEAR_ENOUGH = 160;
 const CLOCK_MARGIN = 30;
 // The players of a team leave their places within this many seconds of each other.
 const GO_LAG = 2;
+// The wait of the Ts ends with the first kill of the round: each goes this many seconds after it.
+const KILL_LAG = [2, 8];
 // With no defuse a T leaves the blast with this many seconds left, from within this range (YaPB).
 const T_LEAVES = 13;
 const T_LEAVES_RANGE = 964;
@@ -293,7 +295,9 @@ function stageGoal(c) {
   }
   // A team does not go in on one tick: each player a moment after the call, the first at once.
   s.goLag ??= c.random(0, GO_LAG);
-  if (time - s.liveAt >= plan.te - s.eta + s.goLag || frame.round.timeLeft < s.eta + CLOCK_MARGIN) {
+  s.killLag ??= c.random(KILL_LAG[0], KILL_LAG[1]);
+  const fought = team.firstKill !== null && time >= team.firstKill + s.killLag;
+  if (fought || time - s.liveAt >= plan.te - s.eta + s.goLag || frame.round.timeLeft < s.eta + CLOCK_MARGIN) {
     s.go = true;
     return null;
   }
