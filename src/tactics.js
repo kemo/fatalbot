@@ -254,10 +254,16 @@ function postOf(c) {
     plan.posts.set(bot.id, own);
     if (own.point) team.take('post', bot.id, own.point);
   }
-  if (!plan.rotate || !own || own.site === plan.rotate.site) return own;
-  if (s.rotate?.at !== plan.rotate.at) {
-    const post = choosePost(brain, plan.rotate.site, team.takenBy('post', bot.id), random());
-    s.rotate = { at: plan.rotate.at, post };
+  // The whole team rotates, or this bot goes over on the first sign of an attack (plan.js lean).
+  const to = plan.rotate ?? plan.leans?.get(bot.id) ?? null;
+  if (!to || !own || own.site === to.site) {
+    if (s.rotate && own?.point) team.take('post', bot.id, own.point);
+    s.rotate = null;
+    return own;
+  }
+  if (s.rotate?.at !== to.at || s.rotate.site !== to.site) {
+    const post = choosePost(brain, to.site, team.takenBy('post', bot.id), random());
+    s.rotate = { at: to.at, site: to.site, post };
     team.take('post', bot.id, post?.point ?? null);
   }
   return s.rotate.post ?? own;
@@ -321,7 +327,7 @@ function objective(c) {
     // to the post looks along its own way. A post of a mined setup has the view of the player who stood there.
     const settled = there || stand.settled;
     const look = !settled ? null : post.yaw !== null && post.yaw !== undefined ? { yaw: post.yaw, pitch: 0 } : post.watch ? toward(eyeOf(me), eyeAt(post.watch)) : null;
-    return { kind: 'hold', task: plan.rotate && post.site === plan.rotate.site && plan.posts.get(c.bot.id)?.site !== post.site ? 'rotate' : 'site', point: at, look, rest: there, walk: settled && !there };
+    return { kind: 'hold', task: plan.posts.get(c.bot.id)?.site !== post.site ? 'rotate' : 'site', point: at, look, rest: there, walk: settled && !there };
   }
   const at = time >= plan.goAt ? siteSpot(c, plan.site) : null;
   if (at) return { kind: 'hold', task: 'site', point: at, look: null };

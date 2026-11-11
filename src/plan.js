@@ -6,7 +6,7 @@
 // played and how often it won.
 // Without them: the Ts take one site, wait on their ways to it out of the sight of its posts, and go at a second
 // drawn as the players' was; each CT takes a post that watches a way in and that it reaches in time (sites.js).
-// In both cases the CTs rotate to a site when the team sees the attack there.
+// In both cases the CTs rotate to a site when the team sees the attack there, and a part of them on its first sign.
 
 import { clamp, exp, flat } from './geometry.js';
 import { LADDER, canReach, nearestNode } from './nav.js';
@@ -18,6 +18,10 @@ const SITE_NEAR = 1300;
 // The CTs rotate when this part of the living Ts is seen at one site, and at least this many.
 const ROTATE_SHARE = 0.6;
 const ROTATE_MIN = 2;
+// A part of an attack: from LEAN_MIN Ts seen at a site, the defenders of the other sites come over, the nearest
+// first and one a second, and one of them stays. They go back LEAN_SECONDS after the last T was seen there.
+const LEAN_MIN = 1;
+const LEAN_SECONDS = 20;
 // A plan is drawn by its share of the rounds times this much plus its share of wins.
 const WON_BASE = 0.4;
 // Two places of a formation lie at least this far apart. A place moves at most SPREAD to a floor that the side can
@@ -206,4 +210,30 @@ export function updatePlan(brain, time) {
   counts.forEach((n, k) => {
     if (!plan.rotate && n >= need) plan.rotate = { site: k, at: time };
   });
+  if (!plan.rotate) lean(brain, plan, counts, time);
+}
+
+/**
+ * The part of a rotation that comes before the whole team goes (plan.leans: bot id -> {site, at}): the players
+ * leave a site that nobody attacks, one by one, on the first Ts that the team sees at the other.
+ */
+function lean(brain, plan, counts, time) {
+  const sites = brain.map.bombSites;
+  const leans = (plan.leans ??= new Map());
+  const seenAt = (plan.seenAt ??= sites.map(() => -Infinity));
+  counts.forEach((n, k) => {
+    if (n) seenAt[k] = time;
+  });
+  const top = counts.indexOf(Math.max(...counts));
+  const attacked = counts[top] >= LEAN_MIN && counts.every((n, k) => k === top || n < counts[top]);
+  // A site that is quiet again, or an attack seen at another site, sends the defenders back.
+  for (const [id, to] of leans) if (time - seenAt[to.site] > LEAN_SECONDS || (attacked && to.site !== top)) leans.delete(id);
+  if (!attacked) return;
+  const alive = brain.census.CT.players.filter((p) => p.alive && plan.posts.has(p.id));
+  const siteOf = (p) => leans.get(p.id)?.site ?? plan.posts.get(p.id).site;
+  const away = alive.filter((p) => siteOf(p) !== top);
+  if (away.length < 2) return;
+  const mid = siteMid(sites[top]);
+  away.sort((a, b) => flat(a.origin, mid) - flat(b.origin, mid) || a.id - b.id);
+  leans.set(away[0].id, { site: top, at: time });
 }

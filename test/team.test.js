@@ -92,6 +92,35 @@ test('the CTs rotate to the site where the team sees the attack', () => {
   assert.ok(flat(d.point, siteInfo(brain, 1).mid) > 400, 'away from its own site');
 });
 
+test('one T seen at a site brings a defender of the other site over, one stays, and it goes back when the site is quiet', () => {
+  const brain = fresh([1, 2, 3]);
+  const at = { 1: [500, 400, 36], 2: [500, -400, 36], 3: [560, 330, 36] };
+  const frame = (tick, extra = []) => {
+    brain.frame(frameAt(tick, [...[1, 2, 3].map((id) => player(id, 'CT', at[id], { own: true, yaw: 180 })), ...extra]));
+    for (const id of [1, 2, 3]) brain.think(id);
+  };
+  frame(1);
+  const plan = brain.teams.CT.plan;
+  const home = (id) => plan.posts.get(id).site;
+  const two = [1, 2, 3].filter((id) => home(id) === home(1));
+  assert.equal(two.length, 2, 'two defenders at one site, one at the other');
+  const other = 1 - home(1);
+  const mid = siteInfo(brain, other).mid;
+  // One T stands before the other site, in the view of the CTs.
+  for (let tick = 2; tick <= 400; tick++) frame(tick, [player(7, 'T', [mid[0] - 300, mid[1], 36])]);
+  assert.equal(plan.rotate, null, 'one T is no attack of the team');
+  const gone = two.filter((id) => plan.leans.get(id)?.site === other);
+  assert.equal(gone.length, 1, 'one of the two goes over, one stays');
+  const d = brain.debug(gone[0]);
+  assert.ok(d.goal === 'rotate' || d.goal === 'ambush', d.goal);
+  assert.ok(flat(d.point, mid) <= 800, 'to a post of the site with the T');
+  // The T is out of sight, behind their backs: LEAN_SECONDS later the defender has its own post again.
+  for (let tick = 401; tick <= 400 + 30 * 100; tick++) frame(tick, [player(7, 'T', [1400, 0, 36])]);
+  assert.equal(plan.leans.size, 0);
+  assert.equal(brain.debug(gone[0]).goal, 'site');
+  assert.ok(flat(brain.debug(gone[0]).point, siteInfo(brain, home(1)).mid) <= 800, 'back at its own site');
+});
+
 test('a CT that comes into a round after its start takes a post at the site nearer to it', () => {
   // The bot of a replay: it takes over for a player in the middle of a round, with no post of the round's plan.
   const brain = createBrain({ map: map(), ports: flatPorts({ half: -1 }), seed: 5 });
