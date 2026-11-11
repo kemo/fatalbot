@@ -88,7 +88,7 @@ round a teammate, the jump of a stuck bot, the island of the graph.
   profile, with no sign of an enemy for 5 s, and never over its count. About half of the players' jumps on the
   flat start from a stand. A rule that lets the bot catch up with its count puts the jumps of a team into the
   seconds when the enemies arrive, and loses the first fight.
-- Gate G7, the jumps (docs/measures/2026-11-11-night.md, section 5): fatalbot jumps 3.0 to 6.0 times a minute
+- Gate G7, the jumps (docs/measures/2026-11-11-night.md, section 5): fatalbot jumps 2.9 to 6.3 times a minute
   with the players' profiles, the players 4.3 to 7.9. It does not jump in a fight (the players: about once a
   minute), and it fires fewer rifle shots on the run at a distance.
 - To come: the peek at a corner, the jiggle at an angle, the jump onto a box with the legs up as a habit, the
