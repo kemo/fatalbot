@@ -3,6 +3,7 @@
 // command, events), never the state of a bot, so they count the same for every kind.
 
 import { burstSteps, groupOf, shotsBy, shotsOfKill, turnsBySight } from './players.js';
+import { roundSampler } from './rounds.js';
 
 const ID = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
 /**
@@ -233,9 +234,10 @@ export function referenceKind(core, { views = null, lineups = [] } = {}) {
 
 /**
  * Plays one match and returns its rounds and measures. `sides` gives the kind of each side: {T: kind, CT: kind}; a
- * kind is {name, round(world, player, match), attach?(world, {seed})}.
+ * kind is {name, round(world, player, match), attach?(world, {seed})}. `facts: true` also returns the places of
+ * the players in each round, as strategies.js roundFacts gives them for a recorded match (`facts`).
  */
-export function runMatch({ core, level, sides, seed = 1, rounds = 12, options = {} }) {
+export function runMatch({ core, level, sides, seed = 1, rounds = 12, options = {}, facts = false }) {
   const { World } = core.world;
   const { Match } = core.match;
   const world = new World(level.hulls, { seed, nav: level.nav, rules: level.rules });
@@ -263,6 +265,7 @@ export function runMatch({ core, level, sides, seed = 1, rounds = 12, options = 
     },
   });
   const played = [];
+  const sampler = facts ? roundSampler(world) : null;
   let round = null;
   let ticks = 0;
   let stepMs = 0;
@@ -275,6 +278,7 @@ export function runMatch({ core, level, sides, seed = 1, rounds = 12, options = 
     ticks++;
     const events = world.events.slice(from);
     g.events(events);
+    sampler?.events(events);
     for (const e of events) {
       if (e.type === 'round' && e.phase === 'start') round = { number: e.number, planted: false, kills: { T: 0, CT: 0 } };
       else if (e.type === 'round' && e.phase === 'end') played.push({ number: e.number, winner: e.winner, reason: e.reason, seconds: world.time - match.liveAt, planted: round.planted, kills: round.kills });
@@ -287,9 +291,10 @@ export function runMatch({ core, level, sides, seed = 1, rounds = 12, options = 
     }
     world.events.length = 0;
     g.sample(match.result === null && world.time >= world.freezeUntil);
+    sampler?.sample(match.result === null && world.time >= world.freezeUntil);
     if (match.result === null && world.time - match.liveAt > (match.options.roundTime ?? 105) + ROUND_LIMIT) throw new Error(`Round ${match.number} on ${level.map} (seed ${seed}) does not end.`);
   }
-  return { map: level.map, seed, sides: { T: sides.T.name, CT: sides.CT.name }, score: { ...match.score }, rounds: played, measure: g.measure, spells: g.spells, ticks, stepMs };
+  return { map: level.map, seed, sides: { T: sides.T.name, CT: sides.CT.name }, score: { ...match.score }, rounds: played, measure: g.measure, spells: g.spells, ticks, stepMs, ...(sampler ? { facts: sampler.rounds } : {}) };
 }
 
 /** Sums matches into one table: rounds, wins by side and by kind, the reasons, and the measures by kind. */

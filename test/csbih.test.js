@@ -58,6 +58,20 @@ test('a match of fatalbot on both sides: the frames and the commands hold the co
   assert.ok(m.measure.fatal.kills > 0, 'the bots fight');
 });
 
+test('a match gives the places of its players in each round, as a recorded match gives them', { skip }, () => {
+  const kind = fatalKind(core, level);
+  const m = runMatch({ core, level, sides: { T: kind, CT: kind }, seed: 2, rounds: 2, facts: true });
+  assert.equal(m.facts.length, 2);
+  for (const r of m.facts) {
+    assert.ok(r.winner === 'T' || r.winner === 'CT');
+    assert.deepEqual([r.T.length, r.CT.length], [5, 5]);
+    // A place every 2 s of the round, and every player alive at its start.
+    assert.ok(Math.abs(r.T[0].length - r.seconds / 2) <= 1, `${r.T[0].length} places in ${r.seconds} s`);
+    assert.ok([...r.T, ...r.CT].every((lane) => lane[0]?.length === 4));
+    assert.ok(['pistol', 'force', 'full'].includes(r.buy.T) && ['pistol', 'force', 'full'].includes(r.buy.CT));
+  }
+});
+
 test('the same seed gives the same match', { skip }, () => {
   const play = (seed) => {
     const kind = fatalKind(core, level);
