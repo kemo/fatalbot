@@ -205,12 +205,29 @@ What was checked, in the copy of links:
   The page sets that name only when the host was made, so the brain was made in the browser on the level of the
   page. Without the option the page says "bot.js" and none of the copy loads.
 
+- **A replay match of real demos, in Node, through the match code of csbih-player** (`DemoMatch` with the rails
+  and the host of fatalbot, as the play page makes it): a member that stands at its start and fires, so that the
+  recorded players leave their recordings. de_dust2 (12 rounds), de_inferno, de_nuke and de_train (6 rounds
+  each): no error in 30 rounds. Each player that left its recording was played on by fatalbot with its route;
+  the brain held no bot of the round before at a round's start. The longest step, with the run alone on the
+  processor: 7.2 ms on de_dust2 and 5.9 ms on de_inferno (the bots of `bot.js`: 6.2 ms on de_dust2).
+- **The owner's steps, on a clean export of the committed tree** (`git archive HEAD`, with links to
+  `node_modules`, `assets` and `out`): the patch applies; with the stand-in alone two of the six new tests pass
+  and four skip; the script copies fatalbot in; then 627 of 635 tests pass and seven skip. The one that fails
+  (`test/import.test.js`, "the import never builds a demo of skips.json") fails on such an export without the
+  patch too, and passes in csbih-player itself.
+- The owner played free play on the page of the copy with fatalbot and reported how the bots behave (section 7).
+
+The patch leaves the choice of the bots to one word of `web/play.js`: `const BOTS = 'bot.js'`. With `'fatal'`
+fatalbot plays for every member; `?bot=fatal` and `?bot=bot.js` in the address override the word.
+
 What was not checked:
 
-- A round played on the page with fatalbot at the keys of the bots: nobody played one. The test of `botRound`
-  covers that a bot gets the host's controller.
-- A replay on the page (`/igraj?demo=`).
-- A full static build with the levels, the models and the timelines, and a page served from one. The checkout of
+- A replay on the page in a browser (`/igraj?demo=`). The same code ran in Node, above.
+- The deploy itself (`deploy/deploy.sh`): it works on the live server, and this repository changes nothing
+  outside itself.
+- A full static build with the levels, the models and the timelines, and a page served from one. The patch
+  changes code only, and the build of the code was run (above). The checkout of
   csbih-player has a static build, so its own `/igraj` answers 403 without a pass of gamerz.ba; the copy had no
   static build and opened without one.
 
