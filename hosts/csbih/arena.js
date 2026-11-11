@@ -45,6 +45,8 @@ const blank = () => ({
   jumpsFight: 0, jumpsUp: 0, jumpsDown: 0, jumpsFlat: 0,
   // Of the jumps on the flat: those in the first EARLY seconds of a round, and those from under SLOW units a second.
   jumpsFlatEarly: 0, jumpsFlatSlow: 0, aliveEarly: 0,
+  // Out of a fight: the time with an enemy in a clear line, and with one within NEAR_ENEMY; the flat jumps then.
+  calm: 0, calmSeen: 0, calmNear: 0, jumpsFlatSeen: 0, jumpsFlatNear: 0,
   // The rifle shots by the distance to the nearest enemy (RANGES), and those of them fired on the run.
   rifleNear: 0, rifleMid: 0, rifleFar: 0, rifleRunNear: 0, rifleRunMid: 0, rifleRunFar: 0,
 });
@@ -52,6 +54,7 @@ const blank = () => ({
 const LEDGE = 16;
 const EARLY = 15;
 const SLOW = 150;
+const NEAR_ENEMY = 1000;
 // The nearest enemy of a shot is near under the first of these distances, far over the second (units).
 const RANGES = [400, 1000];
 // The guns that spread wide over 140 units a second (the game's weapon code): a shot on the run with one is a choice.
@@ -197,7 +200,7 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
         if (live && w.ground && !p.body.onGround && !p.body.onLadder && p.body.velocity[2] > JUMP_RISE) {
           m.jumps++;
           if (ticks - (w.landed ?? -Infinity) <= HOP_TICKS) m.hops++;
-          w.jump = { z: p.body.origin[2], fight: world.time - w.fightAt < FIGHT_MEMORY, early: world.time - liveAt < EARLY, slow: Math.hypot(p.body.velocity[0], p.body.velocity[1]) < SLOW };
+          w.jump = { z: p.body.origin[2], fight: world.time - w.fightAt < FIGHT_MEMORY, early: world.time - liveAt < EARLY, slow: Math.hypot(p.body.velocity[0], p.body.velocity[1]) < SLOW, seen: Boolean(w.seen), near: Boolean(w.near) };
         }
         if (!w.ground && p.body.onGround) {
           w.landed = ticks;
@@ -207,6 +210,8 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
             m[what]++;
             if (what === 'jumpsFlat' && w.jump.early) m.jumpsFlatEarly++;
             if (what === 'jumpsFlat' && w.jump.slow) m.jumpsFlatSlow++;
+            if (what === 'jumpsFlat' && w.jump.seen) m.jumpsFlatSeen++;
+            if (what === 'jumpsFlat' && w.jump.near) m.jumpsFlatNear++;
             w.jump = null;
           }
         }
@@ -230,6 +235,21 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
         m.alive += dt;
         const o = p.body.origin;
         const eye = [o[0], o[1], o[2] + p.body.eye];
+        // The enemies of this moment: one within NEAR_ENEMY, and one with a clear line from eye to eye.
+        w.seen = false;
+        w.near = false;
+        for (const q of world.players.values()) {
+          if (!q.alive || q.team === p.team || (q.team !== 'T' && q.team !== 'CT')) continue;
+          const qo = q.body.origin;
+          if (Math.hypot(qo[0] - o[0], qo[1] - o[1], qo[2] - o[2]) < NEAR_ENEMY) w.near = true;
+          if (!w.seen) {
+            traceBox(world.level, HULL_POINT, eye, [qo[0], qo[1], qo[2] + q.body.eye], tr);
+            if (tr.fraction >= 1) w.seen = true;
+          }
+        }
+        m.calm += dt;
+        if (w.seen) m.calmSeen += dt;
+        if (w.near) m.calmNear += dt;
         const a = (p.yaw * Math.PI) / 180;
         traceBox(world.level, HULL_POINT, eye, [eye[0] + Math.cos(a) * WALL_GAP, eye[1] + Math.sin(a) * WALL_GAP, eye[2]], tr);
         if (tr.fraction >= 1) {
@@ -381,7 +401,9 @@ export function feetLine(kind, m) {
   const run = (range) => `${pct(m[`rifleRun${range}`], m[`rifle${range}`])} of ${m[`rifle${range}`]}`;
   const early = m.aliveEarly > 0 ? (m.jumpsFlatEarly / (m.aliveEarly / 60)).toFixed(2) : '-';
   const late = m.alive - m.aliveEarly > 0 ? ((m.jumpsFlat - m.jumpsFlatEarly) / ((m.alive - m.aliveEarly) / 60)).toFixed(2) : '-';
-  return `${kind.padEnd(8)} G7 jumps a minute: in a fight ${rate(m.jumpsFight)}, up a ledge ${rate(m.jumpsUp)}, down a ledge ${rate(m.jumpsDown)}, on the flat ${rate(m.jumpsFlat)} (in the first ${EARLY} s ${early}, later ${late}; from under ${SLOW} units a second ${pct(m.jumpsFlatSlow, m.jumpsFlat)})  |  rifle shots on the run, the nearest enemy under ${RANGES[0]}: ${run('Near')}, to ${RANGES[1]}: ${run('Mid')}, further: ${run('Far')}`;
+  const per = (n, seconds) => (seconds > 0 ? (n / (seconds / 60)).toFixed(2) : '-');
+  const where = `with an enemy in a clear line ${per(m.jumpsFlatSeen, m.calmSeen)} (${pct(m.calmSeen, m.calm)} of the time), with none ${per(m.jumpsFlat - m.jumpsFlatSeen, m.calm - m.calmSeen)}; with an enemy within ${NEAR_ENEMY} units ${per(m.jumpsFlatNear, m.calmNear)} (${pct(m.calmNear, m.calm)} of the time), with none ${per(m.jumpsFlat - m.jumpsFlatNear, m.calm - m.calmNear)}`;
+  return `${kind.padEnd(8)} G7 jumps a minute: in a fight ${rate(m.jumpsFight)}, up a ledge ${rate(m.jumpsUp)}, down a ledge ${rate(m.jumpsDown)}, on the flat ${rate(m.jumpsFlat)} (in the first ${EARLY} s ${early}, later ${late}; from under ${SLOW} units a second ${pct(m.jumpsFlatSlow, m.jumpsFlat)}; ${where})  |  rifle shots on the run, the nearest enemy under ${RANGES[0]}: ${run('Near')}, to ${RANGES[1]}: ${run('Mid')}, further: ${run('Far')}`;
 }
 
 const quantile = (list, p) => {
