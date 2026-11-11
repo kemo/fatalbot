@@ -121,15 +121,17 @@ export function shotsOfKill(tracks, byPlayer, kill) {
 /**
  * The facts of the players of one demo: [{kills, heads, groups: {group: [kills, heads]}, fights: [{e0, toShot,
  * peak, shotErr, low, group}], bursts: [{group, head, shots: shotsOfKill}]}], one for each player with a kill of
- * an enemy. `hulls` is the level of the demo.
+ * an enemy. `hulls` is the level of the demo. `skip` holds spans of the demo's time ([from, to]) whose kills are
+ * left out: the rounds that do not fit the level (strategies.js demoFits).
  */
-export function playerFacts(aimStats, hulls, timeline) {
+export function playerFacts(aimStats, hulls, timeline, skip = []) {
   const tracks = tracksOf(timeline);
   const shots = (timeline.shots ?? []).map((s) => [s[0], s[1]]);
   const byPlayer = shotsBy(shots);
   const byKiller = new Map();
   for (const k of timeline.kills ?? []) {
     if (!k.killer || k.killer === k.victim || k.killerTeam === k.victimTeam) continue;
+    if (skip.some(([from, to]) => k.t >= from && k.t <= to)) continue;
     if (gunKind(k.weapon) === 'grenade' || gunKind(k.weapon) === 'knife' || !gunKind(k.weapon)) continue;
     let list = byKiller.get(k.killer);
     if (!list) byKiller.set(k.killer, (list = []));

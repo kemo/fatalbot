@@ -101,3 +101,15 @@ test('the body of the model has a smaller head than the two boxes, and all the p
   assert.ok(size[0] * size[1] < 12 * 14, 'the face of the head box is smaller than 12 by 14 units');
   assert.notEqual(bodyOf({ body: { origin: [0, 0, 18], ducked: true }, yaw: 0 }).matrices, body.matrices, 'a ducked body has its own pose');
 });
+
+test('the facts of the players leave out the kills of a span of the demo that is to be skipped', () => {
+  // Two kills of one player; the second falls into a round that does not fit the level.
+  const timeline = { samples: [], shots: [], kills: [
+    { t: 10, killer: 1, victim: 2, weapon: 'ak47', headshot: true, killerTeam: 'T', victimTeam: 'CT' },
+    { t: 200, killer: 1, victim: 2, weapon: 'ak47', headshot: false, killerTeam: 'T', victimTeam: 'CT' },
+  ] };
+  const aimStats = { engagements: () => [] };
+  assert.equal(playerFacts(aimStats, null, timeline)[0].kills, 2);
+  const kept = playerFacts(aimStats, null, timeline, [[150, 300]]);
+  assert.deepEqual([kept[0].kills, kept[0].heads], [1, 1]);
+});
