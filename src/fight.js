@@ -24,8 +24,10 @@ const KNIFE_SLASH = 60;
 const KNIFE_STAND = 36;
 // The sight of the enemy this fresh keeps the trigger and the feet with the fight.
 const IN_SIGHT = 0.15;
-// The part of the strafing fights that a player fires on the run.
-const RUN_GUN = 0.35;
+// The part of the strafing fights that a player fires on the run. With 0.35 fatalbot fired 4 to 8 of 100 rifle
+// shots over 140 units a second, with 0.6 it fires 5 to 12; the players fire 7 to 13
+// (docs/measures/2026-11-11-night.md).
+const RUN_GUN = 0.6;
 // Nearer than this a gun that is not steady yet fires all the same.
 const CLOSE_FIRE = 400;
 // The bolt of an AWP or a Scout: the game brings the scope back itself after it.
@@ -44,8 +46,7 @@ export function startFight(c) {
   s.shotGun = null;
   // How this fight goes, as the player's fights went: moving or still, ducked or standing.
   s.strafe = random() < skill.moveInFight;
-  // Of the fights on the move, the part fought on the run with no care for the spread. The players of the demos
-  // fire about 10 of 100 rifle shots over 140 units a second (docs/measures).
+  // Of the fights on the move, the part fought on the run with no care for the spread.
   s.runGun = s.strafe && random() < RUN_GUN;
   s.crouch = random() < skill.duckInFight;
   s.strafeTurn = 0;
