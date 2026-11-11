@@ -34,7 +34,8 @@ const share = (n, of) => (of ? n / of : NaN);
  * ahead ('CT', 'T' or null: the side that was first AHEAD players ahead from second AHEAD_FROM on, before a plant,
  * with both sides alive), quiet and loud ({T, CT}: [steps, stands, small steps] of the living players of a side
  * from second OUT_AT to the first death, and from the first death to the plant), saved (after a plant that the Ts
- * win: the CTs alive at the round's end; null for another round), tsAtBomb ([Ts within BOMB_NEAR of the bomb,
+ * win: the CTs alive at the round's end, from `round.left`; null for another round, and for a round with no
+ * `left`), tsAtBomb ([Ts within BOMB_NEAR of the bomb,
  * Ts alive] BOMB_LATER seconds after the plant, with a CT alive then; null when the round is over by then)}.
  * `zones` are the sites of the level (strategies.js zonesOf).
  */
@@ -78,7 +79,7 @@ export function shapeOf(zones, round) {
       }
     }
   }
-  const saved = round.plant && round.winner === 'T' ? alive('CT', steps - 1) : null;
+  const saved = round.plant && round.winner === 'T' && round.left ? round.left.CT : null;
   let tsAtBomb = null;
   const later = round.plant ? Math.round((round.plant.t + BOMB_LATER) / STEP) : steps;
   if (later < steps - 1 && alive('CT', later)) {
@@ -139,7 +140,7 @@ export function shapeTable(shapes) {
       const name = `${title}: the steps of ${STEP} s in which a ${side}`;
       return [[`${name} stands (under ${STAND} units)`, share(sum(1), sum(0)), '%'], [`${name} moves under ${SHIFT} units`, share(sum(2), sum(0)), '%']];
     })),
-    ['Plants after which the Ts win and a CT is alive at the end', share(planted.filter((r) => r.saved > 0).length, planted.length), '%'],
+    ['Plants after which the Ts win and a CT is alive at the end', share(planted.filter((r) => r.saved > 0).length, planted.filter((r) => r.winner !== 'T' || r.saved !== null).length), '%'],
     [`${BOMB_LATER} s after the plant: the living Ts within ${BOMB_NEAR} units of the bomb`, share(planted.reduce((n, r) => n + (r.tsAtBomb?.[0] ?? 0), 0), planted.reduce((n, r) => n + (r.tsAtBomb?.[1] ?? 0), 0)), '%'],
     [`At second ${OUT_AT}: the CTs further than ${OUT} units from every site`, mean(shapes.filter((r) => r.ctOut !== null && r.ctOut !== undefined).map((r) => r.ctOut)), '%'],
   );
@@ -212,7 +213,10 @@ export function roundSampler(world) {
         else if (e.type === 'round' && e.phase === 'end') {
           if (cur.liveAt !== null && (e.winner === 'T' || e.winner === 'CT')) {
             const { ids, liveAt, ticks, ...facts } = cur;
-            rounds.push({ ...facts, winner: e.winner, seconds: Math.round(world.time - liveAt) });
+            // The players alive at the end itself: the last sample can be up to STEP seconds older.
+            const left = { T: 0, CT: 0 };
+            for (const team of ['T', 'CT']) for (const id of ids[team]) if (world.players.get(id)?.alive) left[team]++;
+            rounds.push({ ...facts, winner: e.winner, seconds: Math.round(world.time - liveAt), left });
           }
           cur = null;
         }
