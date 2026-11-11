@@ -68,3 +68,51 @@ test('a bot buys a grenade only for a throw that its side has on the map', () =>
   assert.deepEqual(ct.filter((key) => GRENADES.includes(key)), ['flashbang', 'flashbang']);
   assert.deepEqual(buysOf('T', [{ money: 6000 }], { lineups })[0].filter((key) => GRENADES.includes(key)), ['smokegrenade']);
 });
+
+const GUNS = ['m4a1', 'famas', 'ak47', 'galil', 'awp', 'mp5'];
+const gunOf = (list) => list.find((key) => GUNS.includes(key)) ?? null;
+
+test('a team buys together: with one player short of the money the others buy, and that one takes the lesser rifle', () => {
+  for (const seed of [1, 2, 3]) {
+    const lists = buysOf('CT', [{ money: 5000 }, { money: 4200 }, { money: 6000 }, { money: 3200 }, { money: 4500 }], { seed });
+    assert.deepEqual(lists.map(gunOf), ['m4a1', 'm4a1', 'm4a1', 'famas', 'm4a1'], `seed ${seed}`);
+    assert.ok(lists[3].includes('vest'), 'the lesser rifle comes with a vest');
+    // Too poor for the lesser rifle with a vest: no gun.
+    assert.equal(gunOf(buysOf('T', [{ money: 5000 }, { money: 4200 }, { money: 6000 }, { money: 2000 }, { money: 4500 }], { seed })[3]), null);
+  }
+});
+
+test('a team saves together: with two players short of the money nobody buys a gun', () => {
+  for (const seed of [1, 2, 3]) {
+    const lists = buysOf('CT', [{ money: 5000 }, { money: 4200 }, { money: 2000 }, { money: 3000 }, { money: 4500 }], { seed });
+    assert.deepEqual(lists.map(gunOf), [null, null, null, null, null], `seed ${seed}`);
+    assert.ok(lists.every((list) => !list.includes('vest') && !list.includes('vesthelm')), 'a save keeps the money');
+    // The money of this buy and of the next one: that player buys in a save.
+    assert.deepEqual(buysOf('CT', [{ money: 9000 }, { money: 4200 }, { money: 2000 }, { money: 3000 }, { money: 1500 }], { seed }).map(gunOf), ['m4a1', null, null, null, null]);
+    // A player with a rifle from the last round fills it and takes armor; the team still saves.
+    const kept = buysOf('CT', [{ money: 1500, weapons: ['m4a1'] }, { money: 2200 }, { money: 2000 }, { money: 3000 }, { money: 1500 }], { seed });
+    assert.deepEqual(kept.map(gunOf), [null, null, null, null, null]);
+    assert.deepEqual(kept[0].slice(0, 2), ['primammo', 'vesthelm']);
+    // A lesser gun from the last round is filled, and no more.
+    assert.deepEqual(buysOf('CT', [{ money: 2500, weapons: ['famas'] }, { money: 2200 }, { money: 2000 }, { money: 3000 }, { money: 1500 }], { seed })[0], ['primammo', 'secammo']);
+  }
+});
+
+test('players with rifles from the last round count for the call of a buy', () => {
+  const lists = buysOf('T', [{ money: 300, weapons: ['ak47'] }, { money: 200, weapons: ['awp'] }, { money: 100, weapons: ['ak47'] }, { money: 3600 }, { money: 1000 }]);
+  assert.deepEqual(lists.map(gunOf), [null, null, null, 'ak47', null]);
+});
+
+test('a pistol round: armor or a better pistol, and no gun', () => {
+  for (const seed of [1, 2, 3, 4]) {
+    for (const list of buysOf('T', [{ money: 800 }, { money: 800 }, { money: 800 }, { money: 800 }, { money: 800 }], { seed })) {
+      assert.equal(gunOf(list), null);
+      assert.ok(list.includes('vest') || list.includes('deagle'), `seed ${seed}: ${list}`);
+    }
+  }
+});
+
+test('a bot alone among people buys by its own money', () => {
+  assert.equal(gunOf(buysOf('CT', [{ money: 5000 }], { people: 4 })[0]), 'm4a1');
+  assert.equal(gunOf(buysOf('CT', [{ money: 3500 }], { people: 4 })[0]), null);
+});

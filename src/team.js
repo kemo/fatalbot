@@ -35,6 +35,8 @@ export class Team {
     this.flashes = [];
     // The teammates asked to make way: bot id -> {dir, until, to} (walk.js makeWay).
     this.way = new Map();
+    // The call of the round's buy: 'buy' or 'save' (buy.js teamCall).
+    this.buyCall = null;
   }
 
   /** A player of the team sees an enemy. */

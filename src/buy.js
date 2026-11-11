@@ -1,11 +1,13 @@
 // What a bot buys at the start of a round, as the players of the time bought: the side's rifle, armor and grenades
-// with the money for it, a pistol round of armor or a better pistol, and a save below that. The host sells; this
-// only makes the list (the order of csbih-player's economy.js botBuy). 'primammo' and 'secammo' fill the ammo.
+// with the money for it, a pistol round of armor or a better pistol, and a save below that. A team buys together
+// or saves together (teamCall). The host sells; this only makes the list (the order of csbih-player's economy.js
+// botBuy). 'primammo' and 'secammo' fill the ammo.
 
 import { EQUIPMENT, WEAPONS, isPrimary } from './weapons.js';
 import { grenadesOf } from './grenades.js';
 
 const RIFLE = { T: 'ak47', CT: 'm4a1' };
+const LESSER = { T: 'galil', CT: 'famas' };
 const FULL_BUY = { T: 2500 + 1000, CT: 3100 + 1000 };
 // The guns that a player keeps: with a lesser primary and the money of a full buy, a bot takes the side's rifle.
 const KEPT = new Set(['ak47', 'm4a1', 'aug', 'sg552', 'awp', 'g3sg1', 'sg550', 'm249']);
@@ -13,6 +15,21 @@ const KEPT = new Set(['ak47', 'm4a1', 'aug', 'sg552', 'awp', 'g3sg1', 'sg550', '
 const CARRY = { flashbang: 2, hegrenade: 1, smokegrenade: 1 };
 // What a fill of the ammo of a gun costs at most, for the count of the money.
 const AMMO_FILL = 240;
+
+/**
+ * The call of a team for the buy of this round: 'buy' or 'save'. Its first bot that buys makes it, from what the
+ * bots of the team have: 'buy' when all of them but one at most hold a gun to keep or have the money of a full
+ * buy. The bots say what they have, as players do before a round. A teammate that no brain drives says nothing
+ * and counts for nothing: a bot alone among people buys by its own money.
+ */
+function teamCall(c) {
+  const { me, team } = c;
+  if (team.buyCall) return team.buyCall;
+  const bots = c.mates.filter((p) => p.alive && p.own);
+  const ready = bots.filter((p) => p.own.money >= FULL_BUY[me.team] || Object.keys(p.own.weapons).some((key) => KEPT.has(key))).length;
+  team.buyCall = ready >= Math.max(1, bots.length - 1) ? 'buy' : 'save';
+  return team.buyCall;
+}
 
 /** The items that the bot buys now, in order. */
 export function buyList(c) {
@@ -45,17 +62,24 @@ export function buyList(c) {
     return true;
   };
   const held = Object.keys(own.weapons).filter(isPrimary);
+  const keeps = held.some((key) => KEPT.has(key));
   let armed = held.length > 0;
-  if (!held.some((key) => KEPT.has(key)) && money >= FULL_BUY[side]) armed = buy(RIFLE[side]) || armed;
-  else if (!armed && side === 'T' && money >= 2000 + 650 && random() < 0.5) armed = buy('galil');
-  else if (!armed && side === 'CT' && money >= 2250 + 650 && random() < 0.5) armed = buy('famas');
+  // In a save a bot spends when it holds a gun to keep, or has the money of this buy and of the next one.
+  const spends = teamCall(c) === 'buy' || keeps || money >= FULL_BUY[side] * 2;
+  if (spends && !keeps) {
+    if (money >= FULL_BUY[side]) armed = buy(RIFLE[side]) || armed;
+    // The one player of a buy round without the money takes the lesser rifle.
+    else if (!armed && money >= WEAPONS[LESSER[side]].price + AMMO_FILL + EQUIPMENT.vest) armed = buy(LESSER[side]);
+  }
   if (armed) {
     list.push('primammo');
     money -= Math.min(money, AMMO_FILL);
-    if (money >= 1000) buy('vesthelm');
-    else buy('vest');
-    buy('defuser');
-    for (const nade of ['flashbang', 'hegrenade', 'smokegrenade', 'flashbang']) if (throws.has(nade)) buy(nade);
+    if (spends) {
+      if (money >= 1000) buy('vesthelm');
+      else buy('vest');
+      buy('defuser');
+      for (const nade of ['flashbang', 'hegrenade', 'smokegrenade', 'flashbang']) if (throws.has(nade)) buy(nade);
+    }
     list.push('secammo');
     return list;
   }
