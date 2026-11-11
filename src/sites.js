@@ -232,7 +232,7 @@ function postsOf(brain, mid, entries) {
  * the height of the point, not by a wall or on an edge, with a free straight walk from the point, and good by
  * `good(floor)`. At most SPOTS, the furthest first, SPOT_APART from the point and from each other.
  */
-function spotsAbout(brain, point, good) {
+export function spotsAbout(brain, point, good = () => true) {
   const { nav, ports } = brain;
   const start = nearestNode(nav, point, 2, 40);
   if (start < 0) return [];

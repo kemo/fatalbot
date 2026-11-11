@@ -69,7 +69,8 @@ test('a CT that hears steps far off keeps its post', () => {
   }
   const d = brain.debug(1);
   assert.ok(d.goal === 'ambush' || d.goal === 'site', `it holds (${d.goal})`);
-  assert.ok(d.point === null || flat(d.point, post) < 1, 'at its post, not on a run at the enemy');
+  // The post, or one of the floors about it that it steps between (within 176 units).
+  assert.ok(d.point === null || flat(d.point, post) <= 176, 'at its post, not on a run at the enemy');
 });
 
 test('the CTs rotate to the site where the team sees the attack', () => {
@@ -285,4 +286,34 @@ test('a round that is over is free time, and a round with no enemy from its star
     alone.think(1);
   }
   assert.equal(alone.debug(1).goal, 'site');
+});
+
+test('a player that waits for a known enemy steps between floors, with its view on the enemy\'s way', () => {
+  // A T with no post hears an enemy run behind the wall (x = 320, y from -600 to 600) and waits for it, or goes for it.
+  const sites = [{ mins: [1200, -50, 0], maxs: [1300, 50, 72] }];
+  const ports = flatPorts({ half: 600 });
+  for (const seed of [1, 2, 3, 4, 5, 6]) {
+    const brain = createBrain({ map: flatMap({ sites, size: 96, spawns: [-1200, 1400], wall: 600 }), ports, seed });
+    brain.join(1);
+    const floors = [];
+    let waited = 0;
+    for (let tick = 1; tick <= 1200; tick++) {
+      const at = brain.debug(1)?.goal === 'ambush' && brain.debug(1).point ? brain.debug(1).point : [0, 0, 36];
+      const runner = player(9, 'CT', [500, -200 + (tick % 400), 36]);
+      runner.velocity = [0, 250, 0];
+      brain.frame(frameAt(tick, [player(1, 'T', at, { own: true, yaw: 0 }), runner]));
+      brain.think(1);
+      const d = brain.debug(1);
+      if (d.goal !== 'ambush') continue;
+      waited++;
+      if (d.point && !floors.some((f) => flat(f, d.point) < 8)) floors.push(d.point);
+    }
+    // A bot that waits (not every seed draws that) stands on more than one floor in its wait, all about its place.
+    if (waited > 400) {
+      assert.ok(floors.length >= 2, `seed ${seed}: it stood on ${floors.length} floors in ${waited} ticks of its wait`);
+      for (const f of floors) assert.ok(flat(f, [0, 0, 36]) <= 420, 'about the place where it heard the enemy');
+      return;
+    }
+  }
+  assert.fail('no seed drew a wait');
 });
