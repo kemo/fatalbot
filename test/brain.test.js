@@ -198,3 +198,28 @@ test('a bot that gives up at a ladder that it cannot take finds a way without th
   run(brain, 1, 700, players);
   assert.ok(brain.debug(1).path?.length > 0 && !overLadder(), 'after it gave up, its way leaves the ladder out');
 });
+
+test('a bot that waits at its place jumps now and then, by the count of its profile, and never with an enemy near', () => {
+  // A CT holds a post of the site; its player jumped 12 times a minute. The long wall (x = 320) hides the enemy.
+  const map = () => flatMap({ sites: [{ mins: [450, 350, 0], maxs: [550, 450, 72] }], size: 56, spawns: [-800, 600] });
+  const wait = (seed, enemyAt, phase = 'live', jumpRate = 12) => {
+    const brain = createBrain({ map: map(), ports: flatPorts({ half: 5000 }), seed });
+    brain.join(1, { profile: { jumpRate } });
+    brain.frame(frameAt(1, [player(1, 'CT', [600, 0, 36], { own: true }), player(2, 'T', [-800, 0, 36])]));
+    brain.think(1);
+    const { point: post, watch } = brain.teams.CT.plan.posts.get(1);
+    const enemy = enemyAt(post, watch);
+    return run(brain, 1, 3000, () => [player(1, 'CT', post, { own: true }), player(2, 'T', enemy)], () => ({ phase }));
+  };
+  // On the other side of the wall from the post.
+  const hidden = (post) => [post[0] < WALL_X ? WALL_X + 300 : WALL_X - 300, post[1], 36];
+  let jumps = 0;
+  for (const seed of [1, 2, 3, 4]) jumps += wait(seed, hidden).filter((c) => c.jump).length;
+  // 30 s at 12 a minute are 6 jumps of each bot, by chance: no burst of jumps to catch up with the count.
+  assert.ok(jumps > 4 && jumps < 60, `it jumps at about its rate (${jumps} jumps of four bots in 30 s each)`);
+  assert.ok(wait(1, hidden, 'live', 0).every((c) => !c.jump), 'a player that never jumped does not');
+  assert.ok(wait(1, hidden, 'freeze').every((c) => !c.jump), 'not in the freeze time');
+  // An enemy on its own side of the wall, a quarter of the way to the place that it watches: a fight, no jump of a habit.
+  const fought = wait(1, (post, watch) => [post[0] + (watch[0] - post[0]) / 4, post[1] + (watch[1] - post[1]) / 4, 36]);
+  assert.ok(fought.some((c) => c.attack) && fought.every((c) => !c.jump), 'not with an enemy in sight');
+});
