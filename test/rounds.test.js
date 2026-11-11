@@ -21,6 +21,8 @@ test('the shape of a round: the first death, the numbers at the plant, the Ts in
   assert.deepEqual(s.first, { side: 'CT', t: 5 * STEP });
   assert.deepEqual(s.plant, { t: 50, T: 4, CT: 3 });
   assert.equal(s.site, 0);
+  // At second 16 the CTs are on their way: 1700 units and more from the site that they run to.
+  assert.equal(s.ctOut, 1);
   assert.ok(s.te > 20 && s.te <= 60, 'a T stood in the site');
   assert.equal(s.entry.T, 4);
   assert.ok(s.entry.tAtSite >= 1 && s.later.tAtSite >= s.entry.tAtSite, 'more Ts are in the site 10 s later');
@@ -51,6 +53,7 @@ test('the table of many shapes: shares of the wins by the first death and by the
   assert.ok(Math.abs(table['Plants with the sides level'] - 1 / 3) < 1e-9);
   assert.equal(table['The Ts win a plant with the CTs ahead'], 0);
   assert.equal(table['Rounds in which no T stood in a site'], 0.25);
+  assert.equal(table['At second 16: the CTs further than 800 units from every site'], 1);
 });
 
 test('the buys of a side: by the result of the round before, and a new half starts the count again', () => {
