@@ -96,11 +96,11 @@ A claim that a bot is better needs a number. Spec 01 holds the gates. In short:
 2. **The licence** of this repository. None is set.
 3. **How csbih-player takes the brain**: a copy at a pinned commit, a git submodule, or a path. The owner decided on
    2026-11-11: fatalbot plays the bots of csbih-player at once, from a copy of the brain that a script makes. The
-   patch is ready and not applied (`out/csbih-player/fatal-switch.patch`, git-ignored); `?bot=bot.js` on the play
-   page gives the old bots (docs/measures/2026-11-11-hold-and-route.md, section 5). Its own `bot.js`
-   stays the bot of `/igraj` until the owner decides. fatalbot is measured as the bot that takes over in a replay
-   (docs/measures/2026-11-10-replay-takeover.md). The change itself is in `demo-match.js` and `match.js` of
-   csbih-player, which is read-only from here. A bot of fatalbot can keep the route of the player that it plays on
+   owner made the switch on 2026-11-11 (csbih-player commit `af5d038`, live on player.gamerz.ba); `?bot=bot.js` on
+   the play page gives the old bots (docs/measures/2026-11-11-hold-and-route.md, section 5). A newer fatalbot gets
+   there when the owner runs `node tools/vendor-fatalbot.js` in csbih-player, commits and deploys. fatalbot is
+   measured as the bot that takes over in a replay (docs/measures/2026-11-10-replay-takeover.md). The change itself
+   is in `demo-match.js` and `match.js` of csbih-player, which is read-only from here. A bot of fatalbot can keep the route of the player that it plays on
    for, and leaves it by what it meets itself (spec 03, section 6.3). It does not throw that player's grenades.
 4. **The pace of the Ts** (commit `a7858e1`): the Ts wait out of sight and go at a second drawn as the players'
    was. A round then has the players' pace, and the Ts win 54.4% of the rounds of fatalbot against itself (the

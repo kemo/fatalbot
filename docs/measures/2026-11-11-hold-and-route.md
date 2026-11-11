@@ -155,7 +155,7 @@ what it costs.
 - The side of the stand-ins wins as often with a route as without one (426, 430 and 415 of 948 rounds).
 - Not built: the grenades of the player at their seconds.
 
-## 5. The switch for csbih-player (a patch, not applied)
+## 5. The switch for csbih-player (a patch, applied by the owner on 2026-11-11)
 
 csbih-player is read-only from this repository. The switch is a patch in `out/csbih-player/fatal-switch.patch`
 (git-ignored), made and tried in a copy of csbih-player made of links.
@@ -237,9 +237,13 @@ is `'bot.js'`.
   skips (the clone has no levels). The static build of the code of that clone: 123 files, the built `fatal.js`
   imports the hashed adapter, and the built adapter loads with the brain in Node.
 
-What was not checked:
+- **The switch is live.** The owner ran `sh out/csbih-player/switch.sh --deploy` on 2026-11-11. In csbih-player
+  itself 634 of 635 tests pass and one skips; the commit is `af5d038`, with the copy of fatalbot at `73aefba`;
+  the full static build made 14,087 files; the deploy script ended with "Deployed af5d038 to
+  https://player.gamerz.ba" and a healthy container. Nobody opened the live page from this repository.
 
-- The full test run of csbih-player with the patch in the real checkout: the script runs it before the commit.
+What was not checked before the switch:
+
 - The deploy itself (`deploy/deploy.sh`): it works on the live server, and this repository changes nothing
   outside itself.
 - A full static build with the levels, the models and the timelines, and a page served from one. The patch
