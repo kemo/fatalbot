@@ -133,3 +133,31 @@ test('where the attackers come to a site first, the defenders take posts that th
   // Later in a round (a rotation, a bot that takes over) the race from the spawns is over: a post near the site.
   assert.ok(flat(choosePost(brain, 0, [], 0.5).point, info.mid) <= 800);
 });
+
+test('the carrier in the site plants once the site is quiet, and at once when it is alone or the clock is short', () => {
+  // The site lies west of the wall (x = 320, y from -200 to 200). The carrier stands in it; a teammate stands
+  // past the wall's end and sees the CT east of the wall. The carrier does not see that CT.
+  const sites = [{ mins: [200, -50, 0], maxs: [300, 50, 72] }];
+  const bomb = { state: 'carried', carrier: 1, origin: null, explodeAt: null, defuser: null, arming: null };
+  const play = ({ enemy, mate = true, timeLeft = 100 }) => {
+    const brain = createBrain({ map: flatMap({ sites, size: 40, spawns: [-600, 500] }), ports: flatPorts(), seed: 5 });
+    brain.join(1);
+    brain.join(2);
+    for (let tick = 1; tick <= 300; tick++) {
+      const list = [player(1, 'T', [250, 0, 36], { own: true, yaw: 90 }), player(9, 'CT', enemy)];
+      if (mate) list.push(player(2, 'T', [250, 300, 36], { own: true, yaw: -30 }));
+      const frame = frameAt(tick, list, { bomb });
+      frame.round.timeLeft = timeLeft;
+      brain.frame(frame);
+      brain.think(1);
+      if (mate) brain.think(2);
+    }
+    return brain.debug(1).goal;
+  };
+  const seenByMate = [500, 150, 36];
+  const farAway = [500, -600, 36];
+  assert.notEqual(play({ enemy: seenByMate }), 'plant', 'a teammate sees an enemy near the site: no plant yet');
+  assert.equal(play({ enemy: farAway }), 'plant', 'nobody sees an enemy: the plant');
+  assert.equal(play({ enemy: seenByMate, timeLeft: 30 }), 'plant', 'the clock is short: the plant');
+  assert.equal(play({ enemy: seenByMate, mate: false }), 'plant', 'alone it plants: it does not see that enemy');
+});

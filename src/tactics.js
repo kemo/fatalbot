@@ -57,6 +57,11 @@ const COVER_REACH = 800;
 const COVER_NEAR = 96;
 const COVER_TRIES = 60;
 // With nothing known a bot waits at its place this long before it goes to look; a place is sought for at most SEEK_SECONDS.
+// The carrier plants once no enemy was seen or heard within PLANT_RANGE of it for PLANT_QUIET seconds, and at
+// once with less than PLANT_CLOCK seconds of the round left.
+const PLANT_QUIET = 3;
+const PLANT_RANGE = 1000;
+const PLANT_CLOCK = 40;
 const WAIT_MIN = 10;
 const WAIT_MAX = 25;
 const SEEK_SECONDS = 25;
@@ -72,6 +77,19 @@ export function will(skill) {
   return Math.max(0.1, Math.min(0.95, (skill.aggression / AGGRESSION_MID) * 0.5));
 }
 
+/**
+ * True when the carrier in the site plants now: no enemy was seen or heard near it for PLANT_QUIET seconds, by
+ * itself or by its team. Alone, or with little of the round's clock left, it plants at once. The players of the
+ * recorded matches plant about 7 s after their first T stands in the site, with most of the CTs dead
+ * (docs/measures/2026-11-11-night.md).
+ */
+function quietToPlant(c) {
+  const { me, s, team, time, frame } = c;
+  if (c.mateCount <= 1 || frame.round.timeLeft < PLANT_CLOCK) return true;
+  if (time - s.seenAt < PLANT_QUIET || (s.noise && time - s.noise.at < PLANT_QUIET && flat(s.noise.point, me.origin) < PLANT_RANGE)) return false;
+  return !team.enemiesSeen(time, PLANT_QUIET).some((g) => flat(g.point, me.origin) < PLANT_RANGE);
+}
+
 /** What the bot does now. */
 export function decide(c) {
   const { me, team, brain } = c;
@@ -84,7 +102,11 @@ export function decide(c) {
   if (bomb?.state === 'carried' && bomb.mine) {
     // The carrier plants in the site of the team's plan; in another site only when the plan has none.
     const site = team.plan?.site ?? null;
-    if (inBombSite(map, me.origin) && (site === null || touches(map.bombSites[site], me.origin))) return { kind: 'plant' };
+    if (inBombSite(map, me.origin) && (site === null || touches(map.bombSites[site], me.origin))) {
+      // The plant comes once the site is quiet: until then the carrier fights for it with its team.
+      if (quietToPlant(c)) return { kind: 'plant' };
+      return contactTask(c) ?? { kind: 'hold', task: 'carry', point: null };
+    }
     if (stage) return stage;
     const at = site !== null ? siteSpot(c, site) : null;
     return { kind: 'goto', task: 'carry', point: at ?? nearestSite(map, me.origin) };
