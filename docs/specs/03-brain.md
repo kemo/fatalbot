@@ -196,7 +196,8 @@ For a replay: a bot that plays on for a recorded player can get that player's ro
 - Off the route by 300 units, or with no progress for 1 s, it walks back by the graph to the first place of the
   route ahead that the graph reaches. Three walks back that fail end the route.
 - **Each bot leaves its route by what it meets itself**, for the rest of the round: it reacted to an enemy in its
-  sight, it was hit, it heard an enemy within 900 units, the recording of its player ended, it carries a bomb
+  sight, it was hit, it heard an enemy within the hearing distance of its profile (350 units), the recording of its
+  player ended, it carries a bomb
   that its player did not carry, or (after a plant) it is a CT, or a T whose route is over 1500 units from the
   bomb. No count of the dead and no event of a teammate ends a route (the owner's rule of 2026-11-11).
 - With the C4 in the hand of the route, in a site, the carrier plants.

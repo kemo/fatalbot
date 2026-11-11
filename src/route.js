@@ -36,11 +36,12 @@ const REJOINED = 48;
 // So many walks back that failed end the route.
 const REJOIN_TRIES = 3;
 // The bot's own contacts that end its route: an enemy in its sight that it reacted to, a hit in the last HIT
-// seconds, an enemy heard this near in the last HEARD seconds.
+// seconds, an enemy heard in the last HEARD seconds within the hearing distance of its profile (350 units for a
+// middling player). A shot further off ends no route: with a reach of 900 units one shot took every bot about it
+// off its route in the same second (docs/measures/2026-11-11-hold-and-route.md).
 const IN_SIGHT = 0.3;
 const HIT = 0.5;
 const HEARD = 1;
-const NOISE_NEAR = 900;
 // After a plant a T keeps its route only while the route is this near the bomb: else the route is of another round.
 const SAME_PLANT = 1500;
 
@@ -109,11 +110,11 @@ function rejoinPoint(c, route, r) {
  */
 export function routeGoal(c, bomb) {
   if (!onRoute(c)) return null;
-  const { me, own, s, time } = c;
+  const { me, own, s, skill, time } = c;
   // The bot's own contacts: from here on its round is not the recording's.
   if (s.target && time - s.seenAt < IN_SIGHT && time >= s.reactAt) leaveRoute(c, 'fight');
   else if (own.hurt && time - own.hurt.at < HIT) leaveRoute(c, 'hit');
-  else if (s.noise?.attends && time - s.noise.at < HEARD && flat(s.noise.point, me.origin) < NOISE_NEAR) leaveRoute(c, 'heard');
+  else if (s.noise?.attends && time - s.noise.at < HEARD && flat(s.noise.point, me.origin) < skill.hearing) leaveRoute(c, 'heard');
   const here = routeHere(c);
   if (!here) return null;
   const route = routeOf(c);
