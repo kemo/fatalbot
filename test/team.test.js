@@ -288,32 +288,39 @@ test('a round that is over is free time, and a round with no enemy from its star
   assert.equal(alone.debug(1).goal, 'site');
 });
 
-test('a player that waits for a known enemy steps between floors, with its view on the enemy\'s way', () => {
-  // A T with no post hears an enemy run behind the wall (x = 320, y from -600 to 600) and waits for it, or goes for it.
+test('a player that waits for a known enemy steps between floors, and plants its feet when that enemy is close', () => {
+  // A T with no post hears an enemy run behind the wall (x = 320, y from -600 to 600), and waits for it or goes
+  // for it. `x`: where the enemy runs. Returns the floors of the first seed that draws a long wait.
   const sites = [{ mins: [1200, -50, 0], maxs: [1300, 50, 72] }];
   const ports = flatPorts({ half: 600 });
-  for (const seed of [1, 2, 3, 4, 5, 6]) {
-    const brain = createBrain({ map: flatMap({ sites, size: 96, spawns: [-1200, 1400], wall: 600 }), ports, seed });
-    brain.join(1);
-    const floors = [];
-    let waited = 0;
-    for (let tick = 1; tick <= 1200; tick++) {
-      const at = brain.debug(1)?.goal === 'ambush' && brain.debug(1).point ? brain.debug(1).point : [0, 0, 36];
-      const runner = player(9, 'CT', [500, -200 + (tick % 400), 36]);
-      runner.velocity = [0, 250, 0];
-      brain.frame(frameAt(tick, [player(1, 'T', at, { own: true, yaw: 0 }), runner]));
-      brain.think(1);
-      const d = brain.debug(1);
-      if (d.goal !== 'ambush') continue;
-      waited++;
-      if (d.point && !floors.some((f) => flat(f, d.point) < 8)) floors.push(d.point);
+  const wait = (x) => {
+    for (const seed of [1, 2, 3, 4, 5, 6, 7, 8]) {
+      const brain = createBrain({ map: flatMap({ sites, size: 96, spawns: [-1200, 1400], wall: 600 }), ports, seed });
+      brain.join(1);
+      const floors = [];
+      let waited = 0;
+      for (let tick = 1; tick <= 1200; tick++) {
+        const at = brain.debug(1)?.goal === 'ambush' && brain.debug(1).point ? brain.debug(1).point : [0, 0, 36];
+        const runner = player(9, 'CT', [x, -200 + (tick % 400), 36]);
+        runner.velocity = [0, 250, 0];
+        brain.frame(frameAt(tick, [player(1, 'T', at, { own: true, yaw: 0 }), runner]));
+        brain.think(1);
+        const d = brain.debug(1);
+        if (d.goal !== 'ambush') continue;
+        waited++;
+        if (d.point && !floors.some((f) => flat(f, d.point) < 8)) floors.push(d.point);
+      }
+      if (waited > 400) return floors;
     }
-    // A bot that waits (not every seed draws that) stands on more than one floor in its wait, all about its place.
-    if (waited > 400) {
-      assert.ok(floors.length >= 2, `seed ${seed}: it stood on ${floors.length} floors in ${waited} ticks of its wait`);
-      for (const f of floors) assert.ok(flat(f, [0, 0, 36]) <= 420, 'about the place where it heard the enemy');
-      return;
-    }
-  }
-  assert.fail('no seed drew a wait');
+    return null;
+  };
+  // The enemy runs 900 units off: the bot steps between the floors about the place where it heard it.
+  const far = wait(900);
+  assert.ok(far, 'a seed drew a wait for the far enemy');
+  assert.ok(far.length >= 2, `it stood on ${far.length} floors`);
+  for (const f of far) assert.ok(flat(f, [0, 0, 36]) <= 420, 'about the place where it heard the enemy');
+  // The enemy runs 500 units off, heard all the time: the feet stay where they are.
+  const near = wait(500);
+  assert.ok(near, 'a seed drew a wait for the near enemy');
+  assert.equal(near.length, 1);
 });
