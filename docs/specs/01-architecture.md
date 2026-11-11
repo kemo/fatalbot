@@ -94,6 +94,11 @@ same maps, side orders and seeds before and after a change.
 G1 alone is easy to cheat: a faster hand wins. So both sides take the same motor profile (the `DEFAULT_PROFILE`
 numbers of csbih-player), and G6 must hold.
 
+The state of the gates on 2026-11-11 (docs/measures/2026-11-11-night.md): G1, G2, G3, G5 and G6 are met. G4 is
+not: fatalbot plants in 68% of its rounds and the players in 44% (`tools/rounds.js` measures the shape of a round
+for both). G7 is met for the kills with a shot to the head and for the jumps on a run; fatalbot still jumps less
+than the players after the first seconds of a round, and it fires fewer shots on the run at a distance.
+
 To come for G7, with the demo data (section 6): the likeness to the players as `tools/compare-fights.js` and
 `tools/aim-stats.js` of csbih-player measure it.
 

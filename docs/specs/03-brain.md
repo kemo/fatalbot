@@ -75,9 +75,24 @@ round a teammate, the jump of a stuck bot, the island of the graph.
   the step out of it cost the Ts rounds. Near its own point the held-up bot waits 4 s instead of pushing.
 - **New:** at the foot of a ladder on its way down, a bot that hangs there jumps off, also when its point lies
   higher than the foot. The ported rule let it hang there.
-- Gate G7 is not met yet: fatalbot jumps half as often as the players
-  (docs/measures/2026-11-10-plans-and-feel.md, section 6).
-- To come: the peek at a corner, the jiggle at an angle, the jump onto a box with the legs up as a habit.
+- **New:** at the top of a ladder with its floor on the open side of the ladder's face (a ladder beside its
+  platform), a bot keeps its face to the ladder, climbs until its feet clear the floor, then steps off sideways.
+  A floor straight behind it takes a jump off the ladder. A view turned to such a floor turns the climb into a
+  descent, because the game moves a player on a ladder along the view.
+- **New:** an island of the graph is a floor that no way leaves. A bot on one walks straight to the nearest joined
+  floor that a straight walk reaches, and starts its way from that floor. It counts as able to reach the level
+  (`nav.js reaches`), so it gets a goal there.
+- **New:** a give-up marks the step of the way that the bot stood before as failed, as a stuck walk does. A climb
+  holds no stuck clock, so a ladder that the bot cannot take shows only at the give-up.
+- **New:** a bot that waits at its place jumps now and then (`moves.js idleJump`): by chance at the rate of its
+  profile, with no sign of an enemy for 5 s, and never over its count. About half of the players' jumps on the
+  flat start from a stand. A rule that lets the bot catch up with its count puts the jumps of a team into the
+  seconds when the enemies arrive, and loses the first fight.
+- Gate G7, the jumps (docs/measures/2026-11-11-night.md, section 5): fatalbot jumps 3.0 to 6.0 times a minute
+  with the players' profiles, the players 4.3 to 7.9. It does not jump in a fight (the players: about once a
+  minute), and it fires fewer rifle shots on the run at a distance.
+- To come: the peek at a corner, the jiggle at an angle, the jump onto a box with the legs up as a habit, the
+  duck into a hatch.
 
 ## 5. Tactics (`tactics.js`, `watch.js`)
 
@@ -95,6 +110,12 @@ New. The reference bots have no team plan.
 - `sites.js` finds the ways into each bomb site and the posts that watch them from cover, from the graph and the
   level's lines of sight, once a map (14 to 40 ms).
 - Each CT takes a post of its site: first a way in that nobody watches, then a crossfire on one.
+- A post says whether a defender is there in time: half a second before the first attacker within 1000 units has
+  a line to it, both from their spawns by the graph at 240 units a second. A CT that runs from its spawn takes a
+  post in time. A site with fewer than five such posts gets floors further back on the CTs' side, out to 1600
+  units, that see the site or a way in. On two sites of the measured maps (A of de_aztec, the upper site of
+  de_nuke) the Ts are at the way in before the CTs are at their posts. A longer lead or a longer reach takes the
+  forward posts of other sites away and gives the Ts more rounds (docs/measures/2026-11-11-night.md, section 4).
 - A CT with a post holds it on a contact, and watches where the enemy comes into sight.
 - The CTs rotate to a site when the team saw 60% of the living Ts near it within 6 s.
 - A CT that comes into a round after its start (the bot of a replay takes over for a player) takes a post at the

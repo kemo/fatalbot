@@ -22,6 +22,7 @@ node tools/arena.js --maps de_dust2 --rounds 12   # fatalbot against the bots of
 node tools/arena.js --help
 node tools/strategies.js --report docs/strategies.md   # the strategies of every recorded match, by map
 node tools/players.js                                  # the aim of the recorded players, with spread and error
+node tools/rounds.js --kinds fatal --by-map            # the shape of the rounds: the recorded matches beside the bots
 ```
 
 `tools/arena.js` takes a kind of bot for each team (`--a`, `--b`): `ref` (the bots of csbih-player), `fatal`,
@@ -67,7 +68,7 @@ hosts/csbih/    the adapter for the game core of csbih-player, the Node loader o
                 the recorder that writes played rounds as a timeline of the player, the analysis of the
                 strategies of the recorded matches (docs/strategies.md), and the measure of the players' aim
 hosts/goldsrc/  the plan of the adapter for a real server
-tools/          the command lines: arena.js, demo-arena.js, watch.js, strategies.js, players.js
+tools/          the command lines: arena.js, demo-arena.js, watch.js, strategies.js, players.js, rounds.js
 test/           node --test
 docs/specs/     what the code does and why
 docs/measures/  the recorded measures, each with its command line
@@ -101,5 +102,7 @@ A claim that a bot is better needs a number. Spec 01 holds the gates. In short:
    they are places on Valve's maps. They are made into `out/` and are not committed. A host on a real server needs
    them as files: the owner decides if they enter this repository.
 5. **The graph of csbih-player** has floors with no way to them (a platform on de_nuke, box tops, a roof on
-   de_inferno). Players of the demos stand there. A fix belongs in `tools/build-nav.js` of csbih-player, which is
-   read-only from here.
+   de_inferno). Players of the demos stand there. fatalbot leaves such a floor by a straight walk (spec 03,
+   section 4). A fix belongs in `tools/build-nav.js` of csbih-player, which is read-only from here. By that graph
+   the CTs need 16 s to the upper site of de_nuke, which is as long as the Ts need
+   (docs/measures/2026-11-11-night.md, section 4).
