@@ -12,7 +12,8 @@ csbih-player's bot and what is new. The numbers are in the code, each with its s
 3. Decide the goal (`tactics.js decide`): the bomb first, then a known enemy, then the team's plan.
 4. Give up a goal that the bot did not come nearer to in 5 s (`walk.js giveUp`).
 5. Fight an enemy seen in the last 2.5 s (`fight.js`), else look where the goal or a sound asks (`aim.js`, `watch.js`).
-6. Walk to the goal's point unless the fight holds the feet (`walk.js`, `moves.js`).
+6. Walk to the goal's point unless the fight holds the feet (`walk.js`, `moves.js`). A bot that holds a place
+   and stands jumps now and then (`moves.js idleJump`).
 7. The small rules of the hand: no knife in danger, a reload in a quiet moment, the plant and the defuse.
 
 ## 2. Senses (`senses.js`)

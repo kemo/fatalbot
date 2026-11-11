@@ -48,6 +48,10 @@ What this says:
   takeover it plays its own round. The reference bot goes on as the player went.
 - Both bots are stuck often after a takeover on de_train and de_nuke. A player stands where the graph has no
   floor (a wagon, a box, a roof), and the bot starts there. This is open for both.
+  **Correction of 2026-11-11:** this cause was a guess, and it was wrong. A log of the stuck spells showed three
+  other causes (a ladder beside its floor on de_train, a platform with no way in the graph and a hatch on
+  de_nuke), and fatalbot is stuck 0.7% of the time after a takeover now
+  (docs/measures/2026-11-11-night.md, section 2).
 
 What the takeover needed in the brain: a CT that comes into a round after its start has no post of the round's
 plan, and stood still. Now it takes a post at the site nearer to it (`tactics.js postOf`).
