@@ -6,6 +6,7 @@ import { brotliDecompressSync } from 'node:zlib';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { restLevel } from './adapter.js';
+import { fitRounds } from './strategies.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
@@ -52,6 +53,39 @@ export function loadLevel(core, map, { v16 = true } = {}) {
   rules.map ??= map;
   // restLevel keeps the places of the doors as the file has them.
   return restLevel({ map, hulls: core.hull.readHulls(buffer(join(dir, `${map}.hull.bin`))), nav: core.nav.readNav(buffer(join(dir, `${map}.nav.bin`))), rules });
+}
+
+const builds = new Map();
+
+/** A built level, loaded once for the process; null when csbih-player has no such build of the map. */
+function buildOf(core, map, v16) {
+  const key = `${map}:${v16}`;
+  if (!builds.has(key)) {
+    let level = null;
+    try {
+      level = loadLevel(core, map, { v16 });
+    } catch {
+      // No such build of the map.
+    }
+    builds.set(key, level);
+  }
+  return builds.get(key);
+}
+
+/**
+ * The level that a recording is played on: {level, v16}; `level` is null when csbih-player has none of its map.
+ * It is the build of the recording's protocol (1.6 from protocol 47 on), or the other build of the map when most
+ * rounds start at that build's spawns and not at this one's (strategies.js fitRounds): a recording of protocol 46
+ * can be played on the 1.6 build of its map.
+ */
+export function levelFor(core, timeline) {
+  const v16 = (timeline.source?.netProtocol ?? 0) >= 47;
+  const own = buildOf(core, timeline.map, v16);
+  const other = buildOf(core, timeline.map, !v16);
+  if (!own || !other) return { level: own ?? other, v16: own ? v16 : !v16 };
+  const rounds = core.demoRound.demoRounds(timeline).filter((r) => !r.empty && (r.winner === 'T' || r.winner === 'CT'));
+  const most = (level) => fitRounds(core, level, timeline, rounds).length * 2 > rounds.length;
+  return !rounds.length || most(own) || !most(other) ? { level: own, v16 } : { level: other, v16: !v16 };
 }
 
 /**

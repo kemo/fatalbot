@@ -147,3 +147,14 @@ test('the doors of a level go back to the places of its file before a new world'
   assert.deepEqual(level.hulls.models[1], { origin: [10, 20, 30] }, 'the slide and the turn are gone');
   assert.deepEqual(level.hulls.models[2], { origin: [5, 5, 5], rot: 0 });
 });
+
+test('the level of a recording is a build of its map, and most of its rounds start at that build\'s spawns', { skip: skipDemo }, async () => {
+  const { levelFor } = await import('../hosts/csbih/load.js');
+  const { fitRounds } = await import('../hosts/csbih/strategies.js');
+  const timeline = loadTimeline(demoId);
+  const { level, v16 } = levelFor(core, timeline);
+  assert.equal(level.map, timeline.map);
+  assert.equal(typeof v16, 'boolean');
+  const rounds = core.demoRound.demoRounds(timeline).filter((r) => !r.empty && (r.winner === 'T' || r.winner === 'CT'));
+  assert.ok(fitRounds(core, level, timeline, rounds).length * 2 > rounds.length);
+});

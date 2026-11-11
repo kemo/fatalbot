@@ -10,7 +10,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { csbihMissing, csbihRoot, loadAimStats, loadCore, loadLevel, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
+import { csbihMissing, csbihRoot, levelFor, loadAimStats, loadCore, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
 import { MEASURES, MIN_FIGHTS, MIN_KILLS, aimOf, burstSteps, playerFacts, turnsBySight } from '../hosts/csbih/players.js';
 import { fitRounds } from '../hosts/csbih/strategies.js';
 import { seeded } from '../src/random.js';
@@ -34,7 +34,7 @@ const core = await loadCore();
 const aimStats = await loadAimStats();
 const CACHE = join(dirname(fileURLToPath(import.meta.url)), '..', 'out', 'players', 'cache');
 mkdirSync(CACHE, { recursive: true });
-const VERSION = 5;
+const VERSION = 6;
 
 // Which demo is of which map: the index of the player's server knows without a read of each timeline.
 let index = null;
@@ -45,7 +45,6 @@ try {
 }
 const wanted = args.maps ? new Set(args.maps.split(',')) : null;
 const [shard, shards] = args.shard ? args.shard.split('/').map(Number) : [0, 1];
-const levels = new Map();
 const byMap = new Map();
 let read = 0;
 timelineIds().forEach((id, n) => {
@@ -69,15 +68,12 @@ timelineIds().forEach((id, n) => {
     } catch {
       return;
     }
-    const v16 = (timeline.source?.netProtocol ?? 0) >= 47;
     // An old timeline has no fine view angles, and a POV demo has the view of one player only.
     const usable = timeline.source?.kind !== 'pov' && (timeline.version ?? 0) >= 8 && !csbihMissing(timeline.map);
     facts = { version: VERSION, map: timeline.map, players: null };
     if (usable) {
-      const key = `${timeline.map}:${v16}`;
-      if (!levels.has(key)) levels.set(key, loadLevel(core, timeline.map, { v16 }));
       // A recording that goes on into another map: the rounds that are not played on this level are left out.
-      const level = levels.get(key);
+      const { level } = levelFor(core, timeline);
       const played = core.demoRound.demoRounds(timeline).filter((r) => !r.empty);
       const kept = new Set(fitRounds(core, level, timeline, played));
       const skip = played.filter((r) => !kept.has(r)).map((r) => [r.t0, r.end]);

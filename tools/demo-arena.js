@@ -9,7 +9,7 @@
 // Without --demos it takes `count` HLTV demos of `map`, the same ones for the same seed. A report names no player.
 
 import { writeFileSync } from 'node:fs';
-import { csbihMissing, loadAimStats, loadBody, loadCore, loadLevel, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
+import { csbihMissing, levelFor, loadAimStats, loadBody, loadCore, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
 import { addMeasures, aimLine, burstLines, feetLine, measureLine, turnLines, useBody } from '../hosts/csbih/arena.js';
 import { playDemoRound } from '../hosts/csbih/demo.js';
 import { fitRounds } from '../hosts/csbih/strategies.js';
@@ -57,9 +57,8 @@ for (const id of wanted) {
     continue;
   }
   if (!args.demos && (timeline.map !== args.map || timeline.source?.kind === 'pov')) continue;
-  const v16 = (timeline.source?.netProtocol ?? 0) >= 47;
   if (csbihMissing(timeline.map)) continue;
-  const level = loadLevel(core, timeline.map, { v16 });
+  const { level } = levelFor(core, timeline);
   if (!level.rules.bombTargets?.length && !level.rules.bombPoints?.length) continue;
   // A recording that goes on into another map keeps the name of its first one: those rounds are left out.
   const whole = core.demoRound.demoRounds(timeline).filter((r) => !r.empty && (r.winner === 'T' || r.winner === 'CT'));

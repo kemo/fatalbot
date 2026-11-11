@@ -15,7 +15,7 @@ import { existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { brotliCompressSync } from 'node:zlib';
-import { csbihMissing, csbihRoot, loadAnim, loadBody, loadCore, loadLevel, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
+import { csbihMissing, csbihRoot, levelFor, loadAnim, loadBody, loadCore, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
 import { playDemoRound } from '../hosts/csbih/demo.js';
 import { useBody } from '../hosts/csbih/arena.js';
 import { Recorder } from '../hosts/csbih/record.js';
@@ -59,8 +59,7 @@ if (!timeline) {
   console.error(args.demo ? `No timeline ${args.demo} in ${csbihRoot()}/out.` : `No HLTV demo of ${args.map} in ${csbihRoot()}/out.`);
   process.exit(1);
 }
-const v16 = (timeline.source?.netProtocol ?? 0) >= 47;
-const level = loadLevel(core, timeline.map, { v16 });
+const { level, v16 } = levelFor(core, timeline);
 const all = core.demoRound.demoRounds(timeline).filter((r) => !r.empty && (r.winner === 'T' || r.winner === 'CT'));
 const rounds = all.filter((r) => r.number >= Number(args.first)).slice(0, Number(args.rounds));
 if (!rounds.length) {

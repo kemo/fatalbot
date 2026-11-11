@@ -9,7 +9,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { csbihMissing, csbihRoot, loadCore, loadLevel, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
+import { csbihMissing, csbihRoot, levelFor, loadCore, loadLevel, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
 import { FORM_AT, SAME, plansOf, roundFacts, strategiesOf, zonesOf } from '../hosts/csbih/strategies.js';
 
 const args = { maps: null, min: '3', report: null, fresh: false };
@@ -29,8 +29,9 @@ if (missing) {
 }
 const core = await loadCore();
 const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', 'out', 'strategies');
-// The facts in the cache: 5 leaves out the rounds that are not played on the level of their map.
-const VERSION = 5;
+// The facts in the cache: 6 takes the build of the level that a recording is played on, and leaves out the
+// rounds that are not played on it.
+const VERSION = 6;
 
 // Which demo is of which map: the index of the player's server knows without a read of each timeline.
 let index = null;
@@ -147,8 +148,6 @@ for (const map of wanted) {
   }
   const level = loadLevel(core, map);
   const zones = zonesOf(core, level);
-  // The level of a demo by its protocol: a round that is not played on it is left out (strategies.js fitRounds).
-  const levels = new Map();
   if (!zones.sites.length) {
     skipped.push(`${map}: ${ids.length} demos, no bomb site`);
     continue;
@@ -168,9 +167,7 @@ for (const map of wanted) {
     if (!facts) {
       try {
         const timeline = loadTimeline(ids[n]);
-        const v16 = (timeline.source?.netProtocol ?? 0) >= 47;
-        if (!levels.has(v16)) levels.set(v16, loadLevel(core, map, { v16 }));
-        facts = roundFacts(core, timeline, levels.get(v16));
+        facts = roundFacts(core, timeline, levelFor(core, timeline).level);
       } catch (e) {
         facts = [];
         console.error(`  ${map}: demo ${n} gave no rounds (${e.message})`);
