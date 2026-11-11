@@ -12,7 +12,6 @@ import { lookAt } from './aim.js';
 import { noiseAim, restLook, viewOpen } from './watch.js';
 import { giveUp, leaveLadder, makeWay, restStuck, walkTo } from './walk.js';
 import { fight, startFight } from './fight.js';
-import { idleJump } from './moves.js';
 import { decide, forgetGoal } from './tactics.js';
 import { buyList } from './buy.js';
 import { flashToAvoid, lineupThrow } from './grenades.js';
@@ -226,8 +225,6 @@ function command(c) {
     if (goal.walk && !fighting) cmd.walk = true;
   }
   if (goal.duck) cmd.duck = true;
-  // A player that waits at a place jumps now and then (moves.js idleJump).
-  if (!fighting && !feet && goal.kind === 'hold' && idleJump(c, cmd)) cmd.jump = true;
   // Danger near (an enemy heard or seen, a hit taken): no knife in the hand.
   const alert = time - (s.alertAt ?? -Infinity) < ALERT_SECONDS || (own.hurt !== null && time - own.hurt.at < ALERT_SECONDS);
   const knives = frame.round.knives;
