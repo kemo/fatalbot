@@ -138,8 +138,9 @@ them to the brain as `map.plans` (spec 02). With them:
 
 - At the round's start each team draws one plan, by its share of the rounds times 0.4 plus its share of wins.
 - Each T goes to a place of the formation and looks as its player looked. It leaves when its way to the site
-  takes the time that is left until the plan's second of the first T in the site. The bomb carrier waits too. A
-  known enemy comes first, as always. With 30 s on the clock plus the way, every T goes.
+  takes the time that is left until the plan's second of the first T in the site, and up to 2 s later (the lag of
+  section 6: with it the Ts of the mined plans win 56.9% of 864 rounds of self-play, without it 61.0%). The bomb
+  carrier waits too. A known enemy comes first, as always. With 30 s on the clock plus the way, every T goes.
 - Each CT takes a place of the setup as its post, with the view of its player. The rotation is the same.
 - A place moves to the nearest floor, within 200 units and 72 of height, that its side can walk to from its start
   and that is no bare end of a ladder. A place with no such floor is left out: its CT takes a post of the level,
