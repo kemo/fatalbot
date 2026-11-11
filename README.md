@@ -98,10 +98,14 @@ A claim that a bot is better needs a number. Spec 01 holds the gates. In short:
    (docs/measures/2026-11-10-replay-takeover.md). The change itself is in `demo-match.js` and `match.js` of
    csbih-player, which is read-only from here. Also open: if the bot of a replay must follow the route and the
    grenades of the player that it plays on for. fatalbot does not.
-4. **The data of the maps.** The plans and the lineups come from the recorded matches. They name no player, and
+4. **The pace of the Ts** (commit `a7858e1`): the Ts wait out of sight and go at a second drawn as the players'
+   was. A round then has the players' pace, and the Ts win 54.3% of the rounds of fatalbot against itself (the
+   gate is 39 to 54%; 52.1% without the pace). `git revert a7858e1` takes it away
+   (docs/measures/2026-11-11-night.md, sections 6 and 8).
+5. **The data of the maps.** The plans and the lineups come from the recorded matches. They name no player, and
    they are places on Valve's maps. They are made into `out/` and are not committed. A host on a real server needs
    them as files: the owner decides if they enter this repository.
-5. **The graph of csbih-player** has floors with no way to them (a platform on de_nuke, box tops, a roof on
+6. **The graph of csbih-player** has floors with no way to them (a platform on de_nuke, box tops, a roof on
    de_inferno). Players of the demos stand there. fatalbot leaves such a floor by a straight walk (spec 03,
    section 4). A fix belongs in `tools/build-nav.js` of csbih-player, which is read-only from here. By that graph
    the CTs need 16 s to the upper site of de_nuke, which is as long as the Ts need
