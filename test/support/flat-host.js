@@ -7,9 +7,10 @@ const STEP = 32;
 
 /**
  * A flat map: `size` x `size` floors, STEP apart, around the origin, each joined to its eight neighbours. `spawns`
- * gives the x of the T and the CT spawn.
+ * gives the x of the T and the CT spawn. `wall`: half the length of the wall of flatPorts; the graph then has no
+ * way through it, as a built level has none through a wall.
  */
-export function flatMap({ sites = [], size: SIZE = 24, spawns = [-300, 300] } = {}) {
+export function flatMap({ sites = [], size: SIZE = 24, spawns = [-300, 300], wall = null } = {}) {
   const count = SIZE * SIZE;
   const xyz = new Float32Array(count * 3);
   const edges = [];
@@ -23,7 +24,12 @@ export function flatMap({ sites = [], size: SIZE = 24, spawns = [-300, 300] } = 
       const list = [];
       for (let di = -1; di <= 1; di++) {
         for (let dj = -1; dj <= 1; dj++) {
-          if ((di || dj) && i + di >= 0 && i + di < SIZE && j + dj >= 0 && j + dj < SIZE) list.push(at(i + di, j + dj));
+          if (!(di || dj) || i + di < 0 || i + di >= SIZE || j + dj < 0 || j + dj >= SIZE) continue;
+          const x = [(i - SIZE / 2) * STEP, (i + di - SIZE / 2) * STEP];
+          const y = [(j - SIZE / 2) * STEP, (j + dj - SIZE / 2) * STEP];
+          // A box of a player is 32 wide: a way that passes within a floor of the wall's line or its end is none.
+          if (wall !== null && Math.min(...x) <= WALL_X && Math.max(...x) >= WALL_X && Math.min(Math.abs(y[0]), Math.abs(y[1])) <= wall) continue;
+          list.push(at(i + di, j + dj));
         }
       }
       edges.push(list);

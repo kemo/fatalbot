@@ -7,9 +7,9 @@
 // Without them: the Ts take one site at once, and each CT takes a post that watches a way in (sites.js).
 // In both cases the CTs rotate to a site when the team sees the attack there.
 
-import { flat } from './geometry.js';
+import { clamp, exp, flat } from './geometry.js';
 import { LADDER, canReach, nearestNode } from './nav.js';
-import { choosePost, siteMid } from './sites.js';
+import { choosePost, siteMid, stagePlaces } from './sites.js';
 
 // The sightings of the last seconds count for a rotation; an enemy counts for the site that it is this near.
 const ROTATE_SECONDS = 6;
@@ -22,6 +22,12 @@ const WON_BASE = 0.4;
 // Two places of a formation lie at least this far apart. A place moves at most SPREAD to a floor that the side can
 // walk to, and at most RISE up or down.
 const APART = 48;
+// The second of a round at which the first T stands in the site, as the players' was: the middle, the spread of
+// its logarithm, and the ends of the draw.
+const TE_MIDDLE = 34;
+const TE_SPREAD = 0.6;
+const TE_FIRST = 18;
+const TE_LAST = 75;
 const SPREAD = 200;
 const RISE = 72;
 
@@ -132,8 +138,12 @@ export function planRound(brain, side, time) {
   const at = (bot) => brain.census.byId.get(bot.id)?.origin ?? null;
   if (side === 'T') {
     const mined = map.plans?.T?.length ? draw(map.plans.T, random) : null;
-    if (!mined) return { site: Math.floor(random() * sites.length), goAt: time, te: null, spots: null };
-    const places = floorsOf(brain, 'T', mined.points);
+    const site = mined ? mined.site : Math.floor(random() * sites.length);
+    // Without a mined plan: the Ts wait on their ways to the site, out of the sight of its posts, and the first
+    // of them is in the site at a second drawn as the players' first T was (docs/measures/2026-11-11-night.md).
+    const te = mined ? mined.te : clamp(TE_MIDDLE * exp(random.gauss() * TE_SPREAD), TE_FIRST, TE_LAST);
+    const places = mined ? floorsOf(brain, 'T', mined.points) : stagePlaces(brain, site);
+    if (!places.length) return { site, goAt: time, te: null, spots: null };
     const spots = deal(bots, places, at);
     // A formation with fewer places than the team has bots: the others wait at the place nearest them, so that
     // no T goes to the site alone.
@@ -142,7 +152,7 @@ export function planRound(brain, side, time) {
       if (spots.has(bot.id) || !o || !places.length) continue;
       spots.set(bot.id, places.reduce((a, b) => (flat(b, o) < flat(a, o) ? b : a)));
     }
-    return { site: mined.site, goAt: time, te: mined.te, spots };
+    return { site, goAt: time, te, spots };
   }
   const team = brain.teams.CT;
   const posts = new Map();

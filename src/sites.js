@@ -39,6 +39,10 @@ const SIGHT_STEP = 3;
 // A site with fewer posts in time than this takes posts further back too, out to BACK_REACH from its middle.
 const POSTS_IN_TIME = 5;
 const BACK_REACH = 1600;
+// The attackers wait out of the sight of the posts within this distance, so many on each way in, this far apart.
+const STAGE_SIGHT = 2000;
+const STAGE_EACH = 3;
+const STAGE_APART = 90;
 
 const eyeAt = (p) => [p[0], p[1], p[2] + EYE];
 
@@ -215,6 +219,36 @@ function postsOf(brain, mid, entries) {
     found++;
   }
   return kept;
+}
+
+/**
+ * The places where the attackers of site `k` wait before they go in (cached): on each of their ways to it, the
+ * floors short of the way in that no post of the site sees and that do not see the site, STAGE_EACH a way,
+ * STAGE_APART from each other. Empty when the site has no way in or no such floor.
+ */
+export function stagePlaces(brain, k) {
+  const info = siteInfo(brain, k);
+  if (info.stage) return info.stage;
+  const { nav, ports } = brain;
+  info.stage = [];
+  const from = brain.spawnMid.T ? nearestNode(nav, brain.spawnMid.T, 8, 200) : -1;
+  if (from < 0) return info.stage;
+  const posts = info.posts.filter((post) => !post.back);
+  const hidden = (p) => ports.traceLine(eyeAt(info.mid), eyeAt(p)) < 1 && !posts.some((post) => flat(post.point, p) < STAGE_SIGHT && ports.traceLine(eyeAt(post.point), eyeAt(p)) >= 1);
+  for (const entry of info.entries) {
+    const path = findPath(nav, from, nearestNode(nav, entry, 4, 64), nav.count + 1);
+    if (!path) continue;
+    let n = 0;
+    let last = null;
+    for (let i = path.length - 1; i > 0 && n < STAGE_EACH; i--) {
+      const p = path[i].point;
+      if (!hidden(p) || (last && flat(last, p) < STAGE_APART) || info.stage.some((q) => flat(q, p) < STAGE_APART)) continue;
+      info.stage.push(p);
+      last = p;
+      n++;
+    }
+  }
+  return info.stage;
 }
 
 /**

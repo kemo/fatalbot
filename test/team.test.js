@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createBrain } from '../src/brain.js';
 import { flat } from '../src/geometry.js';
-import { choosePost, siteInfo } from '../src/sites.js';
+import { choosePost, siteInfo, stagePlaces } from '../src/sites.js';
 import { flatMap, flatPorts, frameAt, player } from './support/flat-host.js';
 
 // A wide floor with no wall in it: the Ts spawn in the west, two sites lie in the east.
@@ -160,4 +160,44 @@ test('the carrier in the site plants once the site is quiet, and at once when it
   assert.equal(play({ enemy: farAway }), 'plant', 'nobody sees an enemy: the plant');
   assert.equal(play({ enemy: seenByMate, timeLeft: 30 }), 'plant', 'the clock is short: the plant');
   assert.equal(play({ enemy: seenByMate, mate: false }), 'plant', 'alone it plants: it does not see that enemy');
+});
+
+test('the Ts wait out of the sight of the posts on their way, and go at a second of the round', () => {
+  // The site lies far east of the wall (x = 320, y from -600 to 600); the Ts come from the west, round its end.
+  const sites = [{ mins: [1200, -50, 0], maxs: [1300, 50, 72] }];
+  const ports = flatPorts({ half: 600 });
+  const make = (seed) => {
+    const brain = createBrain({ map: flatMap({ sites, size: 96, spawns: [-1200, 1400], wall: 600 }), ports, seed });
+    brain.join(1);
+    brain.join(2);
+    return brain;
+  };
+  const brain = make(4);
+  const info = siteInfo(brain, 0);
+  const places = stagePlaces(brain, 0);
+  const sees = (a, b) => ports.traceLine([a[0], a[1], 53], [b[0], b[1], 53]) >= 1;
+  assert.ok(places.length >= 2, 'places to wait at');
+  for (const p of places) {
+    assert.ok(!sees(p, info.mid), 'a place does not see the site');
+    assert.ok(info.posts.every((post) => !sees(post.point, p)), 'and no post sees it');
+  }
+  // Both Ts get a place, and the plan a second of the players' range.
+  const ts = (at) => [player(1, 'T', at[0], { own: true }), player(2, 'T', at[1], { own: true }), player(9, 'CT', [1400, 0, 36])];
+  brain.frame(frameAt(1, ts([[-1200, 0, 36], [-1200, 64, 36]])));
+  const plan = brain.teams.T.plan;
+  assert.ok(plan.te >= 18 && plan.te <= 75, `the second of the plan (${plan.te})`);
+  assert.ok(plan.spots.get(1) && plan.spots.get(2));
+  // At its place before the second, a T waits; after the second it goes to the site.
+  const goalAt = (seconds) => {
+    const b = make(4);
+    let goal = null;
+    for (let tick = 1; tick <= seconds * 100; tick += 10) {
+      b.frame(frameAt(tick, ts([b.teams.T.plan?.spots.get(1) ?? [-1200, 0, 36], b.teams.T.plan?.spots.get(2) ?? [-1200, 64, 36]])));
+      b.think(1);
+      goal = b.debug(1).goal;
+    }
+    return goal;
+  };
+  assert.equal(goalAt(10), 'stage');
+  assert.notEqual(goalAt(80), 'stage');
 });

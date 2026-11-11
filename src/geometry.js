@@ -1,7 +1,7 @@
 // Angles and vectors. Every module of the brain takes its trigonometry from here (AGENTS.md): a host that needs
 // the same floats on every JavaScript engine replaces these few functions.
 
-export const { sin, cos, atan2, hypot, sqrt, log, log2, abs, min, max, floor, round, sign, PI } = Math;
+export const { sin, cos, atan2, hypot, sqrt, log, log2, exp, abs, min, max, floor, round, sign, PI } = Math;
 export const RAD = PI / 180;
 
 /** An angle difference in degrees, wrapped to -180..180. */
