@@ -4,7 +4,8 @@
 // matches): the Ts take one of them, stand as that team stood, and go so that the first of them is in the site at
 // the plan's second; the CTs take a setup and stand where that team stood. A plan is drawn by how often it was
 // played and how often it won.
-// Without them: the Ts take one site at once, and each CT takes a post that watches a way in (sites.js).
+// Without them: the Ts take one site, wait on their ways to it out of the sight of its posts, and go at a second
+// drawn as the players' was; each CT takes a post that watches a way in and that it reaches in time (sites.js).
 // In both cases the CTs rotate to a site when the team sees the attack there.
 
 import { clamp, exp, flat } from './geometry.js';

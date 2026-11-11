@@ -108,7 +108,8 @@ defuser, the posts of the Ts after the plant, the escape from the blast, the hun
 New. The reference bots have no team plan.
 
 - `sites.js` finds the ways into each bomb site and the posts that watch them from cover, from the graph and the
-  level's lines of sight, once a map (14 to 40 ms).
+  level's lines of sight, once a map, when the brain is made (25 ms, and up to 270 ms on de_nuke, where the timing
+  of the posts asks many floors).
 - Each CT takes a post of its site: first a way in that nobody watches, then a crossfire on one.
 - A post says whether a defender is there in time: half a second before the first attacker within 1000 units has
   a line to it, both from their spawns by the graph at 240 units a second. A CT that runs from its spawn takes a
@@ -120,7 +121,15 @@ New. The reference bots have no team plan.
 - The CTs rotate to a site when the team saw 60% of the living Ts near it within 6 s.
 - A CT that comes into a round after its start (the bot of a replay takes over for a player) takes a post at the
   site nearer to it.
-- The Ts take one site together, chosen at the round's start.
+- The Ts take one site together, chosen at the round's start. Each T first waits on a way to that site, short of
+  the way in, at a place that no post of the site sees and that does not see the site (`sites.js stagePlaces`).
+  The plan draws the second at which the first T stands in the site, with a middle of 34 s and between 18 and
+  75 s, as the players' first T did. A T leaves its place when its way to the site takes as long as is left to
+  that second, and up to 2 s later: a team that leaves on one tick comes round a corner together and wins the
+  first fight too often. A site with no such place is run at once.
+- The carrier in the site plants once no enemy was seen or heard within 1000 units of it for 3 s, by itself or by
+  its team. Alone, or with under 40 s of the round left, it plants at once. Until then it fights for the site
+  (`tactics.js quietToPlant`). The players plant with most of the CTs dead, and win many rounds with no plant.
 
 ### 6.1 The plans of a map (an option)
 
