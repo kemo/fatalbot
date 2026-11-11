@@ -94,10 +94,10 @@ A claim that a bot is better needs a number. Spec 01 holds the gates. In short:
    JavaScript engine inside the plugin, or a Node process beside the server. `hosts/goldsrc/README.md` compares
    them. Nothing of this is fetched or built yet.
 2. **The licence** of this repository. None is set.
-3. **How csbih-player takes the brain**: a copy at a pinned commit, a git submodule, or a path. A patch with a
-   switch is ready and not applied (`out/csbih-player/fatal-switch.patch`, git-ignored): `?bot=fatal` on the play
-   page, a copy of the brain made by a script, the current bots as the default
-   (docs/measures/2026-11-11-hold-and-route.md, section 5). Its own `bot.js`
+3. **How csbih-player takes the brain**: a copy at a pinned commit, a git submodule, or a path. The owner decided on
+   2026-11-11: fatalbot plays the bots of csbih-player at once, from a copy of the brain that a script makes. The
+   patch is ready and not applied (`out/csbih-player/fatal-switch.patch`, git-ignored); `?bot=bot.js` on the play
+   page gives the old bots (docs/measures/2026-11-11-hold-and-route.md, section 5). Its own `bot.js`
    stays the bot of `/igraj` until the owner decides. fatalbot is measured as the bot that takes over in a replay
    (docs/measures/2026-11-10-replay-takeover.md). The change itself is in `demo-match.js` and `match.js` of
    csbih-player, which is read-only from here. A bot of fatalbot can keep the route of the player that it plays on

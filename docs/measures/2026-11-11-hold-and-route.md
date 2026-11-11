@@ -169,9 +169,9 @@ csbih-player is read-only from this repository. The switch is a patch in `out/cs
   player. A recorded player joins the brain when it leaves its recording, and every bot leaves the brain at a
   round's start.
 - `match.js botRound`: with a host on the world, fatalbot plays and buys for the bots of a match.
-- `web/play.js`: `?bot=fatal` on the play page. Without it, and in a build with the stand-in alone, the bots of
-  `bot.js` play as before. The page says which bots play (`data-bots` on the document, and "fatalbot" in the map
-  label).
+- `web/play.js`: fatalbot plays the bots; `?bot=bot.js` in the address gives the bots of `bot.js`. In a build
+  with the stand-in alone the bots of `bot.js` play as before. The page says which bots play (`data-bots` on the
+  document, and "fatalbot" in the map label).
 - `test/game-fatal.test.js` (new): six tests; four of them skip without the copy.
 
 Two faults that a review found before the patch went anywhere, both now fixed and under a test:
@@ -218,8 +218,10 @@ What was checked, in the copy of links:
   patch too, and passes in csbih-player itself.
 - The owner played free play on the page of the copy with fatalbot and reported how the bots behave (section 7).
 
-The patch leaves the choice of the bots to one word of `web/play.js`: `const BOTS = 'bot.js'`. With `'fatal'`
-fatalbot plays for every member; `?bot=fatal` and `?bot=bot.js` in the address override the word.
+The choice of the bots is one word of `web/play.js`: `const BOTS = 'fatal'`. It is the owner's decision of
+2026-11-11 ("we're going with fatal bots right away"): fatalbot plays for every member. `?bot=bot.js` in the
+address brings the bots of `bot.js` back for that page, and `?bot=fatal` asks for fatalbot in a build whose word
+is `'bot.js'`.
 
 What was not checked:
 
