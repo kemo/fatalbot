@@ -94,9 +94,10 @@ same maps, side orders and seeds before and after a change.
 G1 alone is easy to cheat: a faster hand wins. So both sides take the same motor profile (the `DEFAULT_PROFILE`
 numbers of csbih-player), and G6 must hold.
 
-The state of the gates on 2026-11-11 (docs/measures/2026-11-11-night.md): G1, G3 and G6 are met. G2 is open by
-a hair: the Ts win 54.4% of 2,592 rounds (error 1.5), and 51.5% without the pace of the Ts (commit `a7858e1`,
-the owner's decision). G4 is not met: fatalbot plants in 66% of its rounds and the players in 44%
+The state of the gates on 2026-11-11 (docs/measures/2026-11-11-night.md and 2026-11-11-economy.md): G1, G3 and
+G6 are met. G2 is open by a hair: the Ts win 55.2% of 2,592 rounds (error 1.5) with the buy of a team, 54.4%
+before it, and 51.5% without the pace of the Ts (commit `a7858e1`, the owner's decision). G4 is not met:
+fatalbot plants in 66% of its rounds and the players in 44%
 (`tools/rounds.js` measures the shape of a round for both); the pace of a round is the players'. G5 is met: 0.065 ms
 for ten bots a tick alone on the processor, the longest command of one bot 6 ms. G7 is met for the kills with a shot to the head and for the jumps on a
 run; fatalbot still jumps less than the players after the first seconds of a round, and it fires fewer shots on
@@ -156,7 +157,7 @@ The brain takes data as plain objects. The tools that mine the demos stay in csb
 4. Built: the feet (moves.js): the stop before the shots, the hops. To come: the peek, the jiggle at an angle.
 5. Built: the first team layer for the CTs: posts, anchors, a rotation (spec 03, section 6). Built as an option:
    the plans mined from the demos, as formations and their timing (spec 03, section 6.1). To come: the execute
-   after the formation, trades, a retake together, saves, the team's buy.
+   after the formation, trades, a retake together, saves. Built: the buy of a team (spec 03, section 6.2).
 6. Built as an option: the grenades with the lineups of the demos (spec 03, section 7). To come: the throw at the
    plan's second, the view field and the angles where enemies appear.
 7. The goldsrc host, when the owner has decided section 5.

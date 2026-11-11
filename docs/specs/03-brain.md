@@ -8,7 +8,7 @@ csbih-player's bot and what is new. The numbers are in the code, each with its s
 
 1. Look, 20 times a second (`senses.js look`). Each tick the target of a fight follows the enemy while the last
    look saw it (`track`).
-2. Buy, once a round, a moment after the round's start (`buy.js`).
+2. Buy, once a round, a moment after the round's start (`buy.js`, section 6.2).
 3. Decide the goal (`tactics.js decide`): the bomb first, then a known enemy, then the team's plan.
 4. Give up a goal that the bot did not come nearer to in 5 s (`walk.js giveUp`).
 5. Fight an enemy seen in the last 2.5 s (`fight.js`), else look where the goal or a sound asks (`aim.js`, `watch.js`).
@@ -153,7 +153,25 @@ them to the brain as `map.plans` (spec 02). With them:
   by one way. The CT setups win fewer rounds than the posts of the level on de_dust2 and de_inferno. So the plans
   are an option of the hosts (`fatal-plans`, `--plans`), not the default.
 - To come (csbih-player spec 12): the execute after the formation (the order of the entries, the trades, the
-  grenades at its second), fakes, the retake together, the save, the buy of the team.
+  grenades at its second), fakes, the retake together, the save of the guns at the end of a lost round.
+
+### 6.2 The buy of a team (`buy.js`)
+
+- The first bot of a team that buys makes the call of the round from what the bots of the team have, as players
+  say it before a round (`teamCall`). A teammate that no brain drives counts for nothing.
+- A buy: all the bots but one at most hold a gun to keep (a rifle, a sniper rifle that is no Scout, the M249) or
+  have the money of a full buy (the side's rifle and 1000).
+- Else a force buy: always after a round that the team won (the frame's `round.score` tells it), and with a
+  chance of 0.4 after one that it lost. The draw is the team's own stream.
+- Else a save.
+- In a buy or a force buy each bot takes the best that its money gives: the rifle of its side, the lesser rifle,
+  a submachine gun (each with its ammo and a vest), or a vest and a better pistol. A bot with a lesser primary
+  changes it for the rifle.
+- In a save a bot spends only when it holds a gun to keep, or has the money of two buys.
+- A bot buys a grenade only of a kind that its side has a lineup for on the map (section 7): it throws no other.
+- Measured (docs/measures/2026-11-11-economy.md): the buys of a team by the result of the round before lie 11
+  points from the recorded teams' (28 points before, for the CTs). Not built: the hand-over of a gun to a
+  teammate, and the pick-up of a gun from the floor.
 
 ## 7. Grenades (`grenades.js`), an option
 

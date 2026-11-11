@@ -100,8 +100,8 @@ A claim that a bot is better needs a number. Spec 01 holds the gates. In short:
    grenades of the player that it plays on for. fatalbot does not.
 4. **The pace of the Ts** (commit `a7858e1`): the Ts wait out of sight and go at a second drawn as the players'
    was. A round then has the players' pace, and the Ts win 54.4% of the rounds of fatalbot against itself (the
-   gate is 39 to 54%; 51.5% without the pace). `git revert a7858e1` takes it away
-   (docs/measures/2026-11-11-night.md, sections 6 and 8).
+   gate is 39 to 54%; 51.5% without the pace). With the buy of a team they win 55.2%. `git revert a7858e1` takes
+   the pace away (docs/measures/2026-11-11-night.md, sections 6 and 8; 2026-11-11-economy.md).
 5. **The data of the maps.** The plans and the lineups come from the recorded matches. They name no player, and
    they are places on Valve's maps. They are made into `out/` and are not committed. A host on a real server needs
    them as files: the owner decides if they enter this repository.
