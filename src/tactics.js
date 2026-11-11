@@ -325,8 +325,6 @@ function retake(c, bomb) {
   const mine = bomb.defuser === me.id;
   const need = (own.kit ? DEFUSE_KIT : DEFUSE_BARE) + (mine ? -Infinity : (toBomb * PATH_STRETCH) / RUN_SPEED);
   if (!mine && left < need) return { kind: 'goto', task: 'escape', point: fleeSpot(c, bomb) };
-  // Nobody is at the bomb yet: the CT nearest to it goes, and the others are free.
-  if (alone && !mine && nearestMate(c.mates, bomb.point) !== me) return freeGoal(c);
   if (bomb.defuser !== null && !mine && toBomb < GUARD * 2) {
     const at = guardSpot(c, bomb.point);
     return { kind: 'hold', task: 'guard', point: at, look: flat(at, o) < 32 ? { yaw: me.yaw, pitch: 0 } : null, rest: true };
