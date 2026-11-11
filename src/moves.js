@@ -39,6 +39,11 @@ const HOP_KEEN = 12;
 const LATE_TICKS = 2;
 // A stand in a fight: over this speed the keys push against the run; under it the friction ends it.
 const COUNTER_OVER = 40;
+// A bot that waits jumps only from a stand (units a second), this long after the last sign of an enemy (s), with
+// this much room over its head (a jump rises 45 units).
+const IDLE_STILL = 20;
+const IDLE_CALM = 5;
+const JUMP_ROOM = 48;
 
 /**
  * The straight level run that the way gives from the bot along `run` (degrees), in units: the distance to the
@@ -145,6 +150,22 @@ export function hop(c, cmd, path, target, run, distance, kind) {
   h.rate = (abs(off) + SWING) / AIR_SECONDS;
   cmd.jump = true;
   return false;
+}
+
+/**
+ * The jump of a player that waits at a place: a habit too. Half of the players' jumps on the flat start from a
+ * stand (docs/measures/2026-11-11-night.md). True when the bot jumps now: it stands, nothing is near, it is
+ * behind its profile's count of jumps, and it has room over its head.
+ */
+export function idleJump(c, cmd) {
+  const { me, own, s, skill, time, random, dt, brain } = c;
+  if (c.frame.round.phase !== 'live' || c.hurry || cmd.forward || cmd.side || cmd.duck || !me.onGround || me.onLadder || me.ducked || own.stamina > 0) return false;
+  if (hypot(me.velocity[0], me.velocity[1]) > IDLE_STILL) return false;
+  if (time - s.seenAt < IDLE_CALM || time - (s.alertAt ?? -Infinity) < IDLE_CALM) return false;
+  const owed = (skill.jumpRate * (time - (s.liveAt ?? time))) / 60 - (s.jumps ?? 0);
+  if (owed < 1 || random() >= (skill.jumpRate / 60) * clamp(owed, 1, HOP_KEEN) * dt) return false;
+  const o = me.origin;
+  return brain.ports.traceHull(o, [o[0], o[1], o[2] + JUMP_ROOM], false) >= 1;
 }
 
 /**
