@@ -77,8 +77,10 @@ const SEEK_TRIES = 12;
 const STAND_MIDDLE = { CT: 1.2, T: 1.2 };
 const STAND_SPREAD = 1.1;
 const STAND_ENDS = [0.5, 30];
-// With an enemy seen or heard this fresh a player keeps its floor.
+// With an enemy seen or heard this fresh a player keeps its floor. Within SHIFT_NEAR of its place a player that
+// stood there once walks, with its view where the place looks; from further off it runs back as to any place.
 const SHIFT_CALM = 4;
+const SHIFT_NEAR = 240;
 
 const over = (p) => [p[0], p[1], p[2] + 36];
 const eyeAt = (p) => [p[0], p[1], p[2] + EYE];
@@ -158,6 +160,13 @@ function restless(c, base, spots) {
   return shift.at;
 }
 
+/** The floor of its post that a defender holds now: the one it stands on or walks to, else the post's own. Null with no post. */
+function heldFloor(c) {
+  const post = c.post?.point ?? null;
+  const shift = c.s.shift;
+  return post && shift?.key === pointKey(post) && flat(post, c.me.origin) < SHIFT_NEAR ? shift.at : post;
+}
+
 function nearestSite(map, o) {
   let best = null;
   for (const site of map.bombSites) {
@@ -229,7 +238,7 @@ function stageGoal(c) {
   if (spots.length) {
     const at = restless(c, spot, spots);
     const there = flat(at, me.origin) < 40;
-    return { kind: 'hold', task: 'stage', point: at, look: null, rest: there, walk: !there && Boolean(s.shift.settled) };
+    return { kind: 'hold', task: 'stage', point: at, look: null, rest: there, walk: !there && Boolean(s.shift.settled) && flat(spot, me.origin) < SHIFT_NEAR };
   }
   // A teammate on the bot's place: near enough is there.
   const taken = flat(spot, me.origin) < NEAR_ENOUGH && c.mates.some((p) => p.id !== me.id && p.alive && flat(p.origin, spot) < 48);
@@ -251,7 +260,7 @@ function objective(c) {
     const there = flat(at, me.origin) < 40;
     // Once at the post the view stays on the way in that it watches, also on a step to the next floor; the run
     // to the post looks along its own way. A post of a mined setup has the view of the player who stood there.
-    const settled = there || Boolean(c.s.shift.settled);
+    const settled = there || (Boolean(c.s.shift.settled) && flat(post.point, me.origin) < SHIFT_NEAR);
     const look = !settled ? null : post.yaw !== null && post.yaw !== undefined ? { yaw: post.yaw, pitch: 0 } : post.watch ? toward(eyeOf(me), eyeAt(post.watch)) : null;
     return { kind: 'hold', task: plan.rotate && post.site === plan.rotate.site && plan.posts.get(c.bot.id)?.site !== post.site ? 'rotate' : 'site', point: at, look, rest: there, walk: settled && !there };
   }
@@ -512,8 +521,9 @@ function contactTask(c) {
   const eye = eyeOf(me);
   const aim = approachPoint(c, eye, task.watch);
   const look = aim ? toward(eye, aim) : null;
-  // An anchor waits at its post of this moment: a rotation moves it while it watches.
-  if (task.kind === 'ambush') return { kind: 'hold', task: 'ambush', point: task.anchor ? c.post?.point ?? null : null, look };
+  // An anchor waits at its post of this moment: a rotation moves it while it watches. It keeps the floor of the
+  // post that it stands on (restless): a walk back to the post's own floor would be a walk in the enemy's sight.
+  if (task.kind === 'ambush') return { kind: 'hold', task: 'ambush', point: task.anchor ? heldFloor(c) : null, look };
   if (task.kind === 'cover') return { kind: 'hold', task: 'cover', point: task.point, look: flat(task.point, o) < 32 ? look : null };
   return { kind: 'goto', task: 'hunt', point: task.point, look: look && flat(aim, o) > 96 ? look : null, walk: task.walk };
 }
