@@ -3,6 +3,7 @@
 // only makes the list (the order of csbih-player's economy.js botBuy). 'primammo' and 'secammo' fill the ammo.
 
 import { EQUIPMENT, WEAPONS, isPrimary } from './weapons.js';
+import { grenadesOf } from './grenades.js';
 
 const RIFLE = { T: 'ak47', CT: 'm4a1' };
 const FULL_BUY = { T: 2500 + 1000, CT: 3100 + 1000 };
@@ -22,6 +23,8 @@ export function buyList(c) {
   let helmet = own.helmet;
   const pocket = {};
   const list = [];
+  // A grenade is bought for a throw: a bot takes only the kinds that its side has a lineup for on this map.
+  const throws = grenadesOf(brain, side);
   const price = (key) => {
     if (key === 'vest') return armor >= 100 ? null : EQUIPMENT.vest;
     if (key === 'vesthelm') return armor >= 100 ? (helmet ? null : 350) : helmet ? EQUIPMENT.vest : EQUIPMENT.vesthelm;
@@ -52,20 +55,20 @@ export function buyList(c) {
     if (money >= 1000) buy('vesthelm');
     else buy('vest');
     buy('defuser');
-    for (const nade of ['flashbang', 'hegrenade', 'smokegrenade', 'flashbang']) buy(nade);
+    for (const nade of ['flashbang', 'hegrenade', 'smokegrenade', 'flashbang']) if (throws.has(nade)) buy(nade);
     list.push('secammo');
     return list;
   }
   // A pistol round or a save: armor, or a better pistol and a flash, as the money gives.
   if (money >= 650 && money < 1500) {
     const pick = random();
-    if (pick < 0.5) buy('vest');
+    if (pick < 0.5 || (pick >= 0.8 && !throws.has('hegrenade'))) buy('vest');
     else if (pick < 0.8) {
       buy('deagle');
-      buy('flashbang');
+      if (throws.has('flashbang')) buy('flashbang');
     } else {
       buy('hegrenade');
-      buy('flashbang');
+      if (throws.has('flashbang')) buy('flashbang');
     }
   }
   list.push('secammo');

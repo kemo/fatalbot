@@ -38,7 +38,7 @@ function buysOf(side, bots, { seed = 1, people = 0, lineups = [] } = {}) {
 
 test('a bot with the money of a full buy takes the rifle of its side, armor and a kit', () => {
   const [ct] = buysOf('CT', [{ money: 5000 }]);
-  assert.deepEqual(ct.slice(0, 4), ['m4a1', 'primammo', 'vesthelm', 'defuser']);
+  assert.deepEqual(ct, ['m4a1', 'primammo', 'vesthelm', 'defuser', 'secammo']);
   const [t] = buysOf('T', [{ money: 5000 }]);
   assert.deepEqual(t.slice(0, 3), ['ak47', 'primammo', 'vesthelm']);
   assert.ok(!t.includes('defuser'));
@@ -54,4 +54,17 @@ test('a bot that holds a lesser primary changes it for the rifle once it has the
     assert.equal(buysOf('CT', [{ money: 9000, weapons: ['ak47'] }], { seed })[0][0], 'primammo');
     assert.equal(buysOf('T', [{ money: 9000, weapons: ['awp'] }], { seed })[0][0], 'primammo');
   }
+});
+
+test('a bot buys a grenade only for a throw that its side has on the map', () => {
+  const GRENADES = ['flashbang', 'hegrenade', 'smokegrenade'];
+  for (const seed of [1, 2, 3, 4, 5, 6]) {
+    // No lineup: no grenade, with the money of a full buy and in a pistol round.
+    for (const money of [800, 6000]) assert.ok(!buysOf('CT', [{ money }], { seed })[0].some((key) => GRENADES.includes(key)), `seed ${seed}, ${money}`);
+  }
+  // A flashbang of the CTs and a smoke of the Ts: each side takes its own kind only.
+  const lineups = [{ team: 'CT', kind: 'flash', from: [300, 0, 100], velocity: [-600, 0, 100], at: 10 }, { team: 'T', kind: 'smoke', from: [-300, 0, 100], velocity: [600, 0, 100], at: 10 }];
+  const ct = buysOf('CT', [{ money: 6000 }], { lineups })[0];
+  assert.deepEqual(ct.filter((key) => GRENADES.includes(key)), ['flashbang', 'flashbang']);
+  assert.deepEqual(buysOf('T', [{ money: 6000 }], { lineups })[0].filter((key) => GRENADES.includes(key)), ['smokegrenade']);
 });

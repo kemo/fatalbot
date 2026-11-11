@@ -209,6 +209,12 @@ function throwOfLineup(brain, index) {
   return solved;
 }
 
+/** The grenades that a side has a throw for on this map, as weapon names (found once). */
+export function grenadesOf(brain, side) {
+  const known = (brain.nav.grenades ??= {});
+  return (known[side] ??= new Set((brain.map.lineups ?? []).filter((l) => l.team === side).map((l) => WEAPON_OF[l.kind])));
+}
+
 /**
  * The lineup that this bot goes to throw now, as a goal: {kind: 'goto', task: 'lineup', point, lineup}, or null.
  * It keeps the one it is on while it still carries the grenade. Else it takes the nearest lineup of its side for a
