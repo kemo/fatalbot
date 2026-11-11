@@ -28,6 +28,8 @@ export function restLevel(level) {
     if (rest.rot === undefined) delete m.rot;
     else m.rot = rest.rot;
   });
+  // The players of the last world are no part of the level: a trace before the new world's first step would meet them.
+  level.hulls.movers = null;
   return level;
 }
 
