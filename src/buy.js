@@ -6,6 +6,8 @@ import { EQUIPMENT, WEAPONS, isPrimary } from './weapons.js';
 
 const RIFLE = { T: 'ak47', CT: 'm4a1' };
 const FULL_BUY = { T: 2500 + 1000, CT: 3100 + 1000 };
+// The guns that a player keeps: with a lesser primary and the money of a full buy, a bot takes the side's rifle.
+const KEPT = new Set(['ak47', 'm4a1', 'aug', 'sg552', 'awp', 'g3sg1', 'sg550', 'm249']);
 // A grenade kind's most in the pocket.
 const CARRY = { flashbang: 2, hegrenade: 1, smokegrenade: 1 };
 // What a fill of the ammo of a gun costs at most, for the count of the money.
@@ -39,12 +41,11 @@ export function buyList(c) {
     if (CARRY[key]) pocket[key] = (pocket[key] ?? 0) + 1;
     return true;
   };
-  let armed = Object.keys(own.weapons).some(isPrimary);
-  if (!armed) {
-    if (money >= FULL_BUY[side]) armed = buy(RIFLE[side]);
-    else if (side === 'T' && money >= 2000 + 650 && random() < 0.5) armed = buy('galil');
-    else if (side === 'CT' && money >= 2250 + 650 && random() < 0.5) armed = buy('famas');
-  }
+  const held = Object.keys(own.weapons).filter(isPrimary);
+  let armed = held.length > 0;
+  if (!held.some((key) => KEPT.has(key)) && money >= FULL_BUY[side]) armed = buy(RIFLE[side]) || armed;
+  else if (!armed && side === 'T' && money >= 2000 + 650 && random() < 0.5) armed = buy('galil');
+  else if (!armed && side === 'CT' && money >= 2250 + 650 && random() < 0.5) armed = buy('famas');
   if (armed) {
     list.push('primammo');
     money -= Math.min(money, AMMO_FILL);
