@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createBrain } from '../src/brain.js';
+import { canReach, waysTo } from '../src/nav.js';
 import { checkCommand, checkFrame, checkMap } from '../src/contract.js';
 import { turn } from '../src/geometry.js';
 import { WALL_X, flatMap, flatPorts, frameAt, player, run } from './support/flat-host.js';
@@ -177,6 +178,24 @@ test('a bot on an island of the graph leaves it toward a floor that a straight w
   brain.join(1);
   run(brain, 1, 30, () => [player(1, 'T', [310, 0, 36], { own: true }), player(2, 'CT', [-600, 0, 36])]);
   assert.deepEqual(brain.debug(1).escape, [256, 0, 36]);
+});
+
+test('the floors with a way to a point, from one search, are those that each reach it by its own search', () => {
+  // The ways across x = 0 go east only (a drop): the west reaches the east, the east never the west. An island at
+  // the far east has no way in and none out.
+  const map = rewired((a, b) => (a[0] >= 320 || b[0] >= 320 ? (a[0] >= 320 && b[0] >= 320 ? 0 : null) : a[0] >= 0 && b[0] < 0 ? null : 0));
+  const { nav } = map;
+  const at = (x, y) => Array.from({ length: nav.count }, (_, n) => n).find((n) => nav.xyz[n * 3] === x && nav.xyz[n * 3 + 1] === y);
+  for (const to of [at(-128, 0), at(128, 0), at(352, 0)]) {
+    const bits = waysTo(nav, to);
+    let joined = 0;
+    for (let n = 0; n < nav.count; n++) {
+      const bit = Boolean(bits[n >> 3] & (1 << (n & 7)));
+      assert.equal(bit, canReach(nav, n, to), `floor ${n} to ${to}`);
+      if (bit) joined++;
+    }
+    assert.ok(joined > 1 && joined < nav.count, 'some floors have a way, some have none');
+  }
 });
 
 test('a bot on an island finds a floor further off that a straight walk reaches, when the nearest ones lie behind a wall', () => {

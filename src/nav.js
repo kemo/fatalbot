@@ -148,6 +148,8 @@ function heapPop(s) {
 
 // The start nodes whose floods stay cached: a few KB each.
 const FLOODS = 2048;
+// So many targets keep their set of the floors with a way to them (waysTo).
+const WAYS_TO = 16;
 
 /** True when the graph has a way from one node to another. One flood per start node serves every target. */
 export function canReach(nav, from, to) {
@@ -172,6 +174,44 @@ export function canReach(nav, from, to) {
     floods.set(from, bits);
   }
   return Boolean(bits[to >> 3] & (1 << (to & 7)));
+}
+
+/**
+ * The floors that have a way to `to`, as a bit set (bit n of byte n >> 3): one search against the ways, kept for
+ * the last targets. The same answer as canReach(nav, n, to) for every n, at the price of one search.
+ */
+export function waysTo(nav, to) {
+  const known = (nav.waysTo ??= new Map());
+  let bits = known.get(to);
+  if (bits) return bits;
+  if (known.size >= WAYS_TO) known.clear();
+  if (!nav.back) {
+    // The ways turned round, as offsets and ends.
+    const offsets = new Int32Array(nav.count + 1);
+    for (let e = 0; e < nav.to.length; e++) offsets[nav.to[e] + 1]++;
+    for (let n = 0; n < nav.count; n++) offsets[n + 1] += offsets[n];
+    const from = new Int32Array(nav.to.length);
+    const fill = offsets.slice(0, nav.count);
+    for (let a = 0; a < nav.count; a++) for (let e = nav.offsets[a]; e < nav.offsets[a + 1]; e++) from[fill[nav.to[e]]++] = a;
+    nav.back = { offsets, from };
+  }
+  const { offsets, from } = nav.back;
+  bits = new Uint8Array((nav.count >> 3) + 1);
+  const stack = (nav.floodStack ??= new Int32Array(nav.count));
+  let top = 0;
+  stack[top++] = to;
+  bits[to >> 3] |= 1 << (to & 7);
+  while (top) {
+    const at = stack[--top];
+    for (let e = offsets[at]; e < offsets[at + 1]; e++) {
+      const next = from[e];
+      if (bits[next >> 3] & (1 << (next & 7))) continue;
+      bits[next >> 3] |= 1 << (next & 7);
+      stack[top++] = next;
+    }
+  }
+  known.set(to, bits);
+  return bits;
 }
 
 /**

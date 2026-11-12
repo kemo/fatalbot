@@ -3,7 +3,7 @@
 // which holds the fixes of many stuck bots; the traces go through the ports.
 
 import { PI, RAD, abs, atan2, cos, hypot, max, min, sign, sin } from './geometry.js';
-import { JUMP, LADDER, WALK, canReach, findPath, navParts, nearestNode, nodePoint } from './nav.js';
+import { JUMP, LADDER, WALK, findPath, navParts, nearestNode, nodePoint, waysTo } from './nav.js';
 import { lookAt } from './aim.js';
 import { restLook } from './watch.js';
 import { bestGun, maxSpeedOf } from './weapons.js';
@@ -290,9 +290,11 @@ function exitFrom(c, at, to, tries) {
     if (d < ESCAPE_REACH ** 2) near.push([d, i]);
   }
   near.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  // One search tells every floor with a way to the point: a search from each floor took 96 ms on de_nuke.
+  const joined = waysTo(nav, to);
   let first = -1;
   for (const [, i] of near.slice(0, tries)) {
-    if (!canReach(nav, i, to)) continue;
+    if (!(joined[i >> 3] & (1 << (i & 7)))) continue;
     if (first < 0) first = i;
     if (ports.traceHull(at, [nav.xyz[i * 3], nav.xyz[i * 3 + 1], max(at[2], nav.xyz[i * 3 + 2])], c.me.ducked) >= 1) return { first, clear: i };
   }
