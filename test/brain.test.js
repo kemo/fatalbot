@@ -179,6 +179,37 @@ test('a bot on an island of the graph leaves it toward a floor that a straight w
   assert.deepEqual(brain.debug(1).escape, [256, 0, 36]);
 });
 
+test('a bot on an island finds a floor further off that a straight walk reaches, when the nearest ones lie behind a wall', () => {
+  // Everything east of the wall (x = 320, y from -200 to 200) is an island. The 32 nearest joined floors lie behind
+  // the wall; a straight walk passes the wall's end to (288, 384) or (288, -384).
+  const sites = [{ mins: [-350, -50, 0], maxs: [-250, 50, 72] }];
+  const map = withIsland((x) => x >= 320, { sites, size: 56 });
+  const brain = createBrain({ map, ports: flatPorts(), seed: 7 });
+  brain.join(1);
+  run(brain, 1, 30, () => [player(1, 'T', [360, 0, 36], { own: true }), player(2, 'CT', [-600, 0, 36])]);
+  const out = brain.debug(1).escape;
+  assert.ok(out && out[0] === 288 && Math.abs(out[1]) === 384, `past the wall's end (${out})`);
+});
+
+test('a bot on an island with no way out from its place walks inside the island to the floor that has one', () => {
+  // The wall is 1400 long, and the island is a strip of two floors along its east side: no joined floor within
+  // reach of the bot has a straight walk to it. The strip's floors near the wall's end have one.
+  const sites = [{ mins: [-350, -50, 0], maxs: [-250, 50, 72] }];
+  const part = (x) => (x <= 288 ? 'joined' : x === 352 || x === 384 ? 'strip' : null);
+  const map = rewired((a, b) => (part(a[0]) && part(a[0]) === part(b[0]) ? 0 : null), { sites, size: 56 });
+  const brain = createBrain({ map, ports: flatPorts({ half: 700 }), seed: 7 });
+  brain.join(1);
+  run(brain, 1, 30, () => [player(1, 'T', [360, 0, 36], { own: true }), player(2, 'CT', [-600, 0, 36])]);
+  const d = brain.debug(1);
+  assert.equal(d.escape, null, 'no straight walk from here');
+  const end = d.path?.at(-1);
+  assert.ok(end && end[0] >= 352 && Math.abs(end[1]) >= 500, `its way leads along the wall, inside the island (${end})`);
+  // At that floor the straight walk off the island starts.
+  run(brain, 1, 30, () => [player(1, 'T', end, { own: true }), player(2, 'CT', [-600, 0, 36])]);
+  const out = brain.debug(1).escape;
+  assert.ok(out && out[0] < 320, `a floor of the joined part (${out})`);
+});
+
 test('a bot that gives up at a ladder that it cannot take finds a way without that ladder', () => {
   // Two halves of the map, the east one 100 units higher. A ladder joins them at y = 0, a walk far to the north.
   const LADDER = 3;

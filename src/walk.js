@@ -43,6 +43,8 @@ const GIVE_UP_GAP = 64;
 const ESCAPE_REACH = 640;
 // That many of the nearest floors are asked for a way to the point.
 const ESCAPE_TRIES = 32;
+// An island's own floors are searched for a way out up to this many of them.
+const ISLAND_FLOORS = 160;
 // Off the ladder's line by more than this, the bot lines up this far in front of its face before it goes in.
 const LADDER_LINE = 6;
 const LADDER_FRONT = 48;
@@ -102,6 +104,11 @@ export function walkTo(c, cmd, point, facing) {
   const calm = c.free || (time - s.seenAt > 5 && time - (s.alertAt ?? -Infinity) > 5);
   if (facing && calm && s.knifeOut && left > 1200 && own.weapons.knife && cmd.weapon === undefined) cmd.weapon = 'knife';
   else if (facing && !c.free && me.weapon === 'knife' && (left < 800 || !calm)) cmd.weapon = bestGun(own);
+  // At the island's floor with the way out: the way from there is found at once.
+  if (s.islandWay && s.path) {
+    const end = s.path[s.path.length - 1].point;
+    if (hypot(end[0] - o[0], end[1] - o[1]) < 24 && abs(end[2] - o[2]) < 40) s.pathAt = -Infinity;
+  }
   // On a ladder the way holds: its floors lie far below and above, and a new search would pick a wrong one.
   if (nav && !me.onLadder && (s.pathKey !== key || time - s.pathAt > 4 || (s.stuckSince !== null && time - s.stuckSince > 1))) findWay(c, point, key);
   // Off the island: the way is found again at once.
@@ -212,9 +219,15 @@ function findWay(c, point, key) {
   // the bot can still be one of the island.
   const out = !s.path && from >= 0 && to >= 0 ? escapeNode(c, to) : -1;
   s.escape = null;
+  s.islandWay = false;
   if (out >= 0) {
     const p = nodePoint(nav, out);
-    if (hypot(p[0] - o[0], p[1] - o[1]) < 24 && abs(p[2] - o[2]) < 40) s.path = findPath(nav, out, to, 20000, s.avoid ?? null);
+    const parts = navParts(nav);
+    if (parts[out] === parts[from]) {
+      // A floor of the island itself, with a way out from it: there by the island's ways.
+      s.path = findPath(nav, from, out, 20000, null);
+      s.islandWay = Boolean(s.path);
+    } else if (hypot(p[0] - o[0], p[1] - o[1]) < 24 && abs(p[2] - o[2]) < 40) s.path = findPath(nav, out, to, 20000, s.avoid ?? null);
     if (!s.path) s.escape = p;
   }
   s.pathKey = key;
@@ -243,27 +256,74 @@ function failedStep(c) {
  * wall); else the nearest. A drop joins two floors one way only, so each is asked for its way.
  */
 function escapeNode(c, to) {
-  const { nav, ports } = c.brain;
+  const { nav } = c.brain;
   const o = c.me.origin;
   const parts = navParts(nav);
   const from = nearestNode(nav, o, 3, 48);
   if (from >= 0 && parts[from] === parts[to]) return -1;
+  const { first, clear } = exitFrom(c, o, to, ESCAPE_TRIES);
+  if (clear >= 0 || from < 0) return clear >= 0 ? clear : first;
+  // The nearest floors lie behind a wall: any floor of that part in reach that a straight walk reaches, found once
+  // for a floor of the island.
+  const known = (nav.exits ??= new Map());
+  const key = from * nav.count + to;
+  if (!known.has(key)) known.set(key, exitFrom(c, o, to, Infinity).clear);
+  if (known.get(key) >= 0) return known.get(key);
+  // None from here: to the floor of the island that has such a way out, by the island's own ways.
+  const via = islandExit(c, from, to);
+  return via >= 0 ? via : first;
+}
+
+/**
+ * The floors of the part of `to` near `at`, the nearest `tries` of them: {first: the nearest with a way to `to`,
+ * clear: the nearest of those that a straight walk from `at` reaches}; -1 for none.
+ */
+function exitFrom(c, at, to, tries) {
+  const { nav, ports } = c.brain;
+  const parts = navParts(nav);
   const near = [];
   for (let i = 0; i < nav.count; i++) {
     if (parts[i] !== parts[to]) continue;
-    const dz = nav.xyz[i * 3 + 2] - o[2];
+    const dz = nav.xyz[i * 3 + 2] - at[2];
     if (dz > STEP * 3 || dz < -200) continue;
-    const d = (nav.xyz[i * 3] - o[0]) ** 2 + (nav.xyz[i * 3 + 1] - o[1]) ** 2 + dz * dz;
+    const d = (nav.xyz[i * 3] - at[0]) ** 2 + (nav.xyz[i * 3 + 1] - at[1]) ** 2 + dz * dz;
     if (d < ESCAPE_REACH ** 2) near.push([d, i]);
   }
   near.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
   let first = -1;
-  for (const [, i] of near.slice(0, ESCAPE_TRIES)) {
+  for (const [, i] of near.slice(0, tries)) {
     if (!canReach(nav, i, to)) continue;
     if (first < 0) first = i;
-    if (ports.traceHull(o, [nav.xyz[i * 3], nav.xyz[i * 3 + 1], max(o[2], nav.xyz[i * 3 + 2])], c.me.ducked) >= 1) return i;
+    if (ports.traceHull(at, [nav.xyz[i * 3], nav.xyz[i * 3 + 1], max(at[2], nav.xyz[i * 3 + 2])], c.me.ducked) >= 1) return { first, clear: i };
   }
-  return first;
+  return { first, clear: -1 };
+}
+
+/**
+ * The floor of the bot's island nearest to `from` by the island's ways that has a straight walk to a floor with a
+ * way to `to`; -1 for none. Found once for an island and a part of the graph (nav.islandExits).
+ */
+function islandExit(c, from, to) {
+  const { nav } = c.brain;
+  const parts = navParts(nav);
+  const known = (nav.islandExits ??= new Map());
+  const key = `${parts[from]}>${parts[to]}`;
+  if (known.has(key)) return known.get(key);
+  let found = -1;
+  const seen = new Set([from]);
+  for (const queue = [from]; queue.length && found < 0 && seen.size <= ISLAND_FLOORS; ) {
+    const at = queue.shift();
+    if (at !== from && exitFrom(c, nodePoint(nav, at), to, ESCAPE_TRIES).clear >= 0) found = at;
+    for (let e = nav.offsets[at]; e < nav.offsets[at + 1]; e++) {
+      const next = nav.to[e];
+      if (!seen.has(next)) {
+        seen.add(next);
+        queue.push(next);
+      }
+    }
+  }
+  known.set(key, found);
+  return found;
 }
 
 /** The furthest floor of the next PULL that the bot's box reaches in a straight line on its own level. */
