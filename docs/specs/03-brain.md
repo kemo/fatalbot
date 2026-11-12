@@ -120,6 +120,16 @@ New. The reference bots have no team plan.
   forward posts of other sites away and gives the Ts more rounds (docs/measures/2026-11-11-night.md, section 4).
 - A CT with a post holds it on a contact, and watches where the enemy comes into sight.
 - The CTs rotate to a site when the team saw 60% of the living Ts near it within 6 s.
+- Before that, a part of the team goes: the first T that the team sees at a site (or the killer of a teammate
+  there) brings the defenders of the other site over, the nearest first and one a second, and one of them stays.
+  They go back when no T was seen at that site for 20 s, or when the team sees an attack at another site
+  (`plan.js lean`). The recorded CTs travel after the first death of a round; the bots held their posts
+  (docs/measures/2026-11-12-night.md).
+- After a plant the CTs give the retake up by the count of players, as a call of the team: with a chance of 8%
+  with the Ts one ahead and 22% with two or more ahead, drawn once for each count of the round. A CT within 500
+  units of the bomb plays on, and a teammate at the bomb ends the call. A CT that saves leaves the blast and
+  holds a place with its view to the bomb (`tactics.js saves`). The recorded CTs are alive at the blast in 16% of
+  the plants.
 - A CT that comes into a round after its start (the bot of a replay takes over for a player) takes a post at the
   site nearer to it.
 - The Ts take one site together, chosen at the round's start. Each T first waits on a way to that site, short of
@@ -127,7 +137,8 @@ New. The reference bots have no team plan.
   The plan draws the second at which the first T stands in the site, with a middle of 34 s and between 18 and
   75 s, as the players' first T did. A T leaves its place when its way to the site takes as long as is left to
   that second, and up to 2 s later: a team that leaves on one tick comes round a corner together and wins the
-  first fight too often. A site with no such place is run at once.
+  first fight too often. A site with no such place is run at once. The first kill of the round that the feed
+  shows ends the wait: each T goes 2 to 8 s after it.
 - The carrier in the site plants once no enemy was seen or heard within 1000 units of it for 3 s, by itself or by
   its team. Alone, or with under 40 s of the round left, it plants at once. Until then it fights for the site
   (`tactics.js quietToPlant`). The players plant with most of the CTs dead, and win many rounds with no plant.
