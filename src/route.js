@@ -18,6 +18,7 @@ const LEAD = 0.25;
 // is more than CATCH_UP units or BEHIND seconds behind.
 const STAND_PACE = 5;
 const STAND_NEAR = 12;
+const STAND_TRIED = 0.4;
 const WALK_PACE = 135;
 const CATCH_UP = 96;
 const BEHIND = 0.3;
@@ -192,8 +193,13 @@ export function steerRoute(c, cmd) {
   if (distance < 2 && kept) return;
   const next = route(r.progress + LEAD) ?? here;
   const pace = hypot(next.x - here.x, next.y - here.y) / LEAD;
-  // Where the player stood nearer to a wall than the bot's box gets: this near is there.
-  if (pace < STAND_PACE && distance < STAND_NEAR && kept) return;
+  // Where the player stood nearer to a wall than the bot's box gets: this near is there. A bot that gets no
+  // nearer to such a place for STAND_TRIED seconds stands too: the place is one that its box does not reach.
+  if (pace < STAND_PACE && kept) {
+    if (distance < STAND_NEAR) return;
+    if (r.stand === undefined || distance < r.stand.best - 1) r.stand = { best: distance, at: time };
+    if (time - r.stand.at > STAND_TRIED) return;
+  } else r.stand = undefined;
   const rel = atan2(dy, dx) - cmd.yaw * RAD;
   cmd.forward = cos(rel);
   cmd.side = -sin(rel);

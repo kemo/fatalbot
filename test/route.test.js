@@ -28,6 +28,22 @@ const lagging = (id, route, time, extra = {}) => {
   return player(id, 'T', [at.x, at.y, 36], { own: true, yaw: 90, ...extra });
 };
 
+test('a bot that cannot reach the place where its player stood stops its feet there', () => {
+  // The player stood at one place. The frames hold the bot 20 units from it, as a wall would.
+  const route = () => ({ x: -600, y: -400, z: 36, yaw: 90, pitch: 0, duck: false, weapon: 'ak47', bomb: false });
+  const brain = fresh({ 1: route });
+  const held = () => [player(1, 'T', [-620, -400, 36], { own: true, yaw: 90 }), player(9, 'CT', [-600, 800, 36], { alive: false })];
+  const keys = [];
+  for (let tick = 1; tick <= 120; tick++) {
+    brain.frame(frameAt(tick, held()));
+    const cmd = brain.think(1);
+    keys.push(Math.hypot(cmd.forward, cmd.side));
+  }
+  assert.ok(keys[19] > 0.5, 'at first it walks to the place');
+  assert.equal(keys[119], 0, 'with no step nearer for 0.4 s it stands');
+  assert.equal(brain.debug(1).route, 'on');
+});
+
 test('a bot on a route walks where its player walked and looks where its player looked', () => {
   const route = walkEast(-400);
   const brain = fresh({ 1: route });
