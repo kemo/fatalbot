@@ -82,7 +82,11 @@ round a teammate, the jump of a stuck bot, the island of the graph.
   descent, because the game moves a player on a ladder along the view.
 - **New:** an island of the graph is a floor that no way leaves. A bot on one walks straight to the nearest joined
   floor that a straight walk reaches, and starts its way from that floor. It counts as able to reach the level
-  (`nav.js reaches`), so it gets a goal there.
+  (`nav.js reaches`), so it gets a goal there. It asks the 32 nearest joined floors first, then every joined
+  floor within 640 units, then the island's own floors (nearest first by the island's ways) for one with a
+  straight walk out, and goes there by the island's ways. One search against the ways tells the floors with a
+  way to the goal (`nav.js waysTo`). The search of an island takes up to 24 ms in one command, once for an island
+  (docs/measures/2026-11-12-night.md, section 5).
 - **New:** a give-up marks the step of the way that the bot stood before as failed, as a stuck walk does. A climb
   holds no stuck clock, so a ladder that the bot cannot take shows only at the give-up.
 - **New:** a bot that waits at its place jumps now and then (`moves.js idleJump`): by chance at the rate of its
@@ -98,7 +102,8 @@ round a teammate, the jump of a stuck bot, the island of the graph.
 ## 5. Tactics (`tactics.js`, `watch.js`)
 
 Ported from `bot.js decide` and `tactics.js`: the plant, the defuse with its count of the seconds, the guard of a
-defuser, the posts of the Ts after the plant, the escape from the blast, the hunt, the ambush and the cover.
+defuser, the posts of the Ts after the plant (a floor 300 to 1,200 units from the bomb that sees it), the escape
+from the blast, the hunt, the ambush and the cover.
 
 - **New:** at rest a bot looks at the point where an enemy comes into sight on its way from the enemy's side
   (`watch.js restLook`), then at the long lines of the place. The reference bot takes the angles of the demos,
@@ -212,7 +217,8 @@ For a replay: a bot that plays on for a recorded player can get that player's ro
 
 - On the route the bot walks to the place of the route a moment ahead, at the route's pace: it runs when it is
   behind, walks where the player walked, stands where the player stood, and jumps where the track rises as a
-  jump. Its view is the player's view, and it holds the gun that the player held.
+  jump. Its view is the player's view, and it holds the gun that the player held. Where the player stood at a
+  place that the bot's box does not reach, the bot stands after 0.4 s with no step nearer.
 - Off the route by 300 units, or with no progress for 1 s, it walks back by the graph to the first place of the
   route ahead that the graph reaches. Three walks back that fail end the route.
 - **Each bot leaves its route by what it meets itself**, for the rest of the round: it reacted to an enemy in its
