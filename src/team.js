@@ -41,6 +41,8 @@ export class Team {
     this.buyCall = null;
     // True once an enemy was alive in this round: with none alive after that, the round is the team's.
     this.enemiesLived = false;
+    // The team's calls after a plant, by the players alive ("2v4" -> true: it gives the retake up; tactics.js).
+    this.saves = new Map();
     // The time of the first kill of the round that the feed showed, or null.
     this.firstKill = null;
   }

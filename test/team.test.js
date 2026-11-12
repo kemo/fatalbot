@@ -316,6 +316,30 @@ test('with no enemy left and a teammate at the bomb, a CT has free time: it runs
   assert.notEqual(play(1).goal, 'free');
 });
 
+test('after a plant the CTs give the retake up by the count of players: a team call, not a rule of the clock', () => {
+  const bombAt = [500, 400, 36];
+  /** One CT, 1300 units from a bomb that it saw planted, with 36 s left, against `ts` Ts. Returns its goal after 3 s. */
+  const play = (seed, ts) => {
+    const brain = createBrain({ map: map(), ports: open(), seed });
+    brain.join(1);
+    for (let tick = 1; tick <= 400; tick++) {
+      const late = tick > 100;
+      const players = [player(1, 'CT', [600, -900, 36], { own: true, yaw: 90 }), ...Array.from({ length: ts }, (_, i) => player(7 + i, 'T', [1400, 900 + 64 * i, 36]))];
+      const bomb = late ? { state: 'planted', carrier: null, origin: bombAt, explodeAt: 40, defuser: null, arming: null } : null;
+      brain.frame(frameAt(tick, players, { bomb, events: tick === 101 ? [{ type: 'planted', at: bombAt }] : [] }));
+      brain.think(1);
+    }
+    return brain.debug(1);
+  };
+  const seeds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  const alone = seeds.map((seed) => play(seed, 3));
+  const saved = alone.filter((d) => d.goal === 'save');
+  assert.ok(saved.length >= 1 && saved.length < seeds.length, `against three Ts some teams save and some play on (${saved.length} of ${seeds.length})`);
+  for (const d of saved) assert.ok(flat(d.point, bombAt) >= 1300, 'a saver goes away from the bomb, or stays where it is');
+  // One against one is a round to play.
+  for (const seed of seeds) assert.notEqual(play(seed, 1).goal, 'save');
+});
+
 test('a round that is over is free time, and a round with no enemy from its start is not', () => {
   const brain = fresh([1, 2]);
   const at = (tick, phase) => brain.frame(frameAt(tick, [...cts(), player(9, 'T', [850, -800, 36])], { phase }));

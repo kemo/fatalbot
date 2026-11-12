@@ -36,6 +36,10 @@ const T_LEAVES = 13;
 const T_LEAVES_RANGE = 964;
 // A place out of the blast is this far from the bomb, or as far as the map allows.
 const FLEE_DISTANCE = 1500;
+// After a plant the CTs give the retake up by the count of players: the chance of that call with the sides level,
+// with the Ts one ahead, and with the Ts two or more ahead. A CT this near the bomb plays on.
+const SAVE = [0, 0.08, 0.22];
+const SAVE_COMMITTED = 500;
 const FLEE_TRIES = 200;
 // After a plant: the CT's way in is the point of its path this far from the bomb; a T holds a place between
 // POST_NEAR and POST_FAR from the bomb, sees the bomb and that point, and looks at the point.
@@ -346,6 +350,7 @@ function retake(c, bomb) {
   // With no T left alive and a teammate at the bomb, the others have nobody to guard it from: their time is free.
   const alone = c.team.enemiesLived && !c.enemyCount;
   if (alone && bomb.defuser !== null && bomb.defuser !== me.id) return freeGoal(c);
+  if (bomb.defuser === null && (!bomb.point || flat(o, bomb.point) > SAVE_COMMITTED) && saves(c)) return saveGoal(c, bomb);
   if (!bomb.point) {
     // Not seen yet: to the site that the team knows, else the nearest one that nobody found empty.
     const open = brain.map.bombSites.map((site, k) => ({ k, mid: siteMid(site) })).filter(({ k }) => !c.team.noBomb.has(k));
@@ -364,6 +369,28 @@ function retake(c, bomb) {
   }
   const near = distance(o, bomb.point) <= DEFUSE_NEAR;
   return { kind: 'defuse', point: near ? null : over(bomb.point), near, look: near ? toward(eyeOf(me), bomb.point) : null };
+}
+
+/**
+ * True when the CTs give the retake up: a call of the team for the players alive now, drawn once for each count
+ * (the recorded teams decide by the count: docs/measures/2026-11-12-night.md).
+ */
+function saves(c) {
+  const { team } = c;
+  const lead = c.enemyCount - c.mateCount;
+  if (lead < 0 || !c.enemyCount) return false;
+  const key = `${c.mateCount}v${c.enemyCount}`;
+  if (!team.saves.has(key)) team.saves.set(key, (team.random ?? c.random)() < SAVE[Math.min(lead, SAVE.length - 1)]);
+  return team.saves.get(key);
+}
+
+/** A CT that keeps its gun for the next round: out of the blast, then about its place with the view to the bomb. */
+function saveGoal(c, bomb) {
+  const { me, s, brain } = c;
+  const from = bomb.point ?? (bomb.site !== null ? siteMid(brain.map.bombSites[bomb.site]) : null);
+  if (from && flat(me.origin, from) < FLEE_DISTANCE) return { kind: 'goto', task: 'save', point: fleeSpot(c, { point: from }) };
+  s.saveAt ??= { at: [...me.origin], spots: spotsAbout(brain, me.origin) };
+  return steppingHold(c, 'save', s.saveAt.at, s.saveAt.spots, from ? toward(eyeOf(me), eyeAt(from)) : null);
 }
 
 /** A T after the plant: to a CT that defuses, away from the blast at the end, else a post that sees the bomb. */
