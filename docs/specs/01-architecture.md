@@ -94,16 +94,18 @@ same maps, side orders and seeds before and after a change.
 G1 alone is easy to cheat: a faster hand wins. So both sides take the same motor profile (the `DEFAULT_PROFILE`
 numbers of csbih-player), and G6 must hold.
 
-The state of the gates on 2026-11-11 (docs/measures/2026-11-11-night.md, 2026-11-11-economy.md and
-2026-11-11-hold-and-route.md): G1 and G6 are met. G2 is met, near its upper end: the Ts win 53.2% of 2,592 rounds
-(error 1.6), with the pace of the Ts in (commit `a7858e1`). G3: fatalbot is stuck 0.46% of the time (the
-reference bots 1.10%) and faces a wall 0.47% (0.46%). G4 is not met: fatalbot plants in 64% of its rounds and the
-players in 44% (`tools/rounds.js` measures the shape of a round for both). G5 was 0.065 ms for ten bots a tick
-before the steps of a bot that holds a place and is not read with them. G7 is met for the kills with a shot to
-the head, the jumps on a run, the buys of a team, and the steps of a player that holds a place before the first
-contact. After the first death the bots stand in 35% (CTs) and 18% (Ts) of the steps of 2 s, the players in 18%
-and 10%; they jump less than the players after the first seconds of a round, and they fire fewer shots on the run
-at a distance.
+The state of the gates on 2026-11-12 (docs/measures/2026-11-12-night.md, and the records of 2026-11-11): G1 and
+G6 are met: fatalbot wins 71.1% of 384 rounds against the reference bots. G2 is met in its middle: the Ts win
+50.1% of 2,592 rounds by match (error 1.4). G3: fatalbot is stuck 0.28% of the time (the reference bots 1.00%)
+and faces a wall 0.35% (0.29%; on 2026-11-11 it was 0.47% against 0.46%). G4 is not met, and nearer: fatalbot plants in 56% of its rounds and the players
+in 44% (`tools/rounds.js` measures the shape of a round for both). G5 is met: 0.055 ms for ten bots a tick on
+de_dust2 and 0.141 ms on de_nuke, read alone on the processor; the longest command took 6.7 ms. G7 is met for
+the kills with a shot to the head, the buys of a team, the steps of a player that holds a place before the first
+contact, and the CTs alive at the blast (14% of the plants; the players 16%). After the first death the bots
+stand in 28% (CTs) and 17% (Ts) of the steps of 2 s, the players in 18% and 10%. The jumps are not compared any
+more: the arenas count a recorded player's jumps wrong (docs/measures/2026-11-12-night.md, section 8); counted
+the same way the players jump 3.5 times a minute and the bots 2.9, with fewer chains of hops, and the players are
+ducked 9 to 13% of a round against the bots' 1 to 2%.
 
 To come for G7, with the demo data (section 6): the likeness to the players as `tools/compare-fights.js` and
 `tools/aim-stats.js` of csbih-player measure it.
