@@ -44,8 +44,8 @@ const FLEE_TRIES = 200;
 // After a plant: the CT's way in is the point of its path this far from the bomb; a T holds a place between
 // POST_NEAR and POST_FAR from the bomb, sees the bomb and that point, and looks at the point.
 const ENTRY_DISTANCE = 550;
-const POST_NEAR = 200;
-const POST_FAR = 800;
+const POST_NEAR = 300;
+const POST_FAR = 1200;
 const POST_EVERY = 2;
 const POST_TRIES = 80;
 const EYE = 17;
