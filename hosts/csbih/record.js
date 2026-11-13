@@ -142,9 +142,8 @@ export class Recorder {
     if (killer && victim && killer.id !== victim.id) add(killer.id, killer.team === victim.team ? -1 : 1, 0);
     if (victim) {
       add(victim.id, 0, 1);
-      // The fall of the body: the death that the game picks for the hit.
-      const name = this.anim.deathSequenceName({ group: e.headshot ? 1 : 0, weapon: e.weapon, ducked: victim.body.ducked, dice: (victim.id * 7 + Math.round(t * 100)) % 9 });
-      const sequence = this.anim.sequenceOf(this.mdl, name);
+      // The fall of the body: the death that the game drew for the hit (csbih-player death.js startDeath).
+      const sequence = this.anim.deathSequenceOf(this.mdl, e.death ?? victim.death);
       if (sequence >= 0) {
         this.t.anims.push([t, victim.id, sequence, 0]);
         this.round.anim.set(victim.id, `${sequence},0`);
