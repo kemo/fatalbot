@@ -10,7 +10,7 @@
 
 import { writeFileSync } from 'node:fs';
 import { csbihMissing, levelFor, loadAimStats, loadBody, loadCore, loadMapData, loadPlans, loadProfiles, loadTimeline, timelineIds } from '../hosts/csbih/load.js';
-import { addMeasures, aimLine, burstLines, feetLine, measureLine, turnLines, useBody } from '../hosts/csbih/arena.js';
+import { addMeasures, aimLine, burstLines, feetLine, measureLine, styleLine, turnLines, useBody } from '../hosts/csbih/arena.js';
 import { playDemoRound } from '../hosts/csbih/demo.js';
 import { fitRounds } from '../hosts/csbih/strategies.js';
 
@@ -122,6 +122,7 @@ if (routed.seconds > 0) {
 }
 for (const [kind, m] of Object.entries(measure)) if (m.alive > 0) console.log(measureLine(kind, m));
 for (const [kind, m] of Object.entries(measure)) if (m.alive > 0) console.log(feetLine(kind, m));
+for (const [kind, m] of Object.entries(measure)) if (m.alive > 0) console.log(styleLine(kind, m));
 for (const [kind, list] of Object.entries(aim)) console.log(aimLine(kind, list));
 for (const [kind, list] of Object.entries(aim)) console.log(turnLines(kind, list));
 for (const [kind, list] of Object.entries(bursts)) for (const group of ['rifle', 'pistol', 'sniper']) console.log(burstLines(kind, list, group));

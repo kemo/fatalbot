@@ -34,8 +34,6 @@ const SPELL = 1.5;
 const FIGHT_MEMORY = 2.5;
 const WALL_GAP = 40;
 const STUCK_CIRCLE = 16;
-// A jump counts where the feet leave the floor at this speed or more (a jump starts at 268).
-const JUMP_RISE = 200;
 // A round that runs this long after its clock is a round that cannot end.
 const ROUND_LIMIT = 240;
 
@@ -56,6 +54,13 @@ const blank = () => ({
   rifleNear: 0, rifleMid: 0, rifleFar: 0, rifleRunNear: 0, rifleRunMid: 0, rifleRunFar: 0,
   // The rifle shots on the run by the speed of the shooter: 140 to 180, 180 to 220, and over 220 units a second.
   rifleRun180: 0, rifleRun220: 0, rifleRunFull: 0,
+  // The taps of the duck (the duck on the mouse wheel: 18 units up at once, then the fall): in a fight, on a run
+  // out of one, and from a stand out of one.
+  taps: 0, tapsFight: 0, tapsRun: 0, tapsStand: 0,
+  // The flat jumps whose top comes within CHAIN_SECONDS of the top of the flat jump before: a chain of hops.
+  chained: 0,
+  // The feet of a fight: the seconds with a step to a side, and the changes of that side.
+  sideSeconds: 0, sideTurns: 0,
 });
 // A landing this much higher or lower than the take-off is a jump onto or off a ledge (units).
 const LEDGE = 16;
@@ -68,6 +73,15 @@ const RANGES = [400, 1000];
 const RIFLES = new Set(['ak47', 'm4a1', 'galil', 'famas', 'aug', 'sg552', 'm249']);
 // A jump this soon after a landing is a hop of a chain (ticks).
 const HOP_TICKS = 3;
+// A tap of the duck lifts the feet 18 units (pm_shared PM_UnDuck: the hull of a stand goes back 18 higher) and a
+// jump 45. A lift between these two, that lands on the level of its start within TAP_SECONDS, is a tap.
+const TAP_LIFT = [10, 27];
+const TAP_LEVEL = 6;
+const TAP_SECONDS = 0.5;
+// Two flat jumps of one chain have their tops this near in time: a jump is 0.67 s in the air.
+const CHAIN_SECONDS = 0.9;
+// A step to a side in a fight: this fast across the view (units a second).
+const SIDE_SPEED = 60;
 // The tracks of the aim measure: a sample this often (20 a second, as a good demo).
 const AIM_TICKS = 5;
 
@@ -218,19 +232,44 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
         if (!m || !p.alive) continue;
         const w = of(p.id);
         if (live && world.time - liveAt < EARLY) m.aliveEarly += world.tickSeconds;
-        // A jump: off the floor with the speed of one. Right after a landing, it is a hop of a chain.
-        // A climb onto a ladder rises as fast and is no jump.
-        if (live && w.ground && !p.body.onGround && !p.body.onLadder && p.body.velocity[2] > JUMP_RISE) {
-          m.jumps++;
-          if (ticks - (w.landed ?? -Infinity) <= HOP_TICKS) m.hops++;
-          w.jump = { z: p.body.origin[2], fight: world.time - w.fightAt < FIGHT_MEMORY, hurt: world.time - (w.hurtAt ?? -Infinity) < 1, shot: world.time - (w.shotAt ?? -Infinity) < 1, gun: w.shotGroup, early: world.time - liveAt < EARLY, slow: Math.hypot(p.body.velocity[0], p.body.velocity[1]) < SLOW, seen: Boolean(w.seen), near: Boolean(w.near) };
+        // A jump right after a landing is a hop of a chain. A climb onto a ladder is no jump.
+        // Off the floor: the lift of this time in the air says what it was (a jump, or a tap of the duck). The speed
+        // of the rise does not: a recording of 17 frames a second holds the start of a jump too coarsely for it.
+        if (live && w.ground && !p.body.onGround && !p.body.onLadder) {
+          const fight = world.time - w.fightAt < FIGHT_MEMORY;
+          w.air = { z: w.z ?? p.body.origin[2], at: world.time, peak: 0, top: world.time, fight, run: Math.hypot(p.body.velocity[0], p.body.velocity[1]) >= SLOW, ducked: Boolean(w.ducked) };
+          w.air.jump = { hop: ticks - (w.landed ?? -Infinity) <= HOP_TICKS, z: w.air.z, fight: world.time - w.fightAt < FIGHT_MEMORY, hurt: world.time - (w.hurtAt ?? -Infinity) < 1, shot: world.time - (w.shotAt ?? -Infinity) < 1, gun: w.shotGroup, early: world.time - liveAt < EARLY, slow: Math.hypot(p.body.velocity[0], p.body.velocity[1]) < SLOW, seen: Boolean(w.seen), near: Boolean(w.near) };
+        }
+        if (w.air && !p.body.onGround) {
+          const lift = p.body.origin[2] - w.air.z;
+          if (lift > w.air.peak) {
+            w.air.peak = lift;
+            w.air.top = world.time;
+          }
         }
         if (!w.ground && p.body.onGround) {
           w.landed = ticks;
+          const air = w.air;
+          w.air = null;
+          // A tap of the duck: from a stand, a lift of about 18 units, and back on the level of its start.
+          const tap = air && !air.ducked && air.peak >= TAP_LIFT[0] && air.peak <= TAP_LIFT[1] && Math.abs(p.body.origin[2] - air.z) <= TAP_LEVEL && world.time - air.at <= TAP_SECONDS;
+          if (tap) {
+            m.taps++;
+            m[air.fight ? 'tapsFight' : air.run ? 'tapsRun' : 'tapsStand']++;
+          }
+          // A jump lifts the feet over the lift of a tap. A walk off an edge lifts nothing, and in a recording a
+          // stand out of a duck lifts 18 units between two frames.
+          w.jump = air && air.peak > TAP_LIFT[1] ? air.jump : null;
           if (w.jump) {
+            m.jumps++;
+            if (w.jump.hop) m.hops++;
             const rise = p.body.origin[2] - w.jump.z;
             const what = w.jump.fight ? 'jumpsFight' : rise > LEDGE ? 'jumpsUp' : rise < -LEDGE ? 'jumpsDown' : 'jumpsFlat';
             m[what]++;
+            if (what === 'jumpsFlat') {
+              if (air && air.top - (w.flatTop ?? -Infinity) <= CHAIN_SECONDS) m.chained++;
+              w.flatTop = air?.top ?? world.time;
+            }
             if (what === 'jumpsFight' && w.jump.hurt) m.jumpsFightHurt++;
             if (what === 'jumpsFight' && w.jump.shot) {
               m.jumpsFightShot++;
@@ -247,6 +286,22 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
           }
         }
         w.ground = Boolean(p.body.onGround);
+        if (w.ground) {
+          w.z = p.body.origin[2];
+          w.ducked = p.body.ducked;
+        }
+        // The feet of a fight: a step across the view, and each change of its side.
+        if (live && world.time - w.fightAt < FIGHT_MEMORY && p.body.onGround) {
+          const yaw = (p.yaw * Math.PI) / 180;
+          const across = p.body.velocity[0] * Math.sin(yaw) - p.body.velocity[1] * Math.cos(yaw);
+          const side = across > SIDE_SPEED ? 1 : across < -SIDE_SPEED ? -1 : 0;
+          if (side) {
+            m.sideSeconds += world.tickSeconds;
+            if (w.side && side !== w.side && world.time - (w.sideAt ?? -Infinity) < 2) m.sideTurns++;
+            w.side = side;
+            w.sideAt = world.time;
+          }
+        } else if (world.time - w.fightAt >= FIGHT_MEMORY) w.side = 0;
       }
       if (ticks % SAMPLE_TICKS) return;
       const dt = SAMPLE_TICKS * world.tickSeconds;
@@ -440,6 +495,14 @@ export function feetLine(kind, m) {
   const per100 = (jumps, shots) => (shots ? ((jumps / shots) * 100).toFixed(1) : '-');
   const fights = `(${pct(m.jumpsFightHurt, m.jumpsFight)} within a second of a hit taken, ${pct(m.jumpsFightShot, m.jumpsFight)} of an own shot, ${pct(m.jumpsFightSlow, m.jumpsFight)} from under ${SLOW} units a second; jumps after 100 shots: sniper ${per100(m.jumpsShotSniper, m.shotsSniper)}, rifle ${per100(m.jumpsShotRifle, m.shotsRifle)}, pistol ${per100(m.jumpsShotPistol, m.shotsPistol)}; ${m.jumpsShotSniper} / ${m.jumpsShotRifle} / ${m.jumpsShotPistol} jumps)`;
   return `${kind.padEnd(8)} G7 jumps a minute: in a fight ${rate(m.jumpsFight)} ${fights}, up a ledge ${rate(m.jumpsUp)}, down a ledge ${rate(m.jumpsDown)}, on the flat ${rate(m.jumpsFlat)} (in the first ${EARLY} s ${early}, later ${late}; from under ${SLOW} units a second ${pct(m.jumpsFlatSlow, m.jumpsFlat)}; ${where})  |  rifle shots on the run, the nearest enemy under ${RANGES[0]}: ${run('Near')}, to ${RANGES[1]}: ${run('Mid')}, further: ${run('Far')}; ${speeds}`;
+}
+
+/** One line of the style of the feet of a kind: its taps of the duck a minute, its chains of hops, and the steps of its fights. */
+export function styleLine(kind, m) {
+  const minutes = Math.max(1, m.alive / 60);
+  const rate = (n) => (n / minutes).toFixed(2);
+  const beat = m.sideTurns ? `${(m.sideSeconds / m.sideTurns).toFixed(2)} s of side steps for each change of side (${m.sideTurns} changes)` : 'no change of side';
+  return `${kind.padEnd(8)} G7 taps of the duck a minute: ${rate(m.taps)} (on a run ${rate(m.tapsRun)}, from a stand ${rate(m.tapsStand)}, in a fight ${rate(m.tapsFight)}); flat jumps in a chain: ${pct(m.chained, m.jumpsFlat)} of ${m.jumpsFlat}; in a fight: ${beat}`;
 }
 
 const quantile = (list, p) => {
