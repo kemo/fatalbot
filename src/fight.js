@@ -5,7 +5,7 @@ import { PI, RAD, atan2, cos, eyeOf, forwardOf, hypot, max, min, sin, toward } f
 import { hand, startHand } from './aim.js';
 import { approachPoint } from './watch.js';
 import { fightStep } from './moves.js';
-import { WEAPONS, fightGun, isMelee, isSniper } from './weapons.js';
+import { WEAPONS, fightGun, isMelee, isSniper, stillSpeedOf } from './weapons.js';
 
 // At this range and beyond a rifle taps in bursts; nearer it sprays.
 const TAP_RANGE = 700;
@@ -30,6 +30,17 @@ const RUN_GUN = 0.35;
 const CLOSE_FIRE = 400;
 // The bolt of an AWP or a Scout: the game brings the scope back itself after it.
 const BOLT = { awp: 1.45, scout: 1.25 };
+// The points of a body that a shot can go for: up from the eye and to the side (units). Sight needs one clear line
+// (senses.js look), so the drawn point of the aim can lie behind the corner that hides the rest of the body.
+const BODY_UP = [4, 0, -7, -17, -29];
+const BODY_SIDE = [0, -7, 7];
+// Fewer clear points than this: the bot sees a sliver of the enemy and steps WIDE_STEP to the side that shows more,
+// for WIDE_SECONDS, as a player widens a peek. Two players that stand at a corner otherwise fire into it.
+const WIDE_ENOUGH = 6;
+const WIDE_STEP = 32;
+const WIDE_SECONDS = 0.4;
+// A wall this near the aim point stands behind the enemy, not in front of it.
+const WALL_MARGIN = 16;
 
 /** A new enemy in sight: the reaction time starts, and this fight draws how it goes. */
 export function startFight(c) {
@@ -49,6 +60,8 @@ export function startFight(c) {
   s.runGun = s.strafe && random() < RUN_GUN;
   s.crouch = random() < skill.duckInFight;
   s.strafeTurn = 0;
+  s.aimFix = null;
+  s.widen = null;
 }
 
 /** The shots of the gun in the hand since the last tick, read off its clip. */
@@ -79,6 +92,13 @@ function mateInLine(c, cmd, reach) {
   return false;
 }
 
+/** True when the line of the shot (the view and its punch) meets the level within `reach` less WALL_MARGIN. */
+function wallInLine(c, eye, cmd, reach) {
+  const f = forwardOf(cmd.pitch + c.own.punch[0], cmd.yaw + c.own.punch[1]);
+  const d = max(0, reach - WALL_MARGIN);
+  return c.brain.ports.traceLine(eye, [eye[0] + f[0] * d, eye[1] + f[1] * d, eye[2] + f[2] * d]) < 1;
+}
+
 /**
  * One tick of the fight with `s.target`. Writes the view, the trigger and, once the bot has reacted and while it
  * sees the enemy, the feet. Returns true when the feet are the fight's: the walk does not take the keys back.
@@ -99,7 +119,11 @@ export function fight(c, cmd) {
   const peek = lost ? approachPoint(c, eye, o) : null;
   const headZ = o[2] + (lost ? s.lastSeenEye ?? target.eye : target.eye) + 4;
   const side = atan2(o[1] - eye[1], o[0] - eye[0]) + PI / 2;
-  const point = peek ?? [o[0] + cos(side) * s.aimSide, o[1] + sin(side) * s.aimSide, headZ - s.aimLow];
+  const drawn = [o[0] + cos(side) * s.aimSide, o[1] + sin(side) * s.aimSide, headZ - s.aimLow];
+  // At each look the aim goes to a point of the body that the eye sees; the feet widen a narrow view.
+  if (!lost && s.seenAt === time) exposure(c, eye, o, drawn, side);
+  const fix = lost ? null : s.aimFix;
+  const point = peek ?? (fix ? [o[0] + cos(side) * fix[1], o[1] + sin(side) * fix[1], o[2] + target.eye + fix[0]] : drawn);
   const want = toward(eye, point);
   // The recoil it pulls down by its control.
   const off = hand(c, cmd, want.yaw - own.punch[1] * skill.recoilControl, want.pitch - own.punch[0] * skill.recoilControl, want.distance);
@@ -123,18 +147,78 @@ export function fight(c, cmd) {
     resting = true;
   }
   const onAim = off <= room * (s.burst === 0 ? FIRST_SHOT_ROOM : 1);
-  const ready = me.weapon === gun && scoped && onAim && !resting;
+  // No point of the body in sight: no shot into the wall.
+  const ready = me.weapon === gun && scoped && onAim && !resting && s.aimFix !== false;
   // The feet: from side to side as the player strafed, else still; a sniper stands. Slow enough for the gun, or no shot.
   if (sniper) s.strafe = false;
-  const steady = fightStep(c, cmd, ready);
+  const steady = !sniper && time < (s.widen?.until ?? 0) ? widenStep(c, cmd, ready) : fightStep(c, cmd, ready);
   // Close in, a player fires at once and stops while the shots go: the first ones leave on the run. The players of
   // the demos fire 5 to 8 of 100 rifle shots over 140 units a second (docs/measures).
   if (!ready || (!steady && want.distance > CLOSE_FIRE)) return true;
   // A teammate in the line of the shot: no shot, as a player holds fire.
   if (mateInLine(c, cmd, want.distance)) return true;
+  // The view, with its recoil, meets a wall before the enemy: no shot. A player sees the corner in front of the sight.
+  if (wallInLine(c, eye, cmd, want.distance)) return true;
   cmd.attack = w?.auto ? true : c.tick % 2 === 0;
   if (s.crouch) cmd.duck = true;
   return true;
+}
+
+/** The points of the body at `o` (offsets of BODY_UP and BODY_SIDE) with a clear line from `eye`. */
+function clearPoints(c, eye, o, eyeZ, side) {
+  const out = [];
+  for (const up of BODY_UP) {
+    for (const by of BODY_SIDE) {
+      const q = [o[0] + cos(side) * by, o[1] + sin(side) * by, o[2] + eyeZ + up];
+      if (c.brain.ports.traceLine(eye, q) >= 1) out.push([up, by, q]);
+    }
+  }
+  return out;
+}
+
+/**
+ * One look at the target's body. Sets `s.aimFix`: null when the drawn point is in sight, else the offsets [up, side]
+ * of the nearest point in sight, or false when no point is. Sets `s.widen` when the view is narrow and a step to
+ * a side shows more of the body.
+ */
+function exposure(c, eye, o, drawn, side) {
+  const { me, s, time } = c;
+  const eyeZ = s.target.eye;
+  const seen = clearPoints(c, eye, o, eyeZ, side);
+  if (c.brain.ports.traceLine(eye, drawn) >= 1) s.aimFix = null;
+  else if (!seen.length) s.aimFix = false;
+  else {
+    let best = seen[0];
+    for (const p of seen) if (hypot(p[2][0] - drawn[0], p[2][1] - drawn[1], p[2][2] - drawn[2]) < hypot(best[2][0] - drawn[0], best[2][1] - drawn[1], best[2][2] - drawn[2])) best = p;
+    s.aimFix = [best[0], best[1]];
+  }
+  if (seen.length >= WIDE_ENOUGH) {
+    s.widen = null;
+    return;
+  }
+  if (time < (s.widen?.until ?? 0)) return;
+  // The right of a view toward the enemy: a side key of +1 moves that way.
+  const yaw = atan2(o[1] - eye[1], o[0] - eye[0]);
+  const right = [sin(yaw), -cos(yaw)];
+  let best = null;
+  let most = seen.length;
+  for (const k of [1, -1]) {
+    const to = [me.origin[0] + right[0] * k * WIDE_STEP, me.origin[1] + right[1] * k * WIDE_STEP, me.origin[2]];
+    if (c.brain.ports.traceHull(me.origin, to, me.ducked) < 1) continue;
+    const n = clearPoints(c, [to[0], to[1], eye[2]], o, eyeZ, side).length;
+    if (n > most) [best, most] = [k, n];
+  }
+  s.widen = best ? { side: best, until: time + WIDE_SECONDS } : null;
+}
+
+/** The feet of a widened peek (`s.widen`): a side step, at a walk while the shots go. True when the gun is steady. */
+function widenStep(c, cmd, firing) {
+  const { me, s } = c;
+  const limit = stillSpeedOf(cmd.weapon ?? me.weapon);
+  cmd.forward = 0;
+  cmd.side = s.widen.side;
+  if (firing && limit < Infinity) cmd.walk = true;
+  return hypot(me.velocity[0], me.velocity[1]) <= limit;
 }
 
 /** With the knife a player runs at the enemy, from side to side, and strikes in reach: the stab close, the slash a little further. */
