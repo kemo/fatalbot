@@ -107,6 +107,10 @@ more: the arenas count a recorded player's jumps wrong (docs/measures/2026-11-12
 the same way the players jump 3.5 times a minute and the bots 2.9, with fewer chains of hops, and the players are
 ducked 9 to 13% of a round against the bots' 1 to 2%.
 
+On 2026-11-13 the fight at a corner and the duck of a ducked fight moved G1 from 68.2% to 74.9% of 768 rounds
+(four maps, seeds 1 to 8; docs/measures/2026-11-13-fight.md). A bot that fights from a stand now steps to a side
+between bursts, at the owner's word: no gate measures the feet in a fight.
+
 To come for G7, with the demo data (section 6): the likeness to the players as `tools/compare-fights.js` and
 `tools/aim-stats.js` of csbih-player measure it.
 
