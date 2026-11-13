@@ -103,7 +103,11 @@ test('the lineups of a map: a part is a throw from a stand, and it goes off near
 });
 
 test('in a match the bots of fatalbot throw lineups', { skip }, () => {
-  const fatal = fatalKind(core, level, { lineups });
-  const m = runMatch({ core, level, sides: { T: fatal, CT: referenceKind(core) }, seed: 4, rounds: 4 });
-  assert.ok(m.measure.fatal.throws >= 2, `${m.measure.fatal.throws} grenades in 4 rounds`);
+  // Two matches: the throws of one seed go from 1 to 9 of 4 rounds with a small change of the fight.
+  let throws = 0;
+  for (const seed of [4, 5]) {
+    const m = runMatch({ core, level, sides: { T: fatalKind(core, level, { lineups }), CT: referenceKind(core) }, seed, rounds: 4 });
+    throws += m.measure.fatal.throws;
+  }
+  assert.ok(throws >= 4, `${throws} grenades in 8 rounds`);
 });
