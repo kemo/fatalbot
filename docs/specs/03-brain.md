@@ -62,9 +62,14 @@ round a teammate, the jump of a stuck bot, the island of the graph.
   and on a walk edge the bot jumps at a ledge only once the ledge holds it up. The reference bot jumps on stairs.
 - **New:** the bunny hop (`hop`): by the profile's habit (`jumpRate`, `hopChain`), on a straight open run, never in
   a hurry. In the air the forward key is up, a strafe key is down and the view swings 8 degrees across the way. The
-  next jump comes on the landing, now and then a tick or two late. The players of the measured demos rarely hop in
-  a chain (0.1 to 0.6 times a minute), and fatalbot with their profiles does the same; a profile with a high
-  `hopChain` hops more.
+  next jump comes on the landing, now and then a tick or two late. `hopChain` is the part of a player's flat jumps
+  that follow another in a chain (the middle player: 0.17). The places that allow a chain cap a bot at about 9% of
+  its flat jumps (docs/measures/2026-11-13-feet.md).
+- **New:** the tap of the duck (`duckTap`), the duck on the mouse wheel: the duck key down for one tick on a calm
+  run or wait, at the profile's `duckTaps` a minute, in rolls of one tap or a few. The game lifts the player 18
+  units and they fall back; the run keeps its speed. Never near a sign of an enemy, in a hop or on a walk.
+- **New:** `jumpRate` is the real jumps a minute of the live play, and `strafeBeat` sets how long a step of a fight
+  lasts.
 - **New:** the bot counts its own jumps of the round, and the hop comes more often while the count is under the
   profile's `jumpRate` and less often over it.
 - **New:** where a bot comes no nearer to its point for 0.5 s, within 64 units of it, it stands. The point can lie
