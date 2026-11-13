@@ -12,7 +12,7 @@ import { lookAt } from './aim.js';
 import { noiseAim, restLook, viewOpen } from './watch.js';
 import { giveUp, leaveLadder, makeWay, restStuck, walkTo } from './walk.js';
 import { fight, startFight } from './fight.js';
-import { idleJump } from './moves.js';
+import { duckTap, idleJump } from './moves.js';
 import { decide, forgetGoal } from './tactics.js';
 import { buyList } from './buy.js';
 import { flashToAvoid, lineupThrow } from './grenades.js';
@@ -47,12 +47,17 @@ export const DEFAULT_PROFILE = {
   burstNear: 8,
   moveInFight: 0.25,
   duckInFight: 0.2,
-  // On a way: the part of the time walked (shift), the runs with the knife out, jumps a minute, and the chance
-  // that one more bunny hop follows a jump.
+  // On a way: the part of the time walked (shift), the runs with the knife out, the jumps a minute of the live
+  // play, and the part of the flat jumps that follow another in a chain of bunny hops. The last two, and the two
+  // after them, are the middle of the players of the demos (docs/measures/2026-11-13-feet.md).
   walkShare: 0.2,
   knifeRun: 0.2,
-  jumpRate: 6,
-  hopChain: 0.5,
+  jumpRate: 2.9,
+  hopChain: 0.17,
+  // The taps of the duck a minute out of a fight (the duck on the mouse wheel, moves.js duckTap).
+  duckTaps: 1.3,
+  // The seconds of side steps in a fight for each change of the side (moves.js fightStep).
+  strafeBeat: 0.9,
 };
 
 // How often a team looks at its plan again, in seconds.
@@ -255,6 +260,8 @@ function command(c) {
   if (goal.duck) cmd.duck = true;
   // A player that waits at a place jumps now and then (moves.js idleJump).
   if (!fighting && !feet && goal.kind === 'hold' && idleJump(c, cmd)) cmd.jump = true;
+  // The duck on the mouse wheel: a habit of the run and of the wait (moves.js duckTap).
+  if (!fighting && !feet && goal.kind !== 'plant' && goal.kind !== 'defuse' && duckTap(c, cmd)) cmd.duck = true;
   // Danger near (an enemy heard or seen, a hit taken): no knife in the hand.
   const alert = time - (s.alertAt ?? -Infinity) < ALERT_SECONDS || (own.hurt !== null && time - own.hurt.at < ALERT_SECONDS);
   const knives = frame.round.knives;

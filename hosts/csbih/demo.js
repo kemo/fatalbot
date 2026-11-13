@@ -142,7 +142,7 @@ function whyOf(derails) {
 }
 
 // The numbers of a hand and an eye that both bots read under the same names.
-const MOTOR = ['reaction', 'turnSpeed', 'lookSpring', 'tremor', 'handTime', 'recoilControl', 'headAim', 'fov', 'hearing', 'aggression', 'burstFar', 'burstNear', 'moveInFight', 'duckInFight', 'walkShare', 'knifeRun', 'jumpRate'];
+const MOTOR = ['reaction', 'turnSpeed', 'lookSpring', 'tremor', 'handTime', 'recoilControl', 'headAim', 'fov', 'hearing', 'aggression', 'burstFar', 'burstNear', 'moveInFight', 'duckInFight', 'walkShare', 'knifeRun', 'jumpRate', 'hopChain', 'duckTaps', 'strafeBeat'];
 
 function motorOf(profile) {
   const out = {};

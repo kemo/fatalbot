@@ -35,6 +35,11 @@ const RUN_FAST = 0.9;
 const HOP_EAGER = 3;
 const HOP_LAZY = 0.3;
 const HOP_KEEN = 12;
+// `hopChain` is the part of a player's flat jumps that follow another in a chain, over all its jumps. A bot can
+// chain only where the floor and its view allow it: with a chance of 0.5 there, 8.5% of its flat jumps were in a
+// chain (docs/measures/2026-11-13-feet.md). So the chance at such a place is the player's part times this.
+const CHAIN_GAIN = 5.9;
+const CHAIN_MOST = 0.95;
 // The landing of a hop: the key comes this many ticks late at most (a perfect hop every time is no hand).
 const LATE_TICKS = 2;
 // A stand in a fight: over this speed the keys push against the run; under it the friction ends it.
@@ -44,6 +49,22 @@ const COUNTER_OVER = 40;
 const IDLE_STILL = 20;
 const IDLE_CALM = 5;
 const JUMP_ROOM = 48;
+// The tap of the duck lifts the feet this far (units) for about this long (s): 18 units fall in 0.21 s.
+const TAP_LIFT = 18;
+const TAP_AIR = 0.25;
+// No tap this long after the last sign of an enemy (s).
+const TAP_CALM = 3;
+// How a bot keeps to its profile's taps a minute: as the hop keeps to its jumps (HOP_EAGER).
+const TAP_EAGER = 3;
+const TAP_LAZY = 0.3;
+const TAP_KEEN = 12;
+// A roll of the wheel: after each tap one more follows with this chance, up to TAP_ROLL taps. In the demos a tap
+// has one more within 0.8 s in 34% of the cases (docs/measures/2026-11-13-feet.md).
+const TAP_MORE = 0.34;
+const TAP_ROLL = 5;
+// The steps of a fight change their side each 0.35 to 0.7 s for a player of the middle: by the measure of the
+// arena that is this many seconds of side steps for each change (`strafeBeat` of the default profile).
+const STEP_BEAT = 0.9;
 // In a fight from a stand, the rest between two bursts is a step to a side (the jiggle of a player), then the
 // counter-strafe stops the feet for the next burst. A side whose eye, this far over, loses the enemy is not taken.
 // The step takes half the rest, REST_STEP_SECONDS at most.
@@ -115,7 +136,7 @@ export function hop(c, cmd, path, target, run, distance, kind) {
     // How many hops follow the first jump: each one by the player's habit, and only from a view that lies on the
     // way (the air strafe of a chain swings the view across it).
     let more = 0;
-    if (abs(turn(run - me.yaw)) <= ON_VIEW) while (more < 6 && (c.free || random() < skill.hopChain)) more++;
+    if (abs(turn(run - me.yaw)) <= ON_VIEW) while (more < 6 && (c.free || random() < Math.min(CHAIN_MOST, skill.hopChain * CHAIN_GAIN))) more++;
     h = s.hop = { more, swing: more > 0, dir: random() < 0.5 ? 1 : -1, rate: SWING / AIR_SECONDS, air: false, late: 0, tick: c.tick };
     cmd.jump = true;
     return false;
@@ -175,6 +196,45 @@ export function idleJump(c, cmd) {
   return brain.ports.traceHull(o, [o[0], o[1], o[2] + JUMP_ROOM], false) >= 1;
 }
 
+/**
+ * The tap of the duck, the duck on the mouse wheel: a habit of the run and of the wait, as the jump is. The key is
+ * down for one tick; the game stands the player up from the started duck 18 units higher (pm_shared PM_UnDuck) and
+ * they fall back. The run keeps its speed, and the feet make no step in the air. A roll of the wheel gives one tap
+ * or a few in a row. True when the duck key goes down now.
+ *
+ * The taps come by chance at the rate of the profile (`duckTaps` a minute out of a fight), the more readily the
+ * further the count of the round lies behind it. Never in a fight, in a hop, on a walk (shift) or with no room.
+ */
+export function duckTap(c, cmd) {
+  const { me, s, skill, time, random, dt, brain } = c;
+  if (!(skill.duckTaps > 0) || c.frame.round.phase !== 'live' || s.hop || cmd.duck || cmd.jump || cmd.walk || !me.onGround || me.onLadder || me.ducked) return false;
+  // The enemy near, by the eye or the ear: the feet stay on the floor for the first shot.
+  if (time - s.seenAt < TAP_CALM || time - (s.alertAt ?? -Infinity) < TAP_CALM) {
+    s.roll = 0;
+    return false;
+  }
+  // The next tap of a roll comes when the feet are back on the floor.
+  if (time - (s.tapAt ?? -Infinity) < TAP_AIR) return false;
+  if (!(s.roll > 0)) {
+    const owed = (skill.duckTaps * (time - (s.liveAt ?? time))) / 60 - (s.taps ?? 0);
+    if (random() >= (skill.duckTaps / 60) * clamp(1 + owed * TAP_EAGER, TAP_LAZY, TAP_KEEN) * dt) return false;
+    s.roll = 1;
+    while (s.roll < TAP_ROLL && random() < TAP_MORE) s.roll++;
+  }
+  // Room for the body 18 units up, and along the way that it flies in that time.
+  const o = me.origin;
+  const up = [o[0], o[1], o[2] + TAP_LIFT + 2];
+  const on = [up[0] + me.velocity[0] * TAP_AIR, up[1] + me.velocity[1] * TAP_AIR, up[2]];
+  if (brain.ports.traceHull(o, up, false) < 1 || brain.ports.traceHull(up, on, false) < 1) {
+    s.roll = 0;
+    return false;
+  }
+  s.roll--;
+  s.tapAt = time;
+  s.taps = (s.taps ?? 0) + 1;
+  return true;
+}
+
 /** The side step of a rest between bursts: each rest the other side, or the one side that keeps the enemy in sight. */
 function restStep(c, cmd) {
   const { me, s, time, random, brain } = c;
@@ -222,7 +282,7 @@ export function fightStep(c, cmd, firing) {
   }
   if (time >= (s.strafeTurn ?? 0)) {
     s.strafeSide = s.strafeSide === 1 ? -1 : 1;
-    s.strafeTurn = time + random(0.35, 0.7);
+    s.strafeTurn = time + random(0.35, 0.7) * (c.skill.strafeBeat / STEP_BEAT);
   }
   cmd.side = s.strafeSide;
   cmd.forward = 0;

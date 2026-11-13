@@ -274,3 +274,30 @@ test('a bot that waits at its place jumps now and then, by the count of its prof
   const fought = wait(1, (post, watch) => [post[0] + (watch[0] - post[0]) / 4, post[1] + (watch[1] - post[1]) / 4, 36]);
   assert.ok(fought.some((c) => c.attack) && fought.every((c) => !c.jump), 'not with an enemy in sight');
 });
+
+test('a bot taps the duck on its wait and on its run at the rate of its profile, one tick each, and never with an enemy near', () => {
+  const map = () => flatMap({ sites: [{ mins: [450, 350, 0], maxs: [550, 450, 72] }], size: 56, spawns: [-800, 600] });
+  const wait = (seed, enemyAt, phase = 'live', duckTaps = 12, ports = { half: 5000 }) => {
+    const brain = createBrain({ map: map(), ports: flatPorts(ports), seed });
+    brain.join(1, { profile: { duckTaps, jumpRate: 0 } });
+    brain.frame(frameAt(1, [player(1, 'CT', [600, 0, 36], { own: true }), player(2, 'T', [-800, 0, 36])]));
+    brain.think(1);
+    const { point: post, watch } = brain.teams.CT.plan.posts.get(1);
+    const enemy = enemyAt(post, watch);
+    return run(brain, 1, 3000, () => [player(1, 'CT', brain.debug(1).point ?? post, { own: true }), player(2, 'T', enemy)], () => ({ phase }));
+  };
+  const hidden = (post) => [post[0] < WALL_X ? WALL_X + 300 : WALL_X - 300, post[1], 36];
+  let taps = 0;
+  for (const seed of [1, 2, 3, 4]) {
+    const commands = wait(seed, hidden);
+    taps += commands.filter((c) => c.duck).length;
+    // The key is down for one tick, and the next tap of a roll waits for the fall of this one.
+    assert.ok(commands.every((c, i) => !c.duck || commands.slice(i + 1, i + 25).every((d) => !d.duck)), 'no held duck, and no tap in the air');
+  }
+  // 30 s at 12 a minute are 6 taps of each bot.
+  assert.ok(taps > 8 && taps < 60, `it taps at about its rate (${taps} taps of four bots in 30 s each)`);
+  assert.ok(wait(1, hidden, 'live', 0).every((c) => !c.duck), 'a player that never tapped does not');
+  assert.ok(wait(1, hidden, 'freeze').every((c) => !c.duck), 'not in the freeze time');
+  const fought = wait(1, (post, watch) => [post[0] + (watch[0] - post[0]) / 4, post[1] + (watch[1] - post[1]) / 4, 36]);
+  assert.ok(fought.some((c) => c.attack) && fought.every((c) => !c.duck), 'not with an enemy in sight');
+});
