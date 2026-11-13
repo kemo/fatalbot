@@ -5,7 +5,7 @@
 
 import { PI, RAD, abs, atan2, clamp, cos, hypot, sin, turn } from './geometry.js';
 import { WALK } from './nav.js';
-import { maxSpeedOf, stillSpeedOf } from './weapons.js';
+import { isSniper, maxSpeedOf, stillSpeedOf } from './weapons.js';
 
 // A jump on a run needs this much straight floor ahead; a hop after it needs this much more.
 const JUMP_STRAIGHT = 220;
@@ -44,6 +44,11 @@ const COUNTER_OVER = 40;
 const IDLE_STILL = 20;
 const IDLE_CALM = 5;
 const JUMP_ROOM = 48;
+// In a fight from a stand, the rest between two bursts is a step to a side (the jiggle of a player), then the
+// counter-strafe stops the feet for the next burst. A side whose eye, this far over, loses the enemy is not taken.
+// The step takes half the rest, REST_STEP_SECONDS at most.
+const REST_STEP = 24;
+const REST_STEP_SECONDS = 0.2;
 
 /**
  * The straight level run that the way gives from the bot along `run` (degrees), in units: the distance to the
@@ -170,6 +175,32 @@ export function idleJump(c, cmd) {
   return brain.ports.traceHull(o, [o[0], o[1], o[2] + JUMP_ROOM], false) >= 1;
 }
 
+/** The side step of a rest between bursts: each rest the other side, or the one side that keeps the enemy in sight. */
+function restStep(c, cmd) {
+  const { me, s, time, random, brain } = c;
+  if (s.restFor !== s.restUntil) {
+    s.restFor = s.restUntil;
+    s.restStepEnd = time + Math.min(REST_STEP_SECONDS, (s.restUntil - time) / 2);
+    s.restSide = 0;
+    const t = s.target;
+    if (t && me.onGround) {
+      const yaw = cmd.yaw * RAD;
+      const at = [t.origin[0], t.origin[1], t.origin[2] + t.eye];
+      const keeps = (k) => {
+        const to = [me.origin[0] + sin(yaw) * k * REST_STEP, me.origin[1] - cos(yaw) * k * REST_STEP, me.origin[2]];
+        return brain.ports.traceHull(me.origin, to, me.ducked) >= 1 && brain.ports.traceLine([to[0], to[1], to[2] + me.eye], at) >= 1;
+      };
+      const first = s.lastRestSide ? -s.lastRestSide : random() < 0.5 ? 1 : -1;
+      s.restSide = keeps(first) ? first : keeps(-first) ? -first : 0;
+      if (s.restSide) s.lastRestSide = s.restSide;
+    }
+  }
+  if (!s.restSide || time >= s.restStepEnd) return false;
+  cmd.forward = 0;
+  cmd.side = s.restSide;
+  return true;
+}
+
 /**
  * The feet in a fight, as players of 1.6 fought: side to side, a step each 0.35 to 0.7 s, and under the gun's
  * speed limit while the shots go (the walk key, or the stop at the turn). `firing` is true when the trigger is
@@ -180,6 +211,7 @@ export function fightStep(c, cmd, firing) {
   const limit = stillSpeedOf(cmd.weapon ?? me.weapon);
   const speed = hypot(me.velocity[0], me.velocity[1]);
   if (!s.strafe) {
+    if (!firing && time < (s.restUntil ?? 0) && !isSniper(cmd.weapon ?? me.weapon) && restStep(c, cmd)) return speed <= limit;
     // A stand: the keys against the run stop the feet in a few ticks (the counter-strafe), then nothing is held.
     if (speed > COUNTER_OVER && me.onGround) {
       const yaw = cmd.yaw * RAD;

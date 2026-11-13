@@ -94,3 +94,28 @@ test('two bots at a corner fire at the part of the body in sight, and hold fire 
   assert.ok(sum.shots > 50, `the bots fought: ${JSON.stringify(sum)}`);
   assert.ok(sum.corner / sum.shots < 0.15, `few shots go into the corner: ${JSON.stringify(sum)}`);
 });
+
+// A bot at 800 units from an enemy that takes no hit: the fight goes on for many bursts.
+function longFight(profile, ticks, onShot) {
+  const { players, run } = arena(5, [], [
+    { id: 1, team: 'CT', origin: [0, 0, 37], yaw: 0, weapon: 'm4a1', bot: true },
+    { id: 2, team: 'T', origin: [800, 0, 37], yaw: 180, weapon: 'ak47', bot: false },
+  ], { profile, boxes: false });
+  run(ticks, (e, p, i) => e.player === 1 && onShot(p, i));
+  return players[0];
+}
+
+test('a bot that fights from a stand steps to a side between bursts, and stands still for each shot far away', { skip }, () => {
+  let shots = 0;
+  let fast = 0;
+  let side = 0;
+  const bot = longFight(STAND, 400, (p) => {
+    shots++;
+    side = Math.max(side, Math.abs(p.body.origin[1]));
+    if (Math.hypot(p.body.velocity[0], p.body.velocity[1]) > 140) fast++;
+  });
+  assert.ok(bot.alive);
+  assert.ok(shots >= 10, `the bot fired bursts: ${shots}`);
+  assert.ok(side > 10, `the bot stepped to a side: ${side.toFixed(1)}`);
+  assert.equal(fast, 0, 'no shot on the run at 800 units');
+});
