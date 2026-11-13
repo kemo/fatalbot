@@ -152,6 +152,8 @@ export function fight(c, cmd) {
   // The feet: from side to side as the player strafed, else still; a sniper stands. Slow enough for the gun, or no shot.
   if (sniper) s.strafe = false;
   const steady = !sniper && time < (s.widen?.until ?? 0) ? widenStep(c, cmd, ready) : fightStep(c, cmd, ready);
+  // A ducked fight holds the key from the reaction on: the game takes 0.4 s to duck, longer than a short burst.
+  if (s.crouch) cmd.duck = true;
   // Close in, a player fires at once and stops while the shots go: the first ones leave on the run. The players of
   // the demos fire 5 to 8 of 100 rifle shots over 140 units a second (docs/measures).
   if (!ready || (!steady && want.distance > CLOSE_FIRE)) return true;
@@ -160,7 +162,6 @@ export function fight(c, cmd) {
   // The view, with its recoil, meets a wall before the enemy: no shot. A player sees the corner in front of the sight.
   if (wallInLine(c, eye, cmd, want.distance)) return true;
   cmd.attack = w?.auto ? true : c.tick % 2 === 0;
-  if (s.crouch) cmd.duck = true;
   return true;
 }
 

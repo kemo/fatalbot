@@ -119,3 +119,14 @@ test('a bot that fights from a stand steps to a side between bursts, and stands 
   assert.ok(side > 10, `the bot stepped to a side: ${side.toFixed(1)}`);
   assert.equal(fast, 0, 'no shot on the run at 800 units');
 });
+
+test('a bot that fights ducked is down for most of its shots, not only from the end of its first burst', { skip }, () => {
+  let shots = 0;
+  let ducked = 0;
+  longFight({ ...STAND, duckInFight: 1 }, 300, (p) => {
+    shots++;
+    if (p.body.ducked) ducked++;
+  });
+  assert.ok(shots >= 6, `the bot fired: ${shots}`);
+  assert.ok(ducked / shots > 0.7, `ducked shots: ${ducked} of ${shots}`);
+});
