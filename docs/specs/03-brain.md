@@ -63,8 +63,8 @@ round a teammate, the jump of a stuck bot, the island of the graph.
 - **New:** the bunny hop (`hop`): by the profile's habit (`jumpRate`, `hopChain`), on a straight open run, never in
   a hurry. In the air the forward key is up, a strafe key is down and the view swings 8 degrees across the way. The
   next jump comes on the landing, now and then a tick or two late. `hopChain` is the part of a player's flat jumps
-  that follow another in a chain (the middle player: 0.17). The places that allow a chain cap a bot at about 9% of
-  its flat jumps (docs/measures/2026-11-13-feet.md).
+  that follow another in a chain (the middle player: 0.17). A bot with that number has 16% to 19% of its flat
+  jumps in a chain (docs/measures/2026-11-13-feet.md).
 - **New:** the tap of the duck (`duckTap`), the duck on the mouse wheel: the duck key down for one tick on a calm
   run or wait, at the profile's `duckTaps` a minute, in rolls of one tap or a few. The game lifts the player 18
   units and they fall back; the run keeps its speed. Never near a sign of an enemy, in a hop or on a walk.
