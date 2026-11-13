@@ -31,10 +31,12 @@ const AIR_FULL = 1.12;
 // A hop starts only from a run this fast, as a part of the weapon's speed.
 const RUN_FAST = 0.9;
 // How a bot keeps to its profile's jumps a minute: each jump that it owes multiplies the chance of a start by
-// HOP_EAGER more, between HOP_LAZY (ahead of its count) and HOP_KEEN times.
-const HOP_EAGER = 3;
+// HOP_EAGER more, between HOP_LAZY (ahead of its count) and HOP_KEEN times. The profile counts the real jumps of
+// a player (about 3 a minute), and a bot can jump on a part of its way only: so a bot behind its count jumps at
+// almost the first place that allows it.
+const HOP_EAGER = 10;
 const HOP_LAZY = 0.3;
-const HOP_KEEN = 12;
+const HOP_KEEN = 40;
 // `hopChain` is the part of a player's flat jumps that follow another in a chain, over all its jumps. A bot can
 // chain only where the floor and its view allow it: with a chance of 0.5 there, 8.5% of its flat jumps were in a
 // chain (docs/measures/2026-11-13-feet.md). So the chance at such a place is the player's part times this.
