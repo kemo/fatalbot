@@ -1,6 +1,7 @@
 # Roadmap: bots that play and look like a team of players
 
-Date: 2026-11-13. State: a proposal for the owner. Nothing in it is built.
+Date: 2026-11-13. State: a proposal for the owner. An item that was built since has the mark **Done** with its
+date; the rest is not built. Section 1a gives what changed on 2026-11-13 and 2026-11-14 after the reviews.
 
 The owner's aim (2026-11-13): the bots must play as real teams played CS 1.6 in 5 on 5 matches. They trade
 kills. They do not stand in the open in the middle of the map. They hear a call ("one died at A") and they
@@ -30,12 +31,35 @@ Each fact below has one of these marks:
 **Limit.** The work machine of 2026-11-13 has no `out/`, no `demos/` and no `assets/levels/` in csbih-player.
 No arena and no mining tool ran for this document. Section 6.1 tells how to get the data.
 
+## 1a. What changed after the reviews (2026-11-13 and 2026-11-14)
+
+The reviews read fatalbot at `8212a30` and csbih-player at `1bd4500`. Since then:
+
+- **The tap of the duck is built** (fatalbot `7581a76`, csbih-player PR #21): `duckTap` in `moves.js`, at the
+  `duckTaps` a minute of the profile. The record is `docs/measures/2026-11-13-feet.md`. Items E3 (item 1), C3 (the
+  taps) and C4 (the jump count) below have their new state.
+- **A profile has the real jumps.** The old `jumpRate` counted each fast rise as a jump: a tap of the duck, a stand
+  out of a duck, and the freeze time too. The middle player has 2.9 jumps a minute, not 9. A profile also has
+  `hopChain`, `duckTaps` and `strafeBeat` now, from `profile.js feetOf`.
+- **G1 over 32 seeds, and a smaller run of G2**, are in section 2.1.
+- **A shared match** is in csbih-player main (its spec 13): a room server runs the game core and fatalbot, and the
+  page of each member predicts its own player with the same movement code against the other players as they were
+  40 ms before. So the room is a third place where the brain runs, and stage A changes code that the page predicts
+  with. A1 to A3 need a test in a room: a solid player that the page sees late gives a correction of the place.
+- **The death and the bursts of H1** are in csbih-player main (PRs #18 and #20). The same merge made the person
+  solid to a recorded teammate (`hull.js`, `selfHuman`): see A3.
+
 ## 2. The state today
 
 ### 2.1 What is good (docs)
 
-- G1: fatalbot wins 74.9% of 768 rounds against the reference bots, with the same motor profile.
-- G2: the Ts win 50.1% of the rounds of fatalbot against fatalbot.
+- G1: fatalbot wins 71.2% of 3,072 rounds against the reference bots, with the same motor profile (seeds 1 to
+  32, feet record, section 7). The 74.9% of the fight record is the seeds 1 to 8 of that run. With the tap of the
+  duck and the players' jumps it is 69.6%, a difference of 1.6 points with an error of 1.6.
+- G2: the Ts win 50.1% of 2,592 rounds of fatalbot against fatalbot (36 seeds, night of 2026-11-12, at `4cea0ab`
+  before the fight changes). A run of 4 seeds at `8212a30` gave 38.0% of 384 rounds, and 42.2% with the tap of
+  the duck and the players' jumps (feet record, section 7). Four seeds do not replace 36: G2 after the fight
+  changes needs a run of the first size.
 - The share of kills with a shot to the head, the time to the first shot, the turn and the crosshair errors lie
   inside the spread of the players.
 - The first T stands in a site at second 34 (the players: 34). A round takes 57 s (59).
@@ -54,7 +78,7 @@ No arena and no mining tool ran for this document. Section 6.1 tells how to get 
 | 7 | No peek. A bot runs round a corner on the shortest path. | read | spec 03, section 4 |
 | 8 | Ten bots are one player: one profile, no role, no AWP, no radio, no drop of a gun. | read | `hosts/csbih/kind.js:22`, `buy.js` |
 | 9 | No grenade in a default match, and none at all on the page. | read | csbih-player `fatal.js:25-28` |
-| 10 | Time ducked: 1.0% and 1.7% against 9.3% and 12.7%. No duck tap on the run. | docs | night of 2026-11-12, section 8 |
+| 10 | Time ducked: 1.0% and 1.7% against 9.3% and 12.7%. The duck tap on the run: **Done** 2026-11-13 (1.35 a minute; the middle player 1.3). | docs | night of 2026-11-12, section 8; feet record |
 | 11 | A blind bot walks on, and it is deaf too. An enemy flashbang is not in the frame. | read | `senses.js:188` |
 | 12 | A recorded enemy near the human does not see the human, and its shots do no damage. | read | csbih-player `rails.js:333-349`, `rails.js:466-471` |
 
@@ -144,7 +168,9 @@ change of the copy in csbih-player.
 - A recorded player is placed at its coordinates each tick. Nothing stops it: no wall, no door, no player
   (`world.js:102-105`).
 - Its box is a ghost for its own team: `ghostTo` (`world.js:93`, `hull.js:223-224`). In a demo match every bot
-  starts on the rails (`web/play.js:1153`), so the human walks through all its teammates.
+  starts on the rails (`web/play.js:1153`), so the human walked through all its teammates. Since csbih-player PR
+  #20 (2026-11-13) the person is solid to a recorded teammate and walks out of one that ran into it (`hull.js`,
+  `selfHuman`); a recorded player is still a ghost for the bots of its team.
 - An enemy that stands in the path of a recorded player takes it off the rails ("blocked", `rails.js:493-497`).
   A teammate does not.
 
@@ -290,7 +316,7 @@ New rows of `tools/rounds.js`, for the recorded players and for the bots:
 | The angle from the view to the nearest point where enemies appear | `view-<map>.json` of `build-profiles.js` | none |
 | Speed bands in the 5 s before the first sight | samples | none |
 | Time ducked on the move | the duck flag and the speed | the flag is the full duck only |
-| Duck taps a minute | a rise of 18 units that falls back in 0.25 s, duck flag off | demos of 20 samples a second and more |
+| Duck taps a minute. **Done** 2026-11-13: `arena.js gauge` and csbih-player `profile.js feetOf` | a lift of 10 to 27 units from a stand that lands on its level within 0.5 s, with the floors of the level | held by a test at 17 samples a second; in demos under 12 a second the same players have 25% more taps, cause not found |
 | Seconds from a kill to the reload | reload animations | the clip is an estimate |
 | Knife or pistol in the hand on a run | loadouts | none |
 | The turn of the view before a flashbang bursts | grenades and samples | none |
@@ -303,11 +329,15 @@ A demo has no key presses. A counter-strafe tap and a turn under 0.1 s cannot be
 
 - **G8 Team**: the rows of C2, inside the spread of the players.
 - **G9 Body**: the rows of C3, inside the spread of the players.
-- The jump count of the arena does not compare with the recorded players (night of 2026-11-12, section 8). Use
-  the one detector on samples for both.
+- The jump count of the arena did not compare with the recorded players (night of 2026-11-12, section 8).
+  **Done** 2026-11-13: the gauge sorts each time in the air by its lift, for the bots and for a recording. The
+  old count took a tap of the duck and a stand out of a duck for a jump, and missed a jump that starts between two
+  frames. The players jump 3.3 times a minute, not 5.6.
 - fatalbot writes its goals and its tasks into the bot log of the page (`brain.debug`, `brain.js:172-177`). Then
   a play record of the page shows why a bot stood.
 - A result under 7 points of 192 rounds says nothing (plans and feel, section 9). Use paired rounds or more seeds.
+  One set of 384 rounds moved from 68.5% to 77.6% with the seeds alone (feet record, section 7): a difference of G1
+  under 5 points needs 16 seeds or more for each side.
 
 ## 7. Stage D: the team brain
 
@@ -414,8 +444,9 @@ G1 in the places of the recorded CTs (`tools/demo-arena.js`). The first death is
 
 ### D5. Roles, and five different players
 
-**Today (read).** All bots of the arena have one profile (`hosts/csbih/kind.js:22`). On the page a bot takes 17
-motor numbers of a demo player; the places, the guns and the aim error are dropped. Tremor, hand time, view
+**Today (read).** All bots of the arena have one profile (`hosts/csbih/kind.js:22`). On the page and in a room a
+bot takes 20 motor numbers of a demo player (the jumps, the taps of the duck, the chains of hops and the steps of
+a fight among them since 2026-11-13); the places, the guns and the aim error are dropped. Tremor, hand time, view
 field and hearing have no measure: all bots share them. No bot buys an AWP.
 
 **Do.**
@@ -534,12 +565,15 @@ head. Then it goes to the next one. The pitch follows stairs and ramps. Now and 
 minute against 3.6. (docs) A duck in a wait was tried and taken back: it lost 14 of 96 rounds as CTs. "What the
 players do with a duck is not found yet." (read) The game core has the pop of a fast duck: the duck key down for
 one tick lifts the player 18 units (`pmove.js`, `unduck`). The reference bot uses it in the freeze time
-(`antics.js`).
+(`antics.js`). (docs, 2026-11-13) The players tap 1.3 times a minute out of a fight in the live play (p10 0.08, p90
+4.47), and the same player taps as often in other demos (0.81 between two halves of its demos). Three of four
+rolls of the wheel are one tap, and a tap has one more in 34% of the cases.
 
 **Do.**
 
-1. **The tap on the run** (scroll and Ctrl): a habit of the profile, as `jumpRate` is. Chains of 2 to 6 taps on
-   a calm straight run, in the freeze time and after a won round. Never with a fresh sign of an enemy.
+1. **The tap on the run** (scroll and Ctrl): a habit of the profile, as `jumpRate` is. **Done** 2026-11-13 for the
+   live play: one tap or a few on a calm run or wait, never within 3 s of a sign of an enemy. Not chains of 2 to 6:
+   the demos have 1.5 taps for a roll. Open: the taps in the freeze time and after a won round.
 2. **The duck at a post** only where the players ducked (the duck of a place, D4), behind cover that hides a
    ducked body. This is the probable reason of the lost rounds: a duck in the open is a slow target.
 3. **The duck on the move** under a window or behind a low wall, where an enemy's way in sees a standing head.
@@ -640,7 +674,7 @@ to CS 1.6. Two reviews compared the page with the game on 2026-11-13. The server
 source of ReGameDLL_CS (`player.cpp`, `ggrenade.cpp`, `combat.cpp`, `pm_shared.cpp`); the client of CS is not
 public, so a rule of the client has the mark "check" until somebody compares it with the game.
 
-### H1. Done on 2026-11-13 (csbih-player, branch `igraj-death-throw`)
+### H1. Done on 2026-11-13 (csbih-player main, PRs #18 and #20)
 
 - **A death.** The sequence by the hit group and the weights of the model, the throw of the body, the flight
   and the fall of the body, the turn of a bot against its flight.
@@ -696,7 +730,6 @@ The measure of the two changes of the core is in `docs/measures/2026-11-13-death
 - `Team.deaths` and `deathsAt` have no reader (`team.js:95`).
 - `plan.rotate` never clears (`plan.js:193`).
 - The walk pitch is 0 on a ramp (`walk.js:164`).
-- The takeover of a demo player leaves `hopChain` out (`hosts/csbih/demo.js:145`).
 - `duckShare` of a profile has no reader.
 - The page gives fatalbot no lineups and no plans (`fatal.js:25-28`).
 - The events before a bot joins are lost (`hosts/csbih/adapter.js:218-221`).
@@ -706,7 +739,8 @@ The measure of the two changes of the core is in `docs/measures/2026-11-13-death
 1. **A3.** A recorded player in a detour fires the demo's shots from a place that is a little off. Is 48 units
    the right limit for a kill of the demo?
 2. **Look with no gain.** The duck tap, the habits of the hands and the radio move no gate of strength. Do they
-   stay on the owner's word, as the step between bursts did, or only with G9?
+   stay on the owner's word, as the step between bursts did, or only with G9? Answered for the duck tap on
+   2026-11-13: the owner asked for it and merged it, and G1 did not move over 32 seeds.
 3. **D2.** Calls with a delay and a place make the bots more fair and maybe weaker against the reference bots.
    Is a lower G1 right for that?
 4. **D9.** Who writes the names of the places of each map?
