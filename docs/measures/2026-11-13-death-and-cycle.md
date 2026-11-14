@@ -37,8 +37,35 @@ CSBIH_PLAYER=<a copy of csbih-player at the commit> node tools/arena.js --a fata
 
 ## 3. This machine against the record of the morning
 
-The record of the same day (`2026-11-13-fight.md`) has G1 at 74.9% for this command line at fatalbot `8212a30`,
-with fatalbot stuck 0.28% of the time. On this machine the same commits give 65.8% and 0.8%. The levels of this
-machine were built on 2026-11-13 from the maps that `tools/fetch-assets.sh` fetches (`build-levels.js`,
-`build-hulls.js`, `build-nav.js`). The cause of the difference is not found. Until it is, compare a run of this
-machine only with another run of this machine.
+The record of the same day (`2026-11-13-fight.md`) has G1 at 74.9% for this command line at fatalbot `8212a30`.
+On this machine the same commits give 65.8%. The levels of this machine were built on 2026-11-13 from the maps
+that `tools/fetch-assets.sh` fetches (`build-levels.js`, `build-hulls.js`, `build-nav.js`).
+
+**The cause (found on 2026-11-14, on the owner's machine):** this machine has no `out/profiles` of csbih-player.
+The reference bots take the view field and the grenade lineups of each map from there (`view-<map>.json`,
+`throws-<map>.json`, `load.js loadMapData`). Without them the kind `ref` is the kind `ref-bare`.
+
+The same command at fatalbot `8212a30` and csbih-player `1bd4500`, on the owner's machine, with its data changed
+one way at a time:
+
+| Data | G1 | de_dust2 | de_inferno | de_nuke | de_train | Rounds with a plant |
+|------|----|----------|------------|---------|----------|---------------------|
+| All of it | 74.9% | 67.2% | 82.8% | 75.0% | 74.5% | 63.0% |
+| No `out/profiles` | 65.8% | 75.5% | 71.4% | 60.9% | 55.2% | 72.4% |
+| No 1.6 build of a level (`assets/levels16` away) | 70.4% | 67.2% | 70.8% | 69.3% | 74.5% | 66.1% |
+
+- The row with no `out/profiles` is the first row of section 1 to the last digit: G1, each map and the plants. So
+  the levels of the two machines are the same, and the profiles are the whole difference.
+- The row with all the data is the 74.9% of the morning. The same seeds give the same rounds on any machine that
+  has the same data.
+- The reference bots are a harder enemy without their view field and their lineups: 65.8% against 74.9%.
+- The third row shows a second thing that moves the number: the 1.6 builds of de_inferno and de_nuke.
+
+What follows:
+
+- The three rows of section 1 are right as runs against `ref-bare`, and they compare with each other.
+- A run against `ref` needs `out/profiles` (roadmap, C1: a copy of `out` from the server, or
+  `tools/build-profiles.js`). `tools/arena.js` can say at its start which data of a map it did not find.
+- The 74.9% itself is the seeds 1 to 8. Over the seeds 1 to 32 the same commits give 71.2%
+  (`2026-11-13-feet.md`, section 7), and one set of four seeds moves by 5 points and more. The fall of 3.2 points
+  with the death is inside that: it needs 16 seeds or more for each side.
