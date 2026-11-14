@@ -47,7 +47,8 @@ The reviews read fatalbot at `8212a30` and csbih-player at `1bd4500`. Since then
   40 ms before. So the room is a third place where the brain runs, and stage A changes code that the page predicts
   with. A1 and A2 need a test in a room: a solid player that the page sees late gives a correction of the place.
 - **The death and the bursts of H1** are in csbih-player main (PRs #18 and #20). The same merge made the person
-  solid to a recorded teammate (`hull.js`, `selfHuman`): see A3.
+  solid to a recorded teammate (`hull.js`, `selfHuman`). The owner took that back on 2026-11-14 (csbih-player PR
+  #23): see stage A.
 
 ## 2. The state today
 
@@ -135,7 +136,9 @@ make them solid only when they turn from waypoint/recording based into fatalbots
 - A2 stays, and its handover matters more: a player that leaves its recording inside another body needs a free
   place, or the rule of A1 that lets two boxes move apart.
 - A4 stays for the bots that act on their own.
-- Open (question 1 of section 13): the person against a recorded teammate, which csbih-player PR #20 made solid.
+- The person against a recorded teammate: a ghost again, as for the bots of the team (owner, 2026-11-14:
+  "recorded teammate should be a ghost until they act on their own"; csbih-player PR #23 takes that part of PR #20
+  back).
 
 ### A1. Moving players do not pass through each other
 
@@ -183,7 +186,8 @@ The text below is the proposal as it was, for the record.
 - Its box is a ghost for its own team: `ghostTo` (`world.js:93`, `hull.js:223-224`). In a demo match every bot
   starts on the rails (`web/play.js:1153`), so the human walked through all its teammates. Since csbih-player PR
   #20 (2026-11-13) the person is solid to a recorded teammate and walks out of one that ran into it (`hull.js`,
-  `selfHuman`); a recorded player is still a ghost for the bots of its team.
+  `selfHuman`). The owner took that back on 2026-11-14 (csbih-player PR #23): a recorded teammate is a ghost for
+  the person and for the bots of its team until it acts on its own.
 - An enemy that stands in the path of a recorded player takes it off the rails ("blocked", `rails.js:493-497`).
   A teammate does not.
 
@@ -750,9 +754,7 @@ The measure of the two changes of the core is in `docs/measures/2026-11-13-death
 ## 13. Questions for the owner
 
 1. **A3.** Answered on 2026-11-14: no state between the recording and a bot; a player is solid only once it acts
-   on its own. What is open after it: csbih-player PR #20 made the person solid to a recorded teammate, after the
-   owner walked through teammates in a demo match on 2026-11-13. Does that stay, or is a recorded teammate a ghost
-   for the person again?
+   on its own, and a recorded teammate is a ghost for the person too (csbih-player PR #23).
 2. **Look with no gain.** The duck tap, the habits of the hands and the radio move no gate of strength. Do they
    stay on the owner's word, as the step between bursts did, or only with G9? Answered for the duck tap on
    2026-11-13: the owner asked for it and merged it, and G1 did not move over 32 seeds.
