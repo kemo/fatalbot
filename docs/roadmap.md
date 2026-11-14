@@ -45,7 +45,7 @@ The reviews read fatalbot at `8212a30` and csbih-player at `1bd4500`. Since then
 - **A shared match** is in csbih-player main (its spec 13): a room server runs the game core and fatalbot, and the
   page of each member predicts its own player with the same movement code against the other players as they were
   40 ms before. So the room is a third place where the brain runs, and stage A changes code that the page predicts
-  with. A1 to A3 need a test in a room: a solid player that the page sees late gives a correction of the place.
+  with. A1 and A2 need a test in a room: a solid player that the page sees late gives a correction of the place.
 - **The death and the bursts of H1** are in csbih-player main (PRs #18 and #20). The same merge made the person
   solid to a recorded teammate (`hull.js`, `selfHuman`): see A3.
 
@@ -70,7 +70,7 @@ The reviews read fatalbot at `8212a30` and csbih-player at `1bd4500`. Since then
 | No | Fault | Mark | Where |
 |----|-------|------|-------|
 | 1 | Two players that move toward each other pass through each other. | run | csbih-player `hull.js:270`, `world.js:91-94` |
-| 2 | In a demo match every recorded teammate is a ghost, and a recorded player goes through walls and bodies. | read | csbih-player `hull.js:223`, `world.js:102` |
+| 2 | In a demo match every recorded teammate is a ghost, and a recorded player goes through walls and bodies. The owner (2026-11-14): a recorded player stays so; a player is solid once it acts on its own (stage A). | read | csbih-player `hull.js:223`, `world.js:102` |
 | 3 | No trade. A bot with a post only watches when a teammate dies; half of the others ignore the call. | read | `tactics.js:594-606` |
 | 4 | The CTs rotate late and never go back. A teammate's death at a site is not an input. | read | `plan.js:16-23`, `plan.js:190-212` |
 | 5 | The CTs stand too near the enemy and do not move: under 500 units from an enemy 57% against 19%. | docs | night of 2026-11-12, section 1 |
@@ -91,7 +91,7 @@ then the body. Stage E can run beside stage D: the two touch different modules.
 |----|------|------------|------|
 | A1 | Moving players do not pass through each other | csbih-player | small |
 | A2 | The places that do not see players: stand up, spawn, handover | csbih-player | small |
-| A3 | A recorded player is solid | csbih-player | middle |
+| A3 | A recorded player is solid: declined by the owner on 2026-11-14 (a player is solid only once it acts on its own) | csbih-player | none |
 | A4 | The brain walks round bodies | fatalbot | middle |
 | B1 | A recorded enemy sees and hurts the human | csbih-player | middle |
 | B2 | The handover: memory, pop, the killer that fires at nobody | both | middle |
@@ -125,6 +125,17 @@ then the body. Stage E can run beside stage D: the two touch different modules.
 Each item below has four parts: **Today**, **Do**, **Measure**, **Risk**.
 
 ## 4. Stage A: a solid world
+
+**The owner's decision (2026-11-14).** Not as A3 has it. The owner: "I don't think we should do this", and "we can
+make them solid only when they turn from waypoint/recording based into fatalbots that act on their own."
+
+- A player is solid from the moment that it leaves its recording and plays on as a bot. A player on its recording
+  gets no body of the game and no state between the recording and a bot: A3 is not done.
+- A1 stays for the players that the game moves: a bot that acts on its own, and a person.
+- A2 stays, and its handover matters more: a player that leaves its recording inside another body needs a free
+  place, or the rule of A1 that lets two boxes move apart.
+- A4 stays for the bots that act on their own.
+- Open (question 1 of section 13): the person against a recorded teammate, which csbih-player PR #20 made solid.
 
 ### A1. Moving players do not pass through each other
 
@@ -161,7 +172,9 @@ change of the copy in csbih-player.
 
 **Measure.** Tests.
 
-### A3. A recorded player is solid
+### A3. A recorded player is solid (declined by the owner, 2026-11-14)
+
+The text below is the proposal as it was, for the record.
 
 **Today (read).**
 
@@ -736,8 +749,10 @@ The measure of the two changes of the core is in `docs/measures/2026-11-13-death
 
 ## 13. Questions for the owner
 
-1. **A3.** A recorded player in a detour fires the demo's shots from a place that is a little off. Is 48 units
-   the right limit for a kill of the demo?
+1. **A3.** Answered on 2026-11-14: no state between the recording and a bot; a player is solid only once it acts
+   on its own. What is open after it: csbih-player PR #20 made the person solid to a recorded teammate, after the
+   owner walked through teammates in a demo match on 2026-11-13. Does that stay, or is a recorded teammate a ghost
+   for the person again?
 2. **Look with no gain.** The duck tap, the habits of the hands and the radio move no gate of strength. Do they
    stay on the owner's word, as the step between bursts did, or only with G9? Answered for the duck tap on
    2026-11-13: the owner asked for it and merged it, and G1 did not move over 32 seeds.
