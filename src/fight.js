@@ -154,6 +154,14 @@ export function fight(c, cmd) {
   const steady = !sniper && time < (s.widen?.until ?? 0) ? widenStep(c, cmd, ready) : fightStep(c, cmd, ready);
   // A ducked fight holds the key from the reaction on: the game takes 0.4 s to duck, longer than a short burst.
   if (s.crouch) cmd.duck = true;
+  // An empty clip: the player presses the reload key and leaves the trigger alone. The game starts its own reload
+  // only with no button down and 0.2 s after the last pull, so a hand that goes on pulling never reloads
+  // (weapons.cpp ItemPostFrame, the dry fire of each gun).
+  const held = own.weapons[me.weapon];
+  if (me.weapon === gun && held?.clip === 0) {
+    if (held.reserve > 0 && !own.reloading) cmd.reload = true;
+    return true;
+  }
   // Close in, a player fires at once and stops while the shots go: the first ones leave on the run. The players of
   // the demos fire 5 to 8 of 100 rifle shots over 140 units a second (docs/measures).
   if (!ready || (!steady && want.distance > CLOSE_FIRE)) return true;

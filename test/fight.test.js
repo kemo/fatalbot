@@ -105,6 +105,26 @@ function longFight(profile, ticks, onShot) {
   return players[0];
 }
 
+test('a bot whose clip is empty in a fight reloads and fires on: it does not pull the trigger of an empty gun', { skip }, () => {
+  // A pistol at 400 units from an enemy that takes no hit: the fight is longer than one clip.
+  const { world, players, run } = arena(5, [], [
+    { id: 1, team: 'CT', origin: [0, 0, 37], yaw: 0, weapon: 'usp', bot: true },
+    { id: 2, team: 'T', origin: [400, 0, 37], yaw: 180, weapon: 'glock18', bot: false },
+  ], { profile: STAND, boxes: false });
+  let shots = 0;
+  let dry = 0;
+  const gun = players[0].guns.get('usp');
+  const clip = gun.clip;
+  for (let i = 0; i < 25; i++) {
+    run(100, (e) => { if (e.player === 1) shots++; });
+    if (gun.clip === 0 && gun.reloadEnd === null) dry++;
+  }
+  const reloads = world.events.filter((e) => e.type === 'reload' && e.player === 1).length;
+  assert.ok(reloads >= 2, `the bot reloaded ${reloads} times in 25 s`);
+  assert.ok(shots > clip * 2, `the bot fired ${shots} shots of a clip of ${clip}`);
+  assert.ok(dry <= 1, `the bot held an empty gun at ${dry} of 25 looks`);
+});
+
 test('a bot that fights from a stand steps to a side between bursts, and stands still for each shot far away', { skip }, () => {
   let shots = 0;
   let fast = 0;
