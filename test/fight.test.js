@@ -125,6 +125,19 @@ test('a bot whose clip is empty in a fight reloads and fires on: it does not pul
   assert.ok(dry <= 1, `the bot held an empty gun at ${dry} of 25 looks`);
 });
 
+test('a bot with no round left takes the knife and goes at the enemy', { skip }, () => {
+  const { players, run } = arena(5, [], [
+    { id: 1, team: 'CT', origin: [0, 0, 37], yaw: 0, weapon: 'usp', bot: true },
+    { id: 2, team: 'T', origin: [400, 0, 37], yaw: 180, weapon: 'glock18', bot: false },
+  ], { profile: STAND, boxes: false });
+  Object.assign(players[0].guns.get('usp'), { clip: 0, reserve: 0 });
+  let shots = 0;
+  run(300, (e) => { if (e.player === 1 && e.weapon !== 'knife') shots++; });
+  assert.equal(players[0].weapon, 'knife');
+  assert.equal(shots, 0);
+  assert.ok(players[0].body.origin[0] > 150, `the bot went ${players[0].body.origin[0].toFixed(0)} units toward the enemy`);
+});
+
 test('a bot that fights from a stand steps to a side between bursts, and stands still for each shot far away', { skip }, () => {
   let shots = 0;
   let fast = 0;
