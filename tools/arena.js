@@ -69,7 +69,7 @@ const s = summarize(matches);
 console.log(`\n${s.matches} matches, ${s.rounds} rounds, ${(s.seconds / s.rounds).toFixed(0)} s a round, ${(s.stepMs / s.ticks).toFixed(3)} ms a tick`);
 console.log(`G2 sides: T ${pct(s.bySide.T, s.rounds)}  CT ${pct(s.bySide.CT, s.rounds)}`);
 if (Object.keys(s.byKind).length > 1 || args.a !== args.b) console.log(`G1 kinds: ${Object.entries(s.byKind).map(([k, n]) => `${k} ${pct(n, s.rounds)}`).join('  ')}`);
-console.log(`G4 rounds: plants ${pct(s.plants, s.rounds)}; ${Object.entries(s.reasons).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ${n}`).join(', ')}; on the clock with no kill ${s.noKillTimeouts}`);
+console.log(`G4 rounds of both kinds (the plants of a kind as the Ts are in its line below): plants ${pct(s.plants, s.rounds)}; ${Object.entries(s.reasons).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ${n}`).join(', ')}; on the clock with no kill ${s.noKillTimeouts}`);
 for (const [kind, m] of Object.entries(s.measure)) console.log(measureLine(kind, m));
 for (const [kind, m] of Object.entries(s.measure)) console.log(feetLine(kind, m));
 for (const [kind, m] of Object.entries(s.measure)) console.log(styleLine(kind, m));

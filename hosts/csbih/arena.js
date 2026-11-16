@@ -2,7 +2,7 @@
 // the level; each side is driven by a "kind" of bot. The measures read the players from outside (place, view, last
 // command, events), never the state of a bot, so they count the same for every kind.
 
-import { burstSteps, groupOf, shotsBy, shotsOfKill, turnsBySight } from './players.js';
+import { burstSteps, groupOf, gunKill, shotsBy, shotsOfKill, turnsBySight } from './players.js';
 import { roundSampler } from './rounds.js';
 import { restLevel } from './adapter.js';
 
@@ -61,6 +61,10 @@ const blank = () => ({
   chained: 0,
   // The feet of a fight: the seconds with a step to a side, and the changes of that side.
   sideSeconds: 0, sideTurns: 0,
+  // The kills with a gun, and those with a shot to the head: the share of the players has no knife and no grenade.
+  gunKills: 0, gunHeads: 0,
+  // The rounds that the kind played as the Ts, and those with a plant (summarize).
+  roundsT: 0, plantsT: 0,
 });
 // A landing this much higher or lower than the take-off is a jump onto or off a ledge (units).
 const LEDGE = 16;
@@ -185,8 +189,13 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
           if (aimStats && killer && victim && killer.team !== victim.team) kills.push({ t: world.time, killer: killer.id, victim: victim.id, kind: kindOf(killer.id), weapon: e.weapon, head: Boolean(e.headshot) });
           if (victim && measure[kindOf(victim.id)]) measure[kindOf(victim.id)].deaths++;
           if (killer && victim && killer.team !== victim.team && measure[kindOf(killer.id)]) {
-            measure[kindOf(killer.id)].kills++;
-            if (e.headshot) measure[kindOf(killer.id)].headshots++;
+            const m = measure[kindOf(killer.id)];
+            m.kills++;
+            if (e.headshot) m.headshots++;
+            if (gunKill(e.weapon)) {
+              m.gunKills++;
+              if (e.headshot) m.gunHeads++;
+            }
           }
         }
       }
@@ -196,7 +205,7 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
       const out = {};
       if (!aimStats) return out;
       for (const name of names) {
-        const own = kills.filter((k) => k.kind === name);
+        const own = kills.filter((k) => k.kind === name && gunKill(k.weapon));
         if (own.length) out[name] = aimStats.engagements(world.level, tracks, shots, own);
       }
       return out;
@@ -453,6 +462,9 @@ export function summarize(matches) {
       out.rounds++;
       out.seconds += r.seconds;
       if (r.planted) out.plants++;
+      const t = (out.measure[m.sides.T] ??= blank());
+      t.roundsT++;
+      if (r.planted) t.plantsT++;
       out.reasons[r.reason] = (out.reasons[r.reason] ?? 0) + 1;
       if (r.reason === 'Target_Saved' && r.kills.T + r.kills.CT === 0) out.noKillTimeouts++;
       if (!r.winner) continue;
@@ -487,7 +499,7 @@ export function ordersOf(a, b, both = true) {
 /** One line of the measures of a kind, for a tool's report. */
 export function measureLine(kind, m) {
   const minutes = Math.max(1, m.alive / 60);
-  return `${kind.padEnd(8)} G3 wall ${pct(m.wall, m.alive)}  stuck ${pct(m.stuck, m.alive)}  |  G5 ${((m.ms / Math.max(1, m.commands)) * 10).toFixed(3)} ms for ten bots a tick (the longest command of one bot ${m.msMax.toFixed(1)} ms)  |  kills ${m.kills} deaths ${m.deaths} headshots ${pct(m.headshots, m.kills)}  |  G7 jumps a minute ${(m.jumps / minutes).toFixed(1)} (in a chain ${(m.hops / minutes).toFixed(2)})  shots on the run ${pct(m.shotsMoving, m.shots)} (rifles ${pct(m.rifleShotsMoving, m.rifleShots)})  grenades a minute ${(m.throws / minutes).toFixed(2)} (enemies blinded ${m.blinded})`;
+  return `${kind.padEnd(8)} G3 wall ${pct(m.wall, m.alive)}  stuck ${pct(m.stuck, m.alive)}  |  G5 ${((m.ms / Math.max(1, m.commands)) * 10).toFixed(3)} ms for ten bots a tick (the longest command of one bot ${m.msMax.toFixed(1)} ms)  |  kills ${m.kills} deaths ${m.deaths} headshots ${pct(m.gunHeads, m.gunKills)} of ${m.gunKills} gun kills  |  G4 plants as the Ts ${pct(m.plantsT, m.roundsT)} of ${m.roundsT} rounds  |  G7 jumps a minute ${(m.jumps / minutes).toFixed(1)} (in a chain ${(m.hops / minutes).toFixed(2)})  shots on the run ${pct(m.shotsMoving, m.shots)} (rifles ${pct(m.rifleShotsMoving, m.rifleShots)})  grenades a minute ${(m.throws / minutes).toFixed(2)} (enemies blinded ${m.blinded})`;
 }
 
 /** One line of the feet of a kind: its jumps a minute by what they were, and its rifle shots on the run by the range. */
