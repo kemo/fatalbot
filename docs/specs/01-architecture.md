@@ -58,7 +58,8 @@ The cost of the choice lies in the goldsrc host: section 5.
 - No import from outside `src/`. No Node API, no DOM API.
 - No clock: the time is `frame.time`. No `Math.random`: the brain has its own seeded random.
 - All trigonometry goes through `src/geometry.js`.
-- The brain keeps its own state. It writes nothing into a frame, and it keeps no reference to one after the tick.
+- The brain keeps its own state. It writes nothing into a frame. The frame of the last tick stays on the brain
+  (`brain.now`, `brain.census`) and on each bot's context until the next frame; what the brain keeps longer, it copies.
 
 ## 3. The layers of the brain
 
@@ -67,9 +68,9 @@ After spec 12 of csbih-player (the official CS bot's states, a commander as in K
 | Layer | Rate | Decides | Module |
 |-------|------|---------|--------|
 | Senses | 20 a second | what each bot sees and hears | `senses.js` |
-| Team | 1 a second, and on an event | the plan of the round, the roles, what the team knows | `team.js` |
-| Tactics | 10 a second | the task of the bot, its place, where it looks | `tactics.js`, `objective.js` |
-| Motor | each tick | the walk, the aim, the trigger | `walk.js`, `aim.js`, `fight.js` |
+| Team | the plan at the round's start and 1 a second; what the team knows on each look and event | the plan of the round (the site, the posts, the rotation), what the team knows | `plan.js`, `team.js` |
+| Tactics | each tick | the task of the bot, its place, where it looks | `tactics.js`, `sites.js`, `route.js` |
+| Motor | each tick | the walk, the aim, the trigger | `walk.js`, `moves.js`, `watch.js`, `aim.js`, `fight.js` |
 
 - The senses are the only reader of the raw state of an enemy (AGENTS.md, "Fair play").
 - The team layer holds one copy of what its bots saw and heard, as a radio that every call reaches.
@@ -106,6 +107,10 @@ stand in 28% (CTs) and 17% (Ts) of the steps of 2 s, the players in 18% and 10%.
 more: the arenas count a recorded player's jumps wrong (docs/measures/2026-11-12-night.md, section 8); counted
 the same way the players jump 3.5 times a minute and the bots 2.9, with fewer chains of hops, and the players are
 ducked 9 to 13% of a round against the bots' 1 to 2%.
+
+Two numbers of the paragraph above were wrong (the review of 2026-11-16). Single commands took up to 14.4 ms on
+de_nuke, 6 over 5 ms in 4 rounds. G5 now gives the p99 of one command and the count over 2 ms beside the mean. The
+head share of the bots counted their knife and grenade kills, which the players' share leaves out.
 
 On 2026-11-13 the fight at a corner and the duck of a ducked fight moved G1 from 68.2% to 74.9% of 768 rounds
 (four maps, seeds 1 to 8; docs/measures/2026-11-13-fight.md). A bot that fights from a stand now steps to a side

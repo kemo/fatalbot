@@ -13,6 +13,9 @@ brain.join(id, { profile, route });                // a bot takes a player; `rou
 // each tick:
 brain.frame(frame);                                // once, before any think
 const command = brain.think(id);                   // once for each bot
+// at any time:
+brain.leave(id);                                   // the bot gives the player up
+brain.debug(id);                                   // for a tool or a log: {goal, point, target, stuckFor, path, escape, route}
 ```
 
 `route(seconds)` is for a replay: the route of the recorded player that the bot plays on for, on the clock of the
