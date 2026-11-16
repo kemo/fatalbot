@@ -45,7 +45,12 @@ Each run from `git archive` of the commit (before: `a7d6aba`), with `CSBIH_PLAYE
 | G3 wall, stuck | 0.3%, 0.3% | 0.3%, 0.4% |
 
 `node tools/arena.js --a fatal --b fatal --maps de_dust2,de_inferno --rounds 12 --seeds 1,...,8 --sides both`
-(384 rounds):
+(384 rounds).
+
+Correction (2026-11-16): these are 192 different rounds, each counted two times. Until that day `--sides both`
+played a second order for one kind against itself, with the same kinds and the same seed: the same match again.
+The shares stay. A share of 192 rounds has an error of about 3.6 points, and a difference of two such shares
+about 5.1: the fall of G2 below is 1.7 errors, not a result yet.
 
 | | before | after |
 |---|---|---|

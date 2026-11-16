@@ -3,13 +3,14 @@
 //                            [--sides both] [--json file] [--spells 20]
 // `--spells n` lists the n longest spells at a wall or stuck, with the place and the goal of the bot.
 // Team A plays T then CT on each map and seed (`--sides both`), so a side's bias and a team's strength come apart.
+// One kind against itself plays each seed once: the other order is the same match again.
 // Kinds: `ref` (the bots of csbih-player, with the map's view field and lineups; `ref-bare` without them) and
 // `fatal` (this repository's brain). `fatal-plans` gives it the strategies of the map that tools/strategies.js mined
 // from the demos; `fatal-nades` the map's grenade lineups; `fatal-plans-nades` both.
 
 import { writeFileSync } from 'node:fs';
 import { csbihMissing, loadBody, loadCore, loadLevel, loadMapData, loadPlans } from '../hosts/csbih/load.js';
-import { feetLine, measureLine, referenceKind, runMatch, styleLine, summarize, useBody } from '../hosts/csbih/arena.js';
+import { feetLine, measureLine, ordersOf, referenceKind, runMatch, styleLine, summarize, useBody } from '../hosts/csbih/arena.js';
 
 const args = { a: 'fatal', b: 'ref', maps: 'de_dust2', rounds: '12', seeds: '1', sides: 'both', json: null, spells: '0' };
 const argv = process.argv.slice(2);
@@ -52,8 +53,8 @@ for (const map of args.maps.split(',')) {
   }
   const level = loadLevel(core, map);
   for (const seed of args.seeds.split(',').map(Number)) {
-    for (const order of args.sides === 'both' ? [['a', 'b'], ['b', 'a']] : [['a', 'b']]) {
-      const sides = { T: await kindFor(args[order[0]], level), CT: await kindFor(args[order[1]], level) };
+    for (const [t, ct] of ordersOf(args.a, args.b, args.sides === 'both')) {
+      const sides = { T: await kindFor(t, level), CT: await kindFor(ct, level) };
       // One kind against itself: both sides share one name, and one set of measures.
       if (sides.T.name === sides.CT.name) sides.CT = sides.T;
       const m = runMatch({ core, level, sides, seed, rounds: Number(args.rounds) });

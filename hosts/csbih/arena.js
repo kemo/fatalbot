@@ -476,6 +476,14 @@ export function addMeasures(sum, measure) {
 
 const pct = (n, of) => (of ? `${((n / of) * 100).toFixed(1)}%` : '-');
 
+/**
+ * The orders of a pairing of kinds `a` and `b`, as [kind of T, kind of CT]. With `both` each kind plays each side
+ * on the same seed. One kind against itself has one order: the other order is the same match a second time.
+ */
+export function ordersOf(a, b, both = true) {
+  return both && a !== b ? [[a, b], [b, a]] : [[a, b]];
+}
+
 /** One line of the measures of a kind, for a tool's report. */
 export function measureLine(kind, m) {
   const minutes = Math.max(1, m.alive / 60);

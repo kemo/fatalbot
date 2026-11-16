@@ -74,8 +74,9 @@ The owner played a demo match of de_train in a room and reported four faults. Al
   32, feet record, section 7). The 74.9% of the fight record is the seeds 1 to 8 of that run. With the tap of the
   duck and the players' jumps it is 69.6%, a difference of 1.6 points with an error of 1.6.
 - G2: the Ts win 50.1% of 2,592 rounds of fatalbot against fatalbot (36 seeds, night of 2026-11-12, at `4cea0ab`
-  before the fight changes). A run of 4 seeds at `8212a30` gave 38.0% of 384 rounds, and 42.2% with the tap of
-  the duck and the players' jumps (feet record, section 7). Four seeds do not replace 36: G2 after the fight
+  before the fight changes). A run of 4 seeds at `8212a30` gave 38.0% of 192 rounds, and 42.2% with the tap of
+  the duck and the players' jumps (feet record, section 7; the record counted each round two times, see its
+  correction of 2026-11-16). Four seeds do not replace 36: G2 after the fight
   changes needs a run of the first size.
 - The share of kills with a shot to the head, the time to the first shot, the turn and the crosshair errors lie
   inside the spread of the players.
