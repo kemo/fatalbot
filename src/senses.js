@@ -319,12 +319,15 @@ export function bombFor(c) {
   };
 }
 
-/** The teammate of a list who is nearest a point (the Ts see each other and their bomb on the radar). */
+/**
+ * The bot of this brain that is nearest a point (the Ts see each other and their bomb on the radar). A teammate
+ * that the brain does not drive (a person) may never go there, so it does not count.
+ */
 export function nearestMate(mates, point) {
   let best = null;
   let bestD = Infinity;
   for (const p of mates) {
-    if (!p.alive) continue;
+    if (!p.alive || !p.own) continue;
     const d = hypot(p.origin[0] - point[0], p.origin[1] - point[1]);
     if (d < bestD) [best, bestD] = [p, d];
   }

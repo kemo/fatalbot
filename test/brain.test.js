@@ -349,3 +349,26 @@ test('two brains on one level play as each brain alone, side by side and one aft
   run(brainOn(used, 3), 1, 400, players([300, -200, 36]));
   assert.deepEqual(run(brainOn(used, 4), 1, 400, players([100, 250, 36])), b);
 });
+
+test('a bot fetches the dropped C4 while a teammate that the brain does not drive is nearer to it', () => {
+  const fetchers = (person) => {
+    const brain = createBrain({ map: flatMap({ size: 60, sites: [{ mins: [500, -50, 0], maxs: [600, 50, 72] }] }), ports: flatPorts({ half: 0 }), seed: 3 });
+    brain.join(1);
+    brain.join(2);
+    const goals = new Set();
+    const bomb = { state: 'dropped', carrier: null, origin: [0, 0, 0], explodeAt: null, defuser: null, arming: null };
+    for (let tick = 1; tick <= 300; tick++) {
+      const list = [player(1, 'T', [-300, 0, 36], { own: true }), player(2, 'T', [-300, 64, 36], { own: true }), player(9, 'CT', [800, 800, 36])];
+      // A person 90 units from the bomb, who does not take it.
+      if (person) list.push(player(3, 'T', [-80, 40, 36]));
+      brain.frame(frameAt(tick, list, { bomb, events: tick === 1 ? [{ type: 'dropped', at: [0, 0, 0] }] : [] }));
+      for (const id of [1, 2]) {
+        brain.think(id);
+        if (brain.debug(id).goal === 'fetch') goals.add(id);
+      }
+    }
+    return [...goals];
+  };
+  assert.deepEqual(fetchers(false), [1]);
+  assert.deepEqual(fetchers(true), [1]);
+});
