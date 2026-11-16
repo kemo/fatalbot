@@ -66,6 +66,28 @@ The owner played a demo match of de_train in a room and reported four faults. Al
 - **B3, question 5: answered.** The scoreboard shows the ping of a person and "BOT" for a bot. A room sends the
   persons and their pings once a second, and a page tells when a person takes a bot's place.
 
+## 1c. The review of 2026-11-16
+
+A review of both repositories read the brain, the csbih host, the arena and the tests at `69e95d4`. The whole
+report is `docs/review-2026-11-16.md` of csbih-player. Fixed here on that day: the arena played one kind against
+itself two times, two kinds of fatalbot shared the grenades of the first, and the rule tests let a leak pass
+(`docs/measures/2026-11-16-review.md`). Open, with the mark of the review:
+
+| No | Fault | Mark | Where |
+|----|-------|------|-------|
+| F1 | No bot fetches the dropped C4 while a teammate that no brain drives (a person in a room) is nearest to it. | run | `tactics.js:182`, `senses.js:323-332` |
+| F2 | A hit whose shot the bot did not hear gives the exact place of the shooter; for an HE, the thrower's place of now. | run | `senses.js:229-232` |
+| F3 | A heard runner is tracked through a wall with a constant error. | run | `senses.js:166-176` |
+| F4 | The island exit cache holds one bot's answer for all later bots of the process. | run | `walk.js:268-271` |
+| F5 | The post of a dead bot stays taken. | read | `team.js:101-113` |
+| F6 | Single commands take more than a tick (14.4 ms on de_nuke); G5 prints the mean only. | run | `watch.js:39-66`, `nav.js:222-268` |
+| F7 | `smoked()` hides each player within 82 units of a cloud's middle from every direction. | run | `senses.js:135-147` |
+| F8 | The head shot share of the bots counts knife and grenade kills; "G4 plants" divides by the rounds of both kinds. | read | `hosts/csbih/arena.js:185-200,455` |
+
+Two facts of csbih-player that change what the measures here mean: the profiles of the players come from a biased
+sample (`profile.js keep`; the median `lookSpring` of the shipped profiles is 400, the top of its clamp), and G2
+has no run of 36 seeds since the fight changes.
+
 ## 2. The state today
 
 ### 2.1 What is good (docs)
