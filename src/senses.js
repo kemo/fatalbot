@@ -3,7 +3,7 @@
 // The rules of sight and hearing are ported from csbih-player (bot.js look and hear, senses.js noiseOf): the view
 // field, the line to the head or the chest, the smoke, the time to notice, the earshot of each sound.
 
-import { RAD, abs, cos, eyeOf, hypot, min, sin, toward, turn } from './geometry.js';
+import { RAD, abs, cos, eyeOf, hypot, max, min, sin, toward, turn } from './geometry.js';
 import { ENGAGE, ENGAGE_DEFAULT, bestGun, isGrenade } from './weapons.js';
 import { placeAt } from './places.js';
 
@@ -129,32 +129,27 @@ function noiseOf(c, other) {
   return kind ? { radius, kind } : null;
 }
 
-/** True when smoke stands between two points: the lengths of the line inside the clouds add up to too much. */
+/**
+ * True when smoke stands between two points: the lengths of the line inside the clouds add up to too much. Each
+ * cloud adds its chord on the line, clipped to the two points.
+ */
 function smoked(smokes, a, b) {
   if (!smokes.length) return false;
   const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
   const length = hypot(ab[0], ab[1], ab[2]);
   if (length === 0) return false;
   const dir = [ab[0] / length, ab[1] / length, ab[2] / length];
-  const dist = (p, q) => hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
   let sum = 0;
   let limit = Infinity;
   for (const { origin: o, radius } of smokes) {
-    const r2 = radius * radius;
     limit = min(limit, radius * SMOKE_SEE_THROUGH);
-    const along = (o[0] - a[0]) * dir[0] + (o[1] - a[1]) * dir[1] + (o[2] - a[2]) * dir[2];
-    const close = along < 0 ? a : along >= length ? b : [a[0] + dir[0] * along, a[1] + dir[1] * along, a[2] + dir[2] * along];
-    const near2 = dist(close, o) ** 2;
-    if (near2 >= r2) continue;
-    const half = Math.sqrt(r2 - near2);
-    const fromIn = dist(a, o) ** 2 < r2;
-    const toIn = dist(b, o) ** 2 < r2;
-    if (fromIn && toIn) sum += length;
-    else if (fromIn) sum += along > 0 ? half + dist(close, a) : half - dist(close, a);
-    else if (toIn) {
-      const out = (b[0] - o[0]) * dir[0] + (b[1] - o[1]) * dir[1] + (b[2] - o[2]) * dir[2];
-      sum += out > 0 ? half + dist(close, b) : half - dist(close, b);
-    } else sum += 2 * half;
+    const to = [o[0] - a[0], o[1] - a[1], o[2] - a[2]];
+    const along = to[0] * dir[0] + to[1] * dir[1] + to[2] * dir[2];
+    const near2 = to[0] * to[0] + to[1] * to[1] + to[2] * to[2] - along * along;
+    if (near2 >= radius * radius) continue;
+    const half = Math.sqrt(radius * radius - near2);
+    const inside = min(length, along + half) - max(0, along - half);
+    if (inside > 0) sum += inside;
   }
   return sum > limit;
 }

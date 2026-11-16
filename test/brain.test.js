@@ -433,3 +433,14 @@ test('G6: a runner heard behind a wall is placed at each step with a new error, 
   const offs = new Set(heard.map((h) => h.off.map(Math.round).join()));
   assert.ok(offs.size > places.size, 'the place stays while the runner moves on');
 });
+
+test('smoke hides by the length of the line inside the cloud: an enemy at its near edge is seen, one deep in it is not', () => {
+  const play = (smokes) => run(fresh(), 1, 300, duel([300, 0, 36]), () => ({ smokes }));
+  const clear = play([]);
+  // A cloud of radius 115 hides behind 80.5 units of smoke on the line. The enemy 35 units inside its near edge, and
+  // the bot 35 units inside the edge of a cloud behind it: 35 units of smoke, so the same play as with none.
+  assert.deepEqual(play([{ origin: [380, 0, 46], radius: 115 }]), clear);
+  assert.deepEqual(play([{ origin: [-80, 0, 50], radius: 115 }]), clear);
+  // The enemy 35 units inside the far edge: the line crosses most of the cloud.
+  assert.ok(play([{ origin: [220, 0, 46], radius: 115 }]).every((c) => !c.attack));
+});
