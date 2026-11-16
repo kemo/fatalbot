@@ -3,7 +3,7 @@
 // which holds the fixes of many stuck bots; the traces go through the ports.
 
 import { PI, RAD, abs, atan2, cos, hypot, max, min, sign, sin } from './geometry.js';
-import { JUMP, LADDER, WALK, findPath, navParts, nearestNode, nodePoint, waysTo } from './nav.js';
+import { JUMP, LADDER, WALK, findPath, navParts, nearestNode, nodePoint, searchFree, waysTo } from './nav.js';
 import { lookAt } from './aim.js';
 import { restLook } from './watch.js';
 import { bestGun, maxSpeedOf } from './weapons.js';
@@ -109,8 +109,9 @@ export function walkTo(c, cmd, point, facing) {
     const end = s.path[s.path.length - 1].point;
     if (hypot(end[0] - o[0], end[1] - o[1]) < 24 && abs(end[2] - o[2]) < 40) s.pathAt = -Infinity;
   }
-  // On a ladder the way holds: its floors lie far below and above, and a new search would pick a wrong one.
-  if (nav && !me.onLadder && (s.pathKey !== key || time - s.pathAt > 4 || (s.stuckSince !== null && time - s.stuckSince > 1))) findWay(c, point, key);
+  // On a ladder the way holds: its floors lie far below and above, and a new search would pick a wrong one. After
+  // another search of this command the way waits a tick (nav.js searchFree).
+  if (nav && !me.onLadder && (s.pathKey !== key || time - s.pathAt > 4 || (s.stuckSince !== null && time - s.stuckSince > 1)) && searchFree(c)) findWay(c, point, key);
   // Off the island: the way is found again at once.
   if (s.escape && hypot(s.escape[0] - o[0], s.escape[1] - o[1]) < 24) {
     s.escape = null;

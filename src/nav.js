@@ -79,6 +79,12 @@ export function nearestNode(nav, p, reach = 4, rise = Infinity) {
 }
 
 /** The search arrays of a graph, allocated once: a node's slot counts for a search only while its stamp is that search's number. */
+/**
+ * True while the bot of the context `c` made no path search in its command of this tick (brain.js sets
+ * `c.searchAt`). A search that can wait asks first: one search is the price of one command.
+ */
+export const searchFree = (c) => (c.brain.nav?.search?.gen ?? 0) === c.searchAt;
+
 function searchOf(nav) {
   return nav.search ??= {
     gen: 0,

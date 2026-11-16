@@ -444,3 +444,25 @@ test('smoke hides by the length of the line inside the cloud: an enemy at its ne
   // The enemy 35 units inside the far edge: the line crosses most of the cloud.
   assert.ok(play([{ origin: [220, 0, 46], radius: 115 }]).every((c) => !c.attack));
 });
+
+test('one command of a bot makes one path search at most: a second one waits a tick', () => {
+  // A runner heard behind a wall, a site to walk to: the noise, the contact and the way each ask for a search.
+  let most = 0;
+  let searches = 0;
+  for (let seed = 1; seed <= 6; seed++) {
+    const brain = createBrain({ map: flatMap({ size: 40, sites: [{ mins: [-500, -50, 0], maxs: [-400, 50, 72] }], wall: 200 }), ports: flatPorts(), seed });
+    brain.join(1);
+    let yaw = 0;
+    for (let tick = 1; tick <= 400; tick++) {
+      const e = player(2, 'CT', [WALL_X + 150, -150 + tick * 1.5, 36]);
+      e.velocity = [0, 250, 0];
+      brain.frame(frameAt(tick, [player(1, 'T', [100, 0, 36], { own: true, yaw }), e]));
+      const gen = brain.nav.search?.gen ?? 0;
+      yaw = brain.think(1).yaw;
+      most = Math.max(most, brain.nav.search.gen - gen);
+      searches += brain.nav.search.gen - gen;
+    }
+  }
+  assert.equal(most, 1);
+  assert.ok(searches > 50, `the searches still happen (${searches})`);
+});

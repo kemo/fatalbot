@@ -201,6 +201,7 @@ function newState() {
 /** One tick of one bot. */
 function command(c) {
   const { me, own, s, time, frame } = c;
+  c.searchAt = c.brain.nav.search?.gen ?? 0;
   restStuck(c);
   if (c.every(LOOK_EVERY)) look(c);
   track(c);
