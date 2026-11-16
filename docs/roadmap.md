@@ -50,6 +50,22 @@ The reviews read fatalbot at `8212a30` and csbih-player at `1bd4500`. Since then
   solid to a recorded teammate (`hull.js`, `selfHuman`). The owner took that back on 2026-11-14 (csbih-player PR
   #23): see stage A.
 
+## 1b. What changed on 2026-11-15 and 2026-11-16
+
+The owner played a demo match of de_train in a room and reported four faults. All are fixed, in fatalbot main
+(`6815595`, `d5ba04c`) and in csbih-player main `5f2850b`, which is live:
+
+- **A bot with an empty clip reloads** (`2026-11-15-empty-clip.md`). Before, a bot in a fight pulled the trigger
+  of an empty gun and never reloaded.
+- **E5, the scope.** A sniper takes the scope off 1 s after the last sight of an enemy
+  (`2026-11-16-scope-off.md`). Before, it walked on through the scope, also at the second level.
+- **E8, "the aimbot" in a room.** A cause that this roadmap did not list: a room had no player model, and its
+  own head box was larger than the model's and in the middle of the body, where a bot aims. In a replay of a
+  demo match in a room the bots made 55% of their kills by a shot to the head; the demo's players made 34%. A
+  room now meets the model's hit boxes in the aim pose (csbih-player spec 13, `tools/build-body.js`): 33%.
+- **B3, question 5: answered.** The scoreboard shows the ping of a person and "BOT" for a bot. A room sends the
+  persons and their pings once a second, and a page tells when a person takes a bot's place.
+
 ## 2. The state today
 
 ### 2.1 What is good (docs)
@@ -761,5 +777,6 @@ The measure of the two changes of the core is in `docs/measures/2026-11-13-death
 3. **D2.** Calls with a delay and a place make the bots more fair and maybe weaker against the reference bots.
    Is a lower G1 right for that?
 4. **D9.** Who writes the names of the places of each map?
-5. **B3.** The scoreboard's "BOT": does it stay?
+5. **B3.** The scoreboard's "BOT": does it stay? Answered on 2026-11-16: "BOT" for a bot, the ping for a
+   person (section 1b).
 6. **C1.** The data on this machine: a copy from the server, or a new build from the demos?
