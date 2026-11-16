@@ -66,6 +66,33 @@ The owner played a demo match of de_train in a room and reported four faults. Al
 - **B3, question 5: answered.** The scoreboard shows the ping of a person and "BOT" for a bot. A room sends the
   persons and their pings once a second, and a page tells when a person takes a bot's place.
 
+## 1c. The review of 2026-11-16
+
+A review of both repositories read the brain, the csbih host, the arena and the tests at `69e95d4`. The whole
+report is `docs/review-2026-11-16.md` of csbih-player. Fixed here on that day: the arena played one kind against
+itself two times, two kinds of fatalbot shared the grenades of the first, and the rule tests let a leak pass
+(`docs/measures/2026-11-16-review.md`). The findings, with the mark of the review, and their state after the
+branch `fix-all-2026-11-16` (`docs/measures/2026-11-16-fixes.md`; G1 against the run of the commit before, 32
+seeds):
+
+| No | Fault | Mark | Where | State |
+|----|-------|------|-------|-------|
+| F1 | No bot fetches the dropped C4 while a teammate that no brain drives (a person in a room) is nearest to it. | run | `tactics.js:182`, `senses.js:323-332` | Fixed (`6b066bb`): the arena output is the same. |
+| F2 | A hit whose shot the bot did not hear gives the exact place of the shooter; for an HE, the thrower's place of now. | run | `senses.js:229-232` | Fixed (`16ab9fe`): G1 +0.5 (error 1.4). |
+| F3 | A heard runner is tracked through a wall with a constant error. | run | `senses.js:166-176` | Fixed (`2863604`): G1 -1.5 (error 1.2). The fair play rule keeps it. |
+| F4 | The island exit cache holds one bot's answer for all later bots of the process. | run | `walk.js:268-271` | Fixed (`539f8b5`): the arena output is the same on 47 matches of seeds 1 to 16. |
+| F5 | The post of a dead bot stays taken. | read | `team.js:101-113` | Fixed (`1e65c90`): G1 +0.2 (error 0.9). |
+| F6 | Single commands take more than a tick (14.4 ms on de_nuke); G5 prints the mean only. | run | `watch.js:39-66`, `nav.js:222-268` | G5 prints the p99 and the count over 2 ms (`eb66bc4`). One path search a command (`4f37070`): no command makes two or three searches; on de_nuke the commands over 2 ms go from 52 to 32 in 100,000. The longest command stays near 5 to 7 ms: one search of a large level. Open: a search that a tick can split. |
+| F7 | `smoked()` hides each player within 82 units of a cloud's middle from every direction. | run | `senses.js:135-147` | Fixed (`226a636`): G1 +0.6 (error 0.5). |
+| F8 | The head shot share of the bots counts knife and grenade kills; "G4 plants" divides by the rounds of both kinds. | read | `hosts/csbih/arena.js:185-200,455` | Fixed (`4546dd6`). The line "G4 plants" of `sum.mjs` (csbih-player `.cache/arena`) still divides by both kinds: read "G4 plants as the Ts" of each kind. |
+
+The spec lines that no longer matched the code are fixed (`fe8869b`). The determinism test of a match compares a
+hash of every command, and new tests cover a frame step of 0.02 s, smoke, and two brains on one level (`97a91d8`).
+
+Two facts of csbih-player that change what the measures here mean: the profiles of the players come from a biased
+sample (`profile.js keep`; the median `lookSpring` of the shipped profiles is 400, the top of its clamp), and G2
+has no run of 36 seeds since the fight changes.
+
 ## 2. The state today
 
 ### 2.1 What is good (docs)
@@ -74,8 +101,9 @@ The owner played a demo match of de_train in a room and reported four faults. Al
   32, feet record, section 7). The 74.9% of the fight record is the seeds 1 to 8 of that run. With the tap of the
   duck and the players' jumps it is 69.6%, a difference of 1.6 points with an error of 1.6.
 - G2: the Ts win 50.1% of 2,592 rounds of fatalbot against fatalbot (36 seeds, night of 2026-11-12, at `4cea0ab`
-  before the fight changes). A run of 4 seeds at `8212a30` gave 38.0% of 384 rounds, and 42.2% with the tap of
-  the duck and the players' jumps (feet record, section 7). Four seeds do not replace 36: G2 after the fight
+  before the fight changes). A run of 4 seeds at `8212a30` gave 38.0% of 192 rounds, and 42.2% with the tap of
+  the duck and the players' jumps (feet record, section 7; the record counted each round two times, see its
+  correction of 2026-11-16). Four seeds do not replace 36: G2 after the fight
   changes needs a run of the first size.
 - The share of kills with a shot to the head, the time to the first shot, the turn and the crosshair errors lie
   inside the spread of the players.

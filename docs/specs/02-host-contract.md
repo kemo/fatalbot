@@ -13,6 +13,9 @@ brain.join(id, { profile, route });                // a bot takes a player; `rou
 // each tick:
 brain.frame(frame);                                // once, before any think
 const command = brain.think(id);                   // once for each bot
+// at any time:
+brain.leave(id);                                   // the bot gives the player up
+brain.debug(id);                                   // for a tool or a log: {goal, point, target, stuckFor, path, escape, route}
 ```
 
 `route(seconds)` is for a replay: the route of the recorded player that the bot plays on for, on the clock of the
@@ -91,6 +94,7 @@ Players are never in a trace: the level and its solid brush models only.
 | `bomb.defuser`, `.arming` | The player who defuses or arms it now | `bomb.busy` | the `BarTime` message of a player at the bomb |
 | `smokes[]` | The clouds that stand: origin and radius | the burst smoke grenades, radius 115 | the smoke grenade entities after their burst |
 | `events[]` | Since the frame before: `shot`, `hurt`, `kill`, `reload`, `planted`, `dropped`, `picked`, `defusing`, `defused`, `exploded` | `world.events` | the hook of `PlaybackEvent` (shots); the `DeathMsg` and bomb messages; the game log lines |
+| `hurt.weapon` | The weapon of a hit (`hegrenade` for a grenade's blast) | the event's `weapon` | the damage bits of the `Damage` message to the fake client (`DMG_BLAST`) |
 
 What stays in the csbih adapter, because a real server has no such thing: the routes of a demo, the rails, the
 story of a demo round, the bot log, and the throw of a grenade with a recorded velocity.

@@ -200,14 +200,16 @@ test('the floors with a way to a point, from one search, are those that each rea
 
 test('a bot on an island finds a floor further off that a straight walk reaches, when the nearest ones lie behind a wall', () => {
   // Everything east of the wall (x = 320, y from -200 to 200) is an island. The 32 nearest joined floors lie behind
-  // the wall; a straight walk passes the wall's end to (288, 384) or (288, -384).
+  // the wall; a straight walk passes the wall's end to a floor further off.
   const sites = [{ mins: [-350, -50, 0], maxs: [-250, 50, 72] }];
   const map = withIsland((x) => x >= 320, { sites, size: 56 });
-  const brain = createBrain({ map, ports: flatPorts(), seed: 7 });
+  const ports = flatPorts();
+  const brain = createBrain({ map, ports, seed: 7 });
   brain.join(1);
   run(brain, 1, 30, () => [player(1, 'T', [360, 0, 36], { own: true }), player(2, 'CT', [-600, 0, 36])]);
   const out = brain.debug(1).escape;
-  assert.ok(out && out[0] === 288 && Math.abs(out[1]) === 384, `past the wall's end (${out})`);
+  assert.ok(out && out[0] < 320 && Math.abs(out[1]) > 300, `past the wall's end (${out})`);
+  assert.equal(ports.traceHull([360, 0, 36], out, false), 1, 'a straight walk reaches it');
 });
 
 test('a bot on an island with no way out from its place walks inside the island to the floor that has one', () => {
@@ -300,4 +302,167 @@ test('a bot taps the duck on its wait and on its run at the rate of its profile,
   assert.ok(wait(1, hidden, 'freeze').every((c) => !c.duck), 'not in the freeze time');
   const fought = wait(1, (post, watch) => [post[0] + (watch[0] - post[0]) / 4, post[1] + (watch[1] - post[1]) / 4, 36]);
   assert.ok(fought.some((c) => c.attack) && fought.every((c) => !c.duck), 'not with an enemy in sight');
+});
+
+test('at a frame step of 0.02 s a bot sees an enemy and fires after its reaction time', () => {
+  const commands = run(fresh(), 1, 150, duel([200, 0, 36]), () => ({ dt: 0.02 }));
+  const first = commands.findIndex((c) => c.attack);
+  assert.ok(first >= 0, 'it fires');
+  assert.ok((first + 1) * 0.02 >= 0.2, `the first shot at ${(first + 1) * 0.02} s is too early`);
+  assert.ok(Math.abs(turn(commands[first].yaw)) < 6, 'the view is on the enemy at the first shot');
+});
+
+test('a smoke cloud between a bot and an enemy hides the enemy; a cloud beside the line does not', () => {
+  const smoked = (origin) => run(fresh(), 1, 300, duel([300, 0, 36]), () => ({ smokes: [{ origin, radius: 115 }] }));
+  assert.ok(smoked([150, 0, 46]).every((c) => !c.attack), 'no shot through the cloud');
+  assert.ok(smoked([150, 300, 46]).some((c) => c.attack), 'a shot past the cloud');
+});
+
+test('two brains on one level play as each brain alone, side by side and one after the other', () => {
+  const sites = [{ mins: [-500, -50, 0], maxs: [-400, 50, 72] }];
+  const brainOn = (map, seed) => {
+    const brain = createBrain({ map, ports: flatPorts(), seed });
+    brain.join(1);
+    return brain;
+  };
+  const players = (at) => () => [player(1, 'T', at, { own: true }), player(2, 'CT', [WALL_X + 200, 0, 36])];
+  const alone = (seed, at) => run(brainOn(flatMap({ sites }), seed), 1, 400, players(at));
+  const a = alone(3, [300, -200, 36]);
+  const b = alone(4, [100, 250, 36]);
+  // Side by side: the two brains take their ticks in turn on one map (one graph, nav.js navOf).
+  const map = flatMap({ sites });
+  const [ba, bb] = [brainOn(map, 3), brainOn(map, 4)];
+  const [ca, cb] = [[], []];
+  const view = { a: null, b: null };
+  for (let tick = 1; tick <= 400; tick++) {
+    for (const [brain, at, out, k] of [[ba, [300, -200, 36], ca, 'a'], [bb, [100, 250, 36], cb, 'b']]) {
+      const list = players(at)();
+      if (view[k]) [list[0].yaw, list[0].pitch] = [view[k].yaw, view[k].pitch];
+      brain.frame(frameAt(tick, list));
+      const cmd = brain.think(1);
+      view[k] = cmd;
+      out.push(cmd);
+    }
+  }
+  assert.deepEqual(ca, a);
+  assert.deepEqual(cb, b);
+  // One after the other: a later brain on a level that another brain used.
+  const used = flatMap({ sites });
+  run(brainOn(used, 3), 1, 400, players([300, -200, 36]));
+  assert.deepEqual(run(brainOn(used, 4), 1, 400, players([100, 250, 36])), b);
+});
+
+test('a bot fetches the dropped C4 while a teammate that the brain does not drive is nearer to it', () => {
+  const fetchers = (person) => {
+    const brain = createBrain({ map: flatMap({ size: 60, sites: [{ mins: [500, -50, 0], maxs: [600, 50, 72] }] }), ports: flatPorts({ half: 0 }), seed: 3 });
+    brain.join(1);
+    brain.join(2);
+    const goals = new Set();
+    const bomb = { state: 'dropped', carrier: null, origin: [0, 0, 0], explodeAt: null, defuser: null, arming: null };
+    for (let tick = 1; tick <= 300; tick++) {
+      const list = [player(1, 'T', [-300, 0, 36], { own: true }), player(2, 'T', [-300, 64, 36], { own: true }), player(9, 'CT', [800, 800, 36])];
+      // A person 90 units from the bomb, who does not take it.
+      if (person) list.push(player(3, 'T', [-80, 40, 36]));
+      brain.frame(frameAt(tick, list, { bomb, events: tick === 1 ? [{ type: 'dropped', at: [0, 0, 0] }] : [] }));
+      for (const id of [1, 2]) {
+        brain.think(id);
+        if (brain.debug(id).goal === 'fetch') goals.add(id);
+      }
+    }
+    return [...goals];
+  };
+  assert.deepEqual(fetchers(false), [1]);
+  assert.deepEqual(fetchers(true), [1]);
+});
+
+test('the exit of an island is the same for a bot alone and for a bot after others on the level, and a straight walk reaches it', () => {
+  // The island of the test before. Bots A and B have the same nearest floor; B's own straight walk to A's exit meets
+  // the wall, and the graph of a level (nav.js navOf) is shared by every brain on it.
+  const sites = [{ mins: [-350, -50, 0], maxs: [-250, 50, 72] }];
+  const mapOf = () => withIsland((x) => x >= 320, { sites, size: 56 });
+  const [A, B] = [[366, -14, 36], [338, 10, 36]];
+  const ports = flatPorts();
+  const play = (brain, id, at) => ({ commands: run(brain, id, 30, () => [player(id, 'T', at, { own: true }), player(9, 'CT', [-600, 0, 36])]), escape: brain.debug(id).escape });
+  const brainOf = (map, ...ids) => {
+    const brain = createBrain({ map, ports, seed: 7 });
+    for (const id of ids) brain.join(id);
+    return brain;
+  };
+  const alone = play(brainOf(mapOf(), 2), 2, B);
+  const map = mapOf();
+  const first = play(brainOf(map, 1), 1, A);
+  assert.deepEqual(play(brainOf(map, 2), 2, B), alone, 'a later brain on the level');
+  const one = brainOf(mapOf(), 1, 2);
+  play(one, 1, A);
+  assert.deepEqual(play(one, 2, B), alone, 'a later bot of one brain');
+  for (const [at, { escape }] of [[A, first], [B, alone]]) assert.equal(ports.traceHull(at, escape, false), 1, `a straight walk from ${at} to ${escape}`);
+});
+
+test('G6: a hit whose shot the bot did not hear tells the side, not the place; a grenade tells not even the side', () => {
+  // The shooter stands behind a long wall, silent and out of earshot of a silencer (500 units), and hits the bot.
+  const hit = (at, weapon) => run(fresh(5, { half: 5000 }), 1, 150, (tick) => {
+    const me = player(1, 'T', [0, 0, 36], { own: true, yaw: 180 });
+    if (tick >= 21) me.own.hurt = { at: 0.21, by: 2 };
+    return [me, player(2, 'CT', at)];
+  }, (tick) => {
+    if (tick === 20 && weapon !== 'hegrenade') return { events: [{ type: 'shot', player: 2, weapon, silenced: true }] };
+    return tick === 21 ? { events: [{ type: 'hurt', player: 1, by: 2, weapon }] } : {};
+  });
+  // One bearing, two distances: the same play.
+  const near = hit([WALL_X + 400, -300, 36], 'm4a1');
+  assert.deepEqual(hit([2 * (WALL_X + 400), -600, 36], 'm4a1'), near);
+  assert.ok(near.slice(30).some((c) => Math.abs(turn(c.yaw - 180)) > 30), 'the eyes go to the side of the hit');
+  // An HE grenade: two places of the thrower, the same play.
+  assert.deepEqual(hit([WALL_X + 400, -300, 36], 'hegrenade'), hit([WALL_X + 400, 300, 36], 'hegrenade'));
+});
+
+test('G6: a runner heard behind a wall is placed at each step with a new error, and not tracked between steps', () => {
+  const brain = fresh(9, { half: 5000 });
+  const at = (tick) => [WALL_X + 300, -400 + tick * 2.5, 36];
+  const heard = [];
+  run(brain, 1, 200, (tick) => {
+    const e = player(2, 'CT', at(tick));
+    e.velocity = [0, 250, 0];
+    const n = brain.bots.get(1).s.noise;
+    if (n && tick > 20) heard.push({ point: n.point, off: [n.point[0] - at(tick - 1)[0], n.point[1] - at(tick - 1)[1]] });
+    return [player(1, 'T', [0, 0, 36], { own: true, yaw: 180 }), e];
+  });
+  const places = new Set(heard.map((h) => h.point.join()));
+  // A step each 0.3 s: about 6 places in 1.8 s, each with its own error against the true place.
+  assert.ok(places.size >= 4 && places.size <= 8, `${places.size} places`);
+  const offs = new Set(heard.map((h) => h.off.map(Math.round).join()));
+  assert.ok(offs.size > places.size, 'the place stays while the runner moves on');
+});
+
+test('smoke hides by the length of the line inside the cloud: an enemy at its near edge is seen, one deep in it is not', () => {
+  const play = (smokes) => run(fresh(), 1, 300, duel([300, 0, 36]), () => ({ smokes }));
+  const clear = play([]);
+  // A cloud of radius 115 hides behind 80.5 units of smoke on the line. The enemy 35 units inside its near edge, and
+  // the bot 35 units inside the edge of a cloud behind it: 35 units of smoke, so the same play as with none.
+  assert.deepEqual(play([{ origin: [380, 0, 46], radius: 115 }]), clear);
+  assert.deepEqual(play([{ origin: [-80, 0, 50], radius: 115 }]), clear);
+  // The enemy 35 units inside the far edge: the line crosses most of the cloud.
+  assert.ok(play([{ origin: [220, 0, 46], radius: 115 }]).every((c) => !c.attack));
+});
+
+test('one command of a bot makes one path search at most: a second one waits a tick', () => {
+  // A runner heard behind a wall, a site to walk to: the noise, the contact and the way each ask for a search.
+  let most = 0;
+  let searches = 0;
+  for (let seed = 1; seed <= 6; seed++) {
+    const brain = createBrain({ map: flatMap({ size: 40, sites: [{ mins: [-500, -50, 0], maxs: [-400, 50, 72] }], wall: 200 }), ports: flatPorts(), seed });
+    brain.join(1);
+    let yaw = 0;
+    for (let tick = 1; tick <= 400; tick++) {
+      const e = player(2, 'CT', [WALL_X + 150, -150 + tick * 1.5, 36]);
+      e.velocity = [0, 250, 0];
+      brain.frame(frameAt(tick, [player(1, 'T', [100, 0, 36], { own: true, yaw }), e]));
+      const gen = brain.nav.search?.gen ?? 0;
+      yaw = brain.think(1).yaw;
+      most = Math.max(most, brain.nav.search.gen - gen);
+      searches += brain.nav.search.gen - gen;
+    }
+  }
+  assert.equal(most, 1);
+  assert.ok(searches > 50, `the searches still happen (${searches})`);
 });

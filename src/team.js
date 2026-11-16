@@ -111,4 +111,9 @@ export class Team {
     if (point) map.set(id, point);
     else map.delete(id);
   }
+
+  /** A player of the team died: the places that it took are free for a teammate that chooses later. */
+  free(id) {
+    for (const map of this.taken.values()) map.delete(id);
+  }
 }

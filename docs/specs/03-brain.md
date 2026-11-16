@@ -23,8 +23,12 @@ Ported from `bot.js look` and `hear`, with these rules made strict:
 - A bot sees an enemy in its view field (70 degrees each side) with a clear line to the head or the chest, no
   smoke between, within the reach of its gun. A sound near its back turns it at once.
 - Seen is not noticed: an enemy at the edge of the view or far away takes longer, as in csbih-player.
-- **New:** an enemy behind a wall changes nothing. The reference bot draws its gun for an enemy within 2000 units
-  inside the view cone, through walls. Test: gate G6 in `test/brain.test.js`.
+- **New:** an enemy that the bot cannot see or hear changes no command. The reference bot draws its gun for an
+  enemy within 2000 units inside the view cone, through walls. Test: gate G6 in `test/brain.test.js`.
+- A hit whose shot the bot did not hear turns its eyes to the side of the hit, as the HUD shows it: the bearing
+  with an error of 15 degrees, at a guessed 600 units. A grenade's hit tells no side.
+- A sound gives the place of its maker at most each 0.3 s (the step of a run), each time with a new error of 8% of
+  the distance. Between two the bot keeps the last place: it does not track a runner through a wall.
 - **New:** a CT learns where the planted bomb lies by a look at it, by the beep within 1000 units, or by standing in
   a site that has none. The reference bot reads the bomb's place from the world.
 - A T knows its team's bomb, as the radar shows it. Every player counts the bomb's seconds from the call.
@@ -158,7 +162,8 @@ New. The reference bots have no team plan.
 `tools/strategies.js` mines the strategies that teams played on a map (docs/strategies.md), and a host can give
 them to the brain as `map.plans` (spec 02). With them:
 
-- At the round's start each team draws one plan, by its share of the rounds times 0.4 plus its share of wins.
+- At the round's start each team draws one plan, by its share of the rounds times the sum of 0.4 and the part of
+  its rounds that it won (`plan.js WON_BASE`).
 - Each T goes to a place of the formation and looks as its player looked. It leaves when its way to the site
   takes the time that is left until the plan's second of the first T in the site, and up to 2 s later (the lag of
   section 6: with it the Ts of the mined plans win 56.9% of 864 rounds of self-play, without it 61.0%). The bomb
@@ -225,7 +230,8 @@ For a replay: a bot that plays on for a recorded player can get that player's ro
   jump. Its view is the player's view, and it holds the gun that the player held. Where the player stood at a
   place that the bot's box does not reach, the bot stands after 0.4 s with no step nearer.
 - Off the route by 300 units, or with no progress for 1 s, it walks back by the graph to the first place of the
-  route ahead that the graph reaches. Three walks back that fail end the route.
+  route ahead that the graph reaches. A walk back that finds no such place ends the route, and so does the fourth
+  walk back of the round.
 - **Each bot leaves its route by what it meets itself**, for the rest of the round: it reacted to an enemy in its
   sight, it was hit, it heard an enemy within the hearing distance of its profile (350 units), the recording of its
   player ended, it carries a bomb

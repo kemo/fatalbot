@@ -3,8 +3,8 @@
 // The rules of sight and hearing are ported from csbih-player (bot.js look and hear, senses.js noiseOf): the view
 // field, the line to the head or the chest, the smoke, the time to notice, the earshot of each sound.
 
-import { abs, eyeOf, hypot, min, toward, turn } from './geometry.js';
-import { ENGAGE, ENGAGE_DEFAULT, bestGun } from './weapons.js';
+import { RAD, abs, cos, eyeOf, hypot, max, min, sin, toward, turn } from './geometry.js';
+import { ENGAGE, ENGAGE_DEFAULT, bestGun, isGrenade } from './weapons.js';
 import { placeAt } from './places.js';
 
 // What each sound carries (units). A step at a full run fades out at about 1250 (YaPB hears 1280); a shot carries
@@ -38,8 +38,16 @@ const NOTICE_FAR = 0.4;
 // of the distance.
 const NOISE_KEEP = 1.5;
 const NOISE_ERROR = 0.08;
+// A run sounds a step each 0.3 s (pm_shared PM_UpdateStepSound): the bot learns a new place of a sound no more
+// often, each with its own error, and keeps the last place between two.
+const NOISE_EVERY = 0.3;
 // A shot further away than this is somebody else's fight: it brings the gun out, and no turn of the head.
 const NOISE_TURN_SHOT = 1200;
+// A hit whose shot the bot did not hear tells the side it came from, not the place (the HUD lights the sides of the
+// Damage message's origin: cl_dll health.cpp CalcDamageDirection). The error of that side (degrees), and the
+// distance at which the bot puts the shooter. A grenade's hit tells no side of the thrower.
+const HIT_SIDE_ERROR = 15;
+const HIT_GUESS = 600;
 // A line of sight passes a smoke cloud only while less than this part of its radius is in smoke.
 const SMOKE_SEE_THROUGH = 0.7;
 
@@ -66,6 +74,7 @@ export function listen(brain, frame) {
   const { nav, map, teams } = brain;
   for (const e of frame.events) {
     if (e.type === 'shot') brain.shots.set(e.player, { at: time, silenced: Boolean(e.silenced) });
+    else if (e.type === 'hurt') brain.hits.set(e.player, e.weapon ?? null);
     else if (e.type === 'reload') brain.reloads.set(e.player, time);
     else if (e.type === 'kill') {
       const victim = brain.census.byId.get(e.victim);
@@ -74,6 +83,7 @@ export function listen(brain, frame) {
       const other = teams[victim.team === 'T' ? 'CT' : 'T'];
       for (const team of [own, other]) if (team) team.firstKill ??= time;
       own?.died(placeAt(nav, map, victim.origin), time);
+      own?.free(e.victim);
       other?.lost(e.victim);
       // The victim saw who killed it, and says so.
       const killer = brain.census.byId.get(e.killer);
@@ -119,32 +129,27 @@ function noiseOf(c, other) {
   return kind ? { radius, kind } : null;
 }
 
-/** True when smoke stands between two points: the lengths of the line inside the clouds add up to too much. */
+/**
+ * True when smoke stands between two points: the lengths of the line inside the clouds add up to too much. Each
+ * cloud adds its chord on the line, clipped to the two points.
+ */
 function smoked(smokes, a, b) {
   if (!smokes.length) return false;
   const ab = [b[0] - a[0], b[1] - a[1], b[2] - a[2]];
   const length = hypot(ab[0], ab[1], ab[2]);
   if (length === 0) return false;
   const dir = [ab[0] / length, ab[1] / length, ab[2] / length];
-  const dist = (p, q) => hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
   let sum = 0;
   let limit = Infinity;
   for (const { origin: o, radius } of smokes) {
-    const r2 = radius * radius;
     limit = min(limit, radius * SMOKE_SEE_THROUGH);
-    const along = (o[0] - a[0]) * dir[0] + (o[1] - a[1]) * dir[1] + (o[2] - a[2]) * dir[2];
-    const close = along < 0 ? a : along >= length ? b : [a[0] + dir[0] * along, a[1] + dir[1] * along, a[2] + dir[2] * along];
-    const near2 = dist(close, o) ** 2;
-    if (near2 >= r2) continue;
-    const half = Math.sqrt(r2 - near2);
-    const fromIn = dist(a, o) ** 2 < r2;
-    const toIn = dist(b, o) ** 2 < r2;
-    if (fromIn && toIn) sum += length;
-    else if (fromIn) sum += along > 0 ? half + dist(close, a) : half - dist(close, a);
-    else if (toIn) {
-      const out = (b[0] - o[0]) * dir[0] + (b[1] - o[1]) * dir[1] + (b[2] - o[2]) * dir[2];
-      sum += out > 0 ? half + dist(close, b) : half - dist(close, b);
-    } else sum += 2 * half;
+    const to = [o[0] - a[0], o[1] - a[1], o[2] - a[2]];
+    const along = to[0] * dir[0] + to[1] * dir[1] + to[2] * dir[2];
+    const near2 = to[0] * to[0] + to[1] * to[1] + to[2] * to[2] - along * along;
+    if (near2 >= radius * radius) continue;
+    const half = Math.sqrt(radius * radius - near2);
+    const inside = min(length, along + half) - max(0, along - half);
+    if (inside > 0) sum += inside;
   }
   return sum > limit;
 }
@@ -164,13 +169,17 @@ function hear(c, other, sound, distance) {
   const live = n && time - n.at < NOISE_KEEP;
   if (live && n.id !== other.id && n.distance < distance) return;
   const same = live && n.id === other.id;
+  if (same && time - n.heardAt < NOISE_EVERY) {
+    n.at = time;
+    return;
+  }
   // The further off, the likelier it goes past (the official bot's chance); a shot far off never turns the head.
   const attends = sound.kind === 'shot' ? distance < NOISE_TURN_SHOT : random() < 1.25 - distance / sound.radius;
   const spread = distance * NOISE_ERROR;
-  const off = same ? n.off : [random.gauss() * spread, random.gauss() * spread];
+  const off = [random.gauss() * spread, random.gauss() * spread];
   const o = other.origin;
   s.noise = {
-    id: other.id, at: time, distance, off, point: [o[0] + off[0], o[1] + off[1], o[2]], kind: sound.kind,
+    id: other.id, at: time, heardAt: time, distance, point: [o[0] + off[0], o[1] + off[1], o[2]], kind: sound.kind,
     reactAt: same ? n.reactAt : time + skill.reaction * random(0.7, 1.3),
     attends: same ? n.attends || attends : attends,
   };
@@ -225,11 +234,15 @@ export function look(c) {
     if (dir.distance < bestD) [best, bestD] = [other, dir.distance];
   }
   for (const id of exposed.keys()) if (!visible.has(id)) exposed.delete(id);
-  // Hit by an enemy it does not see: the eyes go that way at once.
+  // Hit by an enemy it does not see or hear: the eyes go to the side of the hit at once.
   const hurt = own.hurt && time - own.hurt.at < 0.5 ? brain.census.byId.get(own.hurt.by) : null;
   if (hurt && hurt.team !== me.team && !visible.has(hurt.id) && (s.noise?.id !== hurt.id || time - s.noise.at > 0.5)) {
-    s.noise = { id: hurt.id, at: time, distance: toward(eye, hurt.origin).distance, off: [0, 0], point: [...hurt.origin], kind: 'hit', reactAt: time + skill.reaction * 0.5, attends: true };
     s.alertAt = time;
+    if (!isGrenade(brain.hits.get(me.id))) {
+      const yaw = (toward(eye, hurt.origin).yaw + random.gauss() * HIT_SIDE_ERROR) * RAD;
+      const point = [me.origin[0] + cos(yaw) * HIT_GUESS, me.origin[1] + sin(yaw) * HIT_GUESS, me.origin[2]];
+      s.noise = { id: hurt.id, at: time, distance: HIT_GUESS, point, kind: 'hit', reactAt: time + skill.reaction * 0.5, attends: true };
+    }
   }
   if (me.team === 'CT') bombLook(c, eye, clear);
   if (!best) {
@@ -319,12 +332,15 @@ export function bombFor(c) {
   };
 }
 
-/** The teammate of a list who is nearest a point (the Ts see each other and their bomb on the radar). */
+/**
+ * The bot of this brain that is nearest a point (the Ts see each other and their bomb on the radar). A teammate
+ * that the brain does not drive (a person) may never go there, so it does not count.
+ */
 export function nearestMate(mates, point) {
   let best = null;
   let bestD = Infinity;
   for (const p of mates) {
-    if (!p.alive) continue;
+    if (!p.alive || !p.own) continue;
     const d = hypot(p.origin[0] - point[0], p.origin[1] - point[1]);
     if (d < bestD) [best, bestD] = [p, d];
   }

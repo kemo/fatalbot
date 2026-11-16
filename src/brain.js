@@ -105,6 +105,8 @@ export function createBrain({ map, ports, seed = 1 }) {
     // Who fired and who reloads, by player: what every player in earshot hears (senses.js listen).
     shots: new Map(),
     reloads: new Map(),
+    // The weapon of the last hit that each player took: a bot reads its own (senses.js look).
+    hits: new Map(),
     spawnMid: { T: midOf(map.spawns, 'T'), CT: midOf(map.spawns, 'CT') },
 
     /**
@@ -138,6 +140,7 @@ export function createBrain({ map, ports, seed = 1 }) {
         brain.round = frame.round.number;
         brain.shots.clear();
         brain.reloads.clear();
+        brain.hits.clear();
         for (const side of ['T', 'CT']) {
           brain.teams[side].reset();
           brain.teams[side].plan = planRound(brain, side, frame.time);
@@ -198,6 +201,7 @@ function newState() {
 /** One tick of one bot. */
 function command(c) {
   const { me, own, s, time, frame } = c;
+  c.searchAt = c.brain.nav.search?.gen ?? 0;
   restStuck(c);
   if (c.every(LOOK_EVERY)) look(c);
   track(c);

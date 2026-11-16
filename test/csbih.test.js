@@ -2,6 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { checkCommand, checkFrame, checkMap } from '../src/contract.js';
 import { csbihMissing, loadCore, loadLevel } from '../hosts/csbih/load.js';
 import { mapOf, restLevel } from '../hosts/csbih/adapter.js';
@@ -72,14 +73,32 @@ test('a match gives the places of its players in each round, as a recorded match
   }
 });
 
-test('the same seed gives the same match', { skip }, () => {
+test('the same seed gives the same commands, also after another match on the level', { skip }, () => {
+  // A hash of every command of every bot, in the order of the ticks.
   const play = (seed) => {
     const kind = fatalKind(core, level);
+    const hash = createHash('sha256');
+    const round = kind.round.bind(kind);
+    const hashed = new WeakSet();
+    kind.round = (world, player, match) => {
+      round(world, player, match);
+      const c = player.controller;
+      if (hashed.has(c)) return;
+      hashed.add(c);
+      const command = c.command.bind(c);
+      c.command = (w, me) => {
+        const cmd = command(w, me);
+        hash.update(`${me.id} ${JSON.stringify(cmd)}\n`);
+        return cmd;
+      };
+    };
     const m = runMatch({ core, level, sides: { T: kind, CT: kind }, seed, rounds: 2 });
-    return { score: m.score, rounds: m.rounds, ticks: m.ticks };
+    return { commands: hash.digest('hex'), score: m.score, ticks: m.ticks };
   };
-  assert.deepEqual(play(5), play(5));
-  assert.notDeepEqual(play(5).rounds, play(6).rounds);
+  const first = play(5);
+  const other = play(6);
+  assert.deepEqual(play(5), first);
+  assert.notEqual(other.commands, first.commands);
 });
 
 // A recorded match: csbih-player's timelines hold the play of real people and are never part of this repository.

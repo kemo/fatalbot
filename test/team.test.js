@@ -394,3 +394,24 @@ test('a player that waits for a known enemy steps between floors, and plants its
   assert.ok(near, 'a seed drew a wait for the near enemy');
   assert.equal(near.length, 1);
 });
+
+test('the post of a dead CT is free: a CT that chooses a post later can take its place', () => {
+  // Seed 1: CT 1 holds a post of site A and dies; CT 3 comes into the round after it (a replay's takeover) near
+  // site A and chooses a post there.
+  const brain = createBrain({ map: map(), ports: open(), seed: 1 });
+  brain.join(1);
+  brain.join(2);
+  const list = (tick) => [player(1, 'CT', [600, 100, 36], { own: true, alive: tick < 50 }), player(2, 'CT', [600, -100, 36], { own: true }), player(3, 'CT', [600, 300, 36], { own: true }), player(9, 'T', [-800, 0, 36])];
+  let dead = null;
+  for (let tick = 1; tick <= 70; tick++) {
+    if (tick === 60) brain.join(3);
+    brain.frame(frameAt(tick, list(tick), { events: tick === 50 ? [{ type: 'kill', killer: 9, victim: 1 }] : [] }));
+    for (const id of [1, 2, 3]) if (brain.bots.has(id)) brain.think(id);
+    if (tick === 1) dead = brain.teams.CT.plan.posts.get(1).point;
+  }
+  const plan = brain.teams.CT.plan;
+  assert.ok(!brain.teams.CT.takenBy('post', 3).some((p) => flat(p, dead) < 1), 'the dead CT holds no post');
+  // Two posts closer than 180 units are never both taken (sites.js choosePost).
+  assert.equal(plan.posts.get(3).site, 0);
+  assert.ok(flat(plan.posts.get(3).point, dead) < 180, `a post near the one of the dead CT (${plan.posts.get(3).point} and ${dead})`);
+});

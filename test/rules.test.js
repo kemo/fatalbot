@@ -28,6 +28,8 @@ test('the trigonometry of the brain goes through geometry.js', () => {
   for (const { name, text } of files) {
     if (name === 'geometry.js') continue;
     assert.doesNotMatch(code(text), /Math\.(sin|cos|tan|atan2?|asin|acos|hypot|log2?|exp|pow)\b/, `${name} calls Math trigonometry`);
+    // The same functions by another way: Math['atan2'], const { hypot } = Math, const M = Math.
+    assert.doesNotMatch(code(text), /Math\s*\[|=\s*Math\s*[;,)\n]/, `${name} takes functions out of Math`);
   }
 });
 
@@ -35,6 +37,9 @@ test('only the senses read the players and the bomb of a frame', () => {
   for (const { name, text } of files) {
     if (name === 'senses.js' || name === 'contract.js') continue;
     assert.doesNotMatch(code(text), /frame\.(players|bomb|smokes|events)\b/, `${name} reads the frame's raw state`);
+    // The same state by another way: the frame that the brain keeps (brain.now), and a frame taken apart.
+    assert.doesNotMatch(code(text), /\bnow\.(players|bomb|smokes|events)\b/, `${name} reads the kept frame's raw state`);
+    assert.doesNotMatch(code(text), /\{[^}]*\b(players|bomb|smokes|events)\b[^}]*\}\s*=\s*[\w.]*\b(frame|now)\b/, `${name} takes the raw state out of a frame`);
   }
 });
 

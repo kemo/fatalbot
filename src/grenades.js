@@ -184,11 +184,23 @@ export function solveThrow(ports, kind, eye, target, yaw) {
 }
 
 /**
- * A lineup of the map as a throw of this brain (worked out once, kept on the graph): {stand, yaw, pitch, target}
+ * What the graph keeps for the lineups of a brain: {throws, grenades}. Brains of one level share the graph
+ * (nav.js navOf) and can have different lineups, so the key is the content of the brain's own list.
+ */
+export function lineupCache(brain) {
+  if (brain.lineupCache) return brain.lineupCache;
+  const lists = (brain.nav.lineups ??= new Map());
+  const key = JSON.stringify(brain.map.lineups ?? []);
+  if (!lists.has(key)) lists.set(key, { throws: new Map(), grenades: {} });
+  return (brain.lineupCache = lists.get(key));
+}
+
+/**
+ * A lineup of the map as a throw of this brain (worked out once, see lineupCache): {stand, yaw, pitch, target}
  * or null when a stand at its place cannot throw there.
  */
 function throwOfLineup(brain, index) {
-  const cache = (brain.nav.throws ??= new Map());
+  const cache = lineupCache(brain).throws;
   if (cache.has(index)) return cache.get(index);
   const { nav, ports } = brain;
   const l = brain.map.lineups[index];
@@ -211,7 +223,7 @@ function throwOfLineup(brain, index) {
 
 /** The grenades that a side has a throw for on this map, as weapon names (found once). */
 export function grenadesOf(brain, side) {
-  const known = (brain.nav.grenades ??= {});
+  const known = lineupCache(brain).grenades;
   return (known[side] ??= new Set((brain.map.lineups ?? []).filter((l) => l.team === side).map((l) => WEAPON_OF[l.kind])));
 }
 

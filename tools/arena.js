@@ -3,13 +3,14 @@
 //                            [--sides both] [--json file] [--spells 20]
 // `--spells n` lists the n longest spells at a wall or stuck, with the place and the goal of the bot.
 // Team A plays T then CT on each map and seed (`--sides both`), so a side's bias and a team's strength come apart.
+// One kind against itself plays each seed once: the other order is the same match again.
 // Kinds: `ref` (the bots of csbih-player, with the map's view field and lineups; `ref-bare` without them) and
 // `fatal` (this repository's brain). `fatal-plans` gives it the strategies of the map that tools/strategies.js mined
 // from the demos; `fatal-nades` the map's grenade lineups; `fatal-plans-nades` both.
 
 import { writeFileSync } from 'node:fs';
 import { csbihMissing, loadBody, loadCore, loadLevel, loadMapData, loadPlans } from '../hosts/csbih/load.js';
-import { feetLine, measureLine, referenceKind, runMatch, styleLine, summarize, useBody } from '../hosts/csbih/arena.js';
+import { feetLine, measureLine, ordersOf, referenceKind, runMatch, styleLine, summarize, useBody } from '../hosts/csbih/arena.js';
 
 const args = { a: 'fatal', b: 'ref', maps: 'de_dust2', rounds: '12', seeds: '1', sides: 'both', json: null, spells: '0' };
 const argv = process.argv.slice(2);
@@ -52,8 +53,8 @@ for (const map of args.maps.split(',')) {
   }
   const level = loadLevel(core, map);
   for (const seed of args.seeds.split(',').map(Number)) {
-    for (const order of args.sides === 'both' ? [['a', 'b'], ['b', 'a']] : [['a', 'b']]) {
-      const sides = { T: await kindFor(args[order[0]], level), CT: await kindFor(args[order[1]], level) };
+    for (const [t, ct] of ordersOf(args.a, args.b, args.sides === 'both')) {
+      const sides = { T: await kindFor(t, level), CT: await kindFor(ct, level) };
       // One kind against itself: both sides share one name, and one set of measures.
       if (sides.T.name === sides.CT.name) sides.CT = sides.T;
       const m = runMatch({ core, level, sides, seed, rounds: Number(args.rounds) });
@@ -68,7 +69,7 @@ const s = summarize(matches);
 console.log(`\n${s.matches} matches, ${s.rounds} rounds, ${(s.seconds / s.rounds).toFixed(0)} s a round, ${(s.stepMs / s.ticks).toFixed(3)} ms a tick`);
 console.log(`G2 sides: T ${pct(s.bySide.T, s.rounds)}  CT ${pct(s.bySide.CT, s.rounds)}`);
 if (Object.keys(s.byKind).length > 1 || args.a !== args.b) console.log(`G1 kinds: ${Object.entries(s.byKind).map(([k, n]) => `${k} ${pct(n, s.rounds)}`).join('  ')}`);
-console.log(`G4 rounds: plants ${pct(s.plants, s.rounds)}; ${Object.entries(s.reasons).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ${n}`).join(', ')}; on the clock with no kill ${s.noKillTimeouts}`);
+console.log(`G4 rounds of both kinds (the plants of a kind as the Ts are in its line below): plants ${pct(s.plants, s.rounds)}; ${Object.entries(s.reasons).sort((x, y) => y[1] - x[1]).map(([k, n]) => `${k} ${n}`).join(', ')}; on the clock with no kill ${s.noKillTimeouts}`);
 for (const [kind, m] of Object.entries(s.measure)) console.log(measureLine(kind, m));
 for (const [kind, m] of Object.entries(s.measure)) console.log(feetLine(kind, m));
 for (const [kind, m] of Object.entries(s.measure)) console.log(styleLine(kind, m));

@@ -2,7 +2,7 @@
 // the official CS bot), never a wall. The crosshair waits where the fight starts.
 
 import { PI, cos, eyeOf, hypot, sin, toward, turn } from './geometry.js';
-import { findPath, nearestNode } from './nav.js';
+import { findPath, nearestNode, searchFree } from './nav.js';
 import { SIGHTING_SECONDS } from './team.js';
 
 // How long a sound holds the bot's attention.
@@ -45,10 +45,13 @@ export function approachPoint(c, eye, point) {
   const answers = (s.approach ??= new Map());
   const cached = answers.get(key);
   if (cached && time < cached.until && hypot(cached.from[0] - me.origin[0], cached.from[1] - me.origin[1], cached.from[2] - me.origin[2]) < APPROACH_STEPPED) return cached.aim;
-  if (answers.size >= APPROACH_KEPT) answers.clear();
   const at = [point[0], point[1], point[2] + STANDING_EYE];
+  const open = ports.traceLine(eye, at) >= 1;
+  // After another search of this command: the old answer or the point itself for a tick, and nothing kept.
+  if (!open && nav && !searchFree(c)) return cached?.aim ?? at;
+  if (answers.size >= APPROACH_KEPT) answers.clear();
   let aim = null;
-  if (ports.traceLine(eye, at) >= 1) aim = at;
+  if (open) aim = at;
   else if (nav) {
     const from = nearestNode(nav, me.origin, 3, 48);
     const to = nearestNode(nav, point, 4, 96);

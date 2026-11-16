@@ -1,0 +1,22 @@
+# Every pull request and every push to main: the tests that need no csbih-player. The tests of the csbih host skip
+# here; run `npm test` beside a checkout of csbih-player with its built levels before a merge of a behaviour change.
+name: ci
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test

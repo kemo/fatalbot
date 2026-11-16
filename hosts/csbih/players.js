@@ -32,6 +32,11 @@ const NAMES = { mp5navy: 'mp5' };
 const gunKind = (weapon) => kindOf(NAMES[weapon] ?? weapon);
 /** The group of a weapon for the tables: rifle, sniper, pistol or other. */
 export const groupOf = (weapon) => GROUP[gunKind(weapon)] ?? 'other';
+/** True for a kill with a gun: the head share and the aim of the players leave out the knife and the grenades. */
+export const gunKill = (weapon) => {
+  const kind = gunKind(weapon);
+  return Boolean(kind) && kind !== 'grenade' && kind !== 'knife';
+};
 
 // The sight errors that the turn is told apart by: [from, to, title] in degrees.
 export const SIGHT_STEPS = [[0, 10, 'Under 10'], [10, 40, '10 to 40'], [40, 181, 'Over 40']];
@@ -132,7 +137,7 @@ export function playerFacts(aimStats, hulls, timeline, skip = []) {
   for (const k of timeline.kills ?? []) {
     if (!k.killer || k.killer === k.victim || k.killerTeam === k.victimTeam) continue;
     if (skip.some(([from, to]) => k.t >= from && k.t <= to)) continue;
-    if (gunKind(k.weapon) === 'grenade' || gunKind(k.weapon) === 'knife' || !gunKind(k.weapon)) continue;
+    if (!gunKill(k.weapon)) continue;
     let list = byKiller.get(k.killer);
     if (!list) byKiller.set(k.killer, (list = []));
     list.push(k);
