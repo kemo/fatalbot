@@ -397,3 +397,21 @@ test('the exit of an island is the same for a bot alone and for a bot after othe
   assert.deepEqual(play(one, 2, B), alone, 'a later bot of one brain');
   for (const [at, { escape }] of [[A, first], [B, alone]]) assert.equal(ports.traceHull(at, escape, false), 1, `a straight walk from ${at} to ${escape}`);
 });
+
+test('G6: a hit whose shot the bot did not hear tells the side, not the place; a grenade tells not even the side', () => {
+  // The shooter stands behind a long wall, silent and out of earshot of a silencer (500 units), and hits the bot.
+  const hit = (at, weapon) => run(fresh(5, { half: 5000 }), 1, 150, (tick) => {
+    const me = player(1, 'T', [0, 0, 36], { own: true, yaw: 180 });
+    if (tick >= 21) me.own.hurt = { at: 0.21, by: 2 };
+    return [me, player(2, 'CT', at)];
+  }, (tick) => {
+    if (tick === 20 && weapon !== 'hegrenade') return { events: [{ type: 'shot', player: 2, weapon, silenced: true }] };
+    return tick === 21 ? { events: [{ type: 'hurt', player: 1, by: 2, weapon }] } : {};
+  });
+  // One bearing, two distances: the same play.
+  const near = hit([WALL_X + 400, -300, 36], 'm4a1');
+  assert.deepEqual(hit([2 * (WALL_X + 400), -600, 36], 'm4a1'), near);
+  assert.ok(near.slice(30).some((c) => Math.abs(turn(c.yaw - 180)) > 30), 'the eyes go to the side of the hit');
+  // An HE grenade: two places of the thrower, the same play.
+  assert.deepEqual(hit([WALL_X + 400, -300, 36], 'hegrenade'), hit([WALL_X + 400, 300, 36], 'hegrenade'));
+});

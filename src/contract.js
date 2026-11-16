@@ -69,7 +69,7 @@
  *   `defuser` and `arming` name the player who defuses or arms the bomb now.
  * @property {{origin: Vec3, radius: number}[]} smokes The smoke clouds that stand now.
  * @property {Object[]} events What happened since the frame before: {type: 'shot', player, weapon, silenced},
- *   {type: 'hurt', player, by}, {type: 'kill', killer, victim}, {type: 'reload', player},
+ *   {type: 'hurt', player, by, weapon}, {type: 'kill', killer, victim}, {type: 'reload', player},
  *   {type: 'planted', player, at}, {type: 'dropped', at}, {type: 'picked', player}, {type: 'defusing', player},
  *   {type: 'defused'}, {type: 'exploded'}.
  *

@@ -25,6 +25,8 @@ Ported from `bot.js look` and `hear`, with these rules made strict:
 - Seen is not noticed: an enemy at the edge of the view or far away takes longer, as in csbih-player.
 - **New:** an enemy that the bot cannot see or hear changes no command. The reference bot draws its gun for an
   enemy within 2000 units inside the view cone, through walls. Test: gate G6 in `test/brain.test.js`.
+- A hit whose shot the bot did not hear turns its eyes to the side of the hit, as the HUD shows it: the bearing
+  with an error of 15 degrees, at a guessed 600 units. A grenade's hit tells no side.
 - **New:** a CT learns where the planted bomb lies by a look at it, by the beep within 1000 units, or by standing in
   a site that has none. The reference bot reads the bomb's place from the world.
 - A T knows its team's bomb, as the radar shows it. Every player counts the bomb's seconds from the call.

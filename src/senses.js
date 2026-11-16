@@ -3,8 +3,8 @@
 // The rules of sight and hearing are ported from csbih-player (bot.js look and hear, senses.js noiseOf): the view
 // field, the line to the head or the chest, the smoke, the time to notice, the earshot of each sound.
 
-import { abs, eyeOf, hypot, min, toward, turn } from './geometry.js';
-import { ENGAGE, ENGAGE_DEFAULT, bestGun } from './weapons.js';
+import { RAD, abs, cos, eyeOf, hypot, min, sin, toward, turn } from './geometry.js';
+import { ENGAGE, ENGAGE_DEFAULT, bestGun, isGrenade } from './weapons.js';
 import { placeAt } from './places.js';
 
 // What each sound carries (units). A step at a full run fades out at about 1250 (YaPB hears 1280); a shot carries
@@ -40,6 +40,11 @@ const NOISE_KEEP = 1.5;
 const NOISE_ERROR = 0.08;
 // A shot further away than this is somebody else's fight: it brings the gun out, and no turn of the head.
 const NOISE_TURN_SHOT = 1200;
+// A hit whose shot the bot did not hear tells the side it came from, not the place (the HUD lights the sides of the
+// Damage message's origin: cl_dll health.cpp CalcDamageDirection). The error of that side (degrees), and the
+// distance at which the bot puts the shooter. A grenade's hit tells no side of the thrower.
+const HIT_SIDE_ERROR = 15;
+const HIT_GUESS = 600;
 // A line of sight passes a smoke cloud only while less than this part of its radius is in smoke.
 const SMOKE_SEE_THROUGH = 0.7;
 
@@ -66,6 +71,7 @@ export function listen(brain, frame) {
   const { nav, map, teams } = brain;
   for (const e of frame.events) {
     if (e.type === 'shot') brain.shots.set(e.player, { at: time, silenced: Boolean(e.silenced) });
+    else if (e.type === 'hurt') brain.hits.set(e.player, e.weapon ?? null);
     else if (e.type === 'reload') brain.reloads.set(e.player, time);
     else if (e.type === 'kill') {
       const victim = brain.census.byId.get(e.victim);
@@ -226,11 +232,15 @@ export function look(c) {
     if (dir.distance < bestD) [best, bestD] = [other, dir.distance];
   }
   for (const id of exposed.keys()) if (!visible.has(id)) exposed.delete(id);
-  // Hit by an enemy it does not see: the eyes go that way at once.
+  // Hit by an enemy it does not see or hear: the eyes go to the side of the hit at once.
   const hurt = own.hurt && time - own.hurt.at < 0.5 ? brain.census.byId.get(own.hurt.by) : null;
   if (hurt && hurt.team !== me.team && !visible.has(hurt.id) && (s.noise?.id !== hurt.id || time - s.noise.at > 0.5)) {
-    s.noise = { id: hurt.id, at: time, distance: toward(eye, hurt.origin).distance, off: [0, 0], point: [...hurt.origin], kind: 'hit', reactAt: time + skill.reaction * 0.5, attends: true };
     s.alertAt = time;
+    if (!isGrenade(brain.hits.get(me.id))) {
+      const yaw = (toward(eye, hurt.origin).yaw + random.gauss() * HIT_SIDE_ERROR) * RAD;
+      const point = [me.origin[0] + cos(yaw) * HIT_GUESS, me.origin[1] + sin(yaw) * HIT_GUESS, me.origin[2]];
+      s.noise = { id: hurt.id, at: time, distance: HIT_GUESS, off: [0, 0], point, kind: 'hit', reactAt: time + skill.reaction * 0.5, attends: true };
+    }
   }
   if (me.team === 'CT') bombLook(c, eye, clear);
   if (!best) {
