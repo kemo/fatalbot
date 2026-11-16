@@ -301,3 +301,51 @@ test('a bot taps the duck on its wait and on its run at the rate of its profile,
   const fought = wait(1, (post, watch) => [post[0] + (watch[0] - post[0]) / 4, post[1] + (watch[1] - post[1]) / 4, 36]);
   assert.ok(fought.some((c) => c.attack) && fought.every((c) => !c.duck), 'not with an enemy in sight');
 });
+
+test('at a frame step of 0.02 s a bot sees an enemy and fires after its reaction time', () => {
+  const commands = run(fresh(), 1, 150, duel([200, 0, 36]), () => ({ dt: 0.02 }));
+  const first = commands.findIndex((c) => c.attack);
+  assert.ok(first >= 0, 'it fires');
+  assert.ok((first + 1) * 0.02 >= 0.2, `the first shot at ${(first + 1) * 0.02} s is too early`);
+  assert.ok(Math.abs(turn(commands[first].yaw)) < 6, 'the view is on the enemy at the first shot');
+});
+
+test('a smoke cloud between a bot and an enemy hides the enemy; a cloud beside the line does not', () => {
+  const smoked = (origin) => run(fresh(), 1, 300, duel([300, 0, 36]), () => ({ smokes: [{ origin, radius: 115 }] }));
+  assert.ok(smoked([150, 0, 46]).every((c) => !c.attack), 'no shot through the cloud');
+  assert.ok(smoked([150, 300, 46]).some((c) => c.attack), 'a shot past the cloud');
+});
+
+test('two brains on one level play as each brain alone, side by side and one after the other', () => {
+  const sites = [{ mins: [-500, -50, 0], maxs: [-400, 50, 72] }];
+  const brainOn = (map, seed) => {
+    const brain = createBrain({ map, ports: flatPorts(), seed });
+    brain.join(1);
+    return brain;
+  };
+  const players = (at) => () => [player(1, 'T', at, { own: true }), player(2, 'CT', [WALL_X + 200, 0, 36])];
+  const alone = (seed, at) => run(brainOn(flatMap({ sites }), seed), 1, 400, players(at));
+  const a = alone(3, [300, -200, 36]);
+  const b = alone(4, [100, 250, 36]);
+  // Side by side: the two brains take their ticks in turn on one map (one graph, nav.js navOf).
+  const map = flatMap({ sites });
+  const [ba, bb] = [brainOn(map, 3), brainOn(map, 4)];
+  const [ca, cb] = [[], []];
+  const view = { a: null, b: null };
+  for (let tick = 1; tick <= 400; tick++) {
+    for (const [brain, at, out, k] of [[ba, [300, -200, 36], ca, 'a'], [bb, [100, 250, 36], cb, 'b']]) {
+      const list = players(at)();
+      if (view[k]) [list[0].yaw, list[0].pitch] = [view[k].yaw, view[k].pitch];
+      brain.frame(frameAt(tick, list));
+      const cmd = brain.think(1);
+      view[k] = cmd;
+      out.push(cmd);
+    }
+  }
+  assert.deepEqual(ca, a);
+  assert.deepEqual(cb, b);
+  // One after the other: a later brain on a level that another brain used.
+  const used = flatMap({ sites });
+  run(brainOn(used, 3), 1, 400, players([300, -200, 36]));
+  assert.deepEqual(run(brainOn(used, 4), 1, 400, players([100, 250, 36])), b);
+});
