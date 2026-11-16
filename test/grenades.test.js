@@ -3,7 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createBrain } from '../src/brain.js';
-import { flight, lineupsSolved, solveThrow, throwOf } from '../src/grenades.js';
+import { flight, grenadesOf, lineupCache, lineupsSolved, solveThrow, throwOf } from '../src/grenades.js';
 import { csbihMissing, loadCore, loadLevel, loadMapData } from '../hosts/csbih/load.js';
 import { csbihHost } from '../hosts/csbih/adapter.js';
 import { runMatch, referenceKind } from '../hosts/csbih/arena.js';
@@ -56,6 +56,20 @@ test('a brain with no lineups throws none', () => {
   assert.deepEqual(lineupsSolved(brain), { all: 0, solved: 0, miss: null });
 });
 
+test('two brains of one level with different lineups do not share what the graph keeps for them', () => {
+  // One graph for both brains (nav.js navOf): the same arrays of the map.
+  const map = flatMap();
+  const lineups = [{ team: 'T', kind: 'flash', from: [0, 0, 64], velocity: [500, 0, 200], at: 5 }];
+  const nades = createBrain({ map: { ...map, lineups }, ports: open, seed: 1 });
+  const plain = createBrain({ map, ports: open, seed: 1 });
+  assert.equal(nades.nav, plain.nav);
+  assert.deepEqual([...grenadesOf(nades, 'T')], ['flashbang']);
+  assert.deepEqual([...grenadesOf(plain, 'T')], []);
+  // The same lineups in a later match: what was worked out once serves again.
+  const again = createBrain({ map: { ...map, lineups: lineups.map((l) => ({ ...l })) }, ports: open, seed: 2 });
+  assert.equal(lineupCache(again), lineupCache(nades));
+});
+
 const MAP = 'de_dust2';
 const missing = csbihMissing(MAP) ?? false;
 const core = missing ? null : await loadCore();
@@ -83,7 +97,7 @@ test('the lineups of a map: a part is a throw from a stand, and it goes off near
   const KEY = { he: 'hegrenade', flash: 'flashbang', smoke: 'smokegrenade' };
   let thrown = 0;
   for (let i = 0; i < sample.length && thrown < 10; i++) {
-    const t = brain.nav.throws.get(i);
+    const t = lineupCache(brain).throws.get(i);
     if (!t) continue;
     const l = brain.map.lineups[i];
     // The recorded throw, as the game core flies it.
