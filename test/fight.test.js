@@ -163,3 +163,44 @@ test('a bot that fights ducked is down for most of its shots, not only from the 
   assert.ok(shots >= 6, `the bot fired: ${shots}`);
   assert.ok(ducked / shots > 0.7, `ducked shots: ${ducked} of ${shots}`);
 });
+
+// An AWP bot and an enemy `far` units away: the trace of the scope, a level a tick. At tick `hideAt` the enemy goes
+// behind a wall (x 380 to 420) and stays there.
+// The longest run of ticks at the second level of the scope.
+const secondLevel = (zoom) => zoom.reduce(([run, most], z) => (z === 2 ? [run + 1, Math.max(most, run + 1)] : [0, most]), [0, 0])[1];
+
+function sniperTrace(seed, { hideAt = Infinity, ticks = 600, far = 800 } = {}) {
+  const { world, players } = arena(seed, [[[380, 200, 0], [420, 1200, 200]]], [
+    { id: 1, team: 'CT', origin: [0, 0, 37], yaw: 0, weapon: 'awp', bot: true },
+    { id: 2, team: 'T', origin: [far, 0, 37], yaw: 180, weapon: 'ak47', bot: false },
+  ], { profile: STAND });
+  const [bot, enemy] = players;
+  const zoom = [];
+  let shot = null;
+  for (let i = 0; i < ticks; i++) {
+    if (i === hideAt && enemy.alive) enemy.body.origin = [800, 700, 37];
+    const from = world.events.length;
+    world.step();
+    if (shot === null && world.events.slice(from).some((e) => e.type === 'shot' && e.player === 1)) shot = i;
+    zoom.push(bot.zoom);
+  }
+  return { zoom, shot, killed: !enemy.alive };
+}
+
+test('an AWP bot takes the scope off after it loses the enemy, and passes the second level only on the way off', { skip }, () => {
+  for (let seed = 1; seed <= 6; seed++) {
+    const kill = sniperTrace(seed);
+    assert.ok(kill.shot !== null && kill.killed, `seed ${seed}: the bot fired and killed`);
+    assert.ok(kill.zoom.includes(1), `seed ${seed}: the bot fired through the scope`);
+    assert.ok(secondLevel(kill.zoom) <= 31, `seed ${seed}: the second level only on the way off`);
+    // The enemy hides before the shot: the scope stays a moment on the place, then comes off.
+    const lost = sniperTrace(seed, { hideAt: kill.shot - 5 });
+    assert.ok(secondLevel(lost.zoom) <= 31, `seed ${seed}: the second level only on the way off after the loss`);
+    assert.equal(lost.zoom.at(-1), 0, `seed ${seed}: the scope is off after the loss`);
+  }
+  // Near, a bot fights without the scope; a scope that it takes off goes through the second level for a moment, and
+  // the bot does not walk on through it when the enemy hides.
+  const near = sniperTrace(1, { far: 300, hideAt: 20, ticks: 400 });
+  assert.equal(near.zoom.at(-1), 0, 'the scope is off after a near loss');
+  assert.ok(secondLevel(near.zoom) <= 31, 'the second level only on the way off, near');
+});

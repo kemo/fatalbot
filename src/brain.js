@@ -20,7 +20,7 @@ import { planRound, updatePlan } from './plan.js';
 import { steerRoute } from './route.js';
 import { stagePlaces } from './sites.js';
 import { idleCommand } from './contract.js';
-import { WEAPONS, bestGun, isGrenade, isMelee, isPistol } from './weapons.js';
+import { WEAPONS, bestGun, isGrenade, isMelee, isPistol, isSniper } from './weapons.js';
 
 /** A player of no special skill: the motor profile of the reference bots (csbih-player bot.js DEFAULT_PROFILE). */
 export const DEFAULT_PROFILE = {
@@ -67,6 +67,8 @@ const LOOK_EVERY = 0.05;
 const MEMORY = 2.5;
 // Seconds without an enemy after which a pistol drawn in a fight goes back for the rifle.
 const RIFLE_BACK = 2;
+// A sniper holds its scope this long (s) after the last sight of an enemy, and with the feet not in a fight.
+const SCOPE_HOLD = 1;
 // An enemy heard or seen keeps the gun out for this long.
 const ALERT_SECONDS = 8;
 // The tasks that the round waits for, and the seconds of the round clock under which every run is one.
@@ -244,6 +246,10 @@ function command(c) {
     // The pistol of a fight goes back for the rifle once it is quiet.
     else if (isPistol(me.weapon) && bestGun(own) !== me.weapon && time - s.seenAt > RIFLE_BACK) cmd.weapon = bestGun(own);
   }
+  // The scope comes off once the fight has no sight: a player does not walk about through it. The bolt brings the
+  // scope back after a shot (fight.js BOLT), so the key waits for the bolt. From the first level the key goes
+  // through the second, as the game cycles it.
+  if (!feet && own.zoom > 0 && isSniper(me.weapon) && time - s.seenAt > SCOPE_HOLD && time >= (s.boltUntil ?? 0)) cmd.attack2 = true;
   // Free time (tactics.js freeGoal): nothing waits, and the player hops as it likes.
   c.free = goal.task === 'free';
   // No hop on a run that the round waits for (moves.js hop).
