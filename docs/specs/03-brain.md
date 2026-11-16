@@ -27,6 +27,8 @@ Ported from `bot.js look` and `hear`, with these rules made strict:
   enemy within 2000 units inside the view cone, through walls. Test: gate G6 in `test/brain.test.js`.
 - A hit whose shot the bot did not hear turns its eyes to the side of the hit, as the HUD shows it: the bearing
   with an error of 15 degrees, at a guessed 600 units. A grenade's hit tells no side.
+- A sound gives the place of its maker at most each 0.3 s (the step of a run), each time with a new error of 8% of
+  the distance. Between two the bot keeps the last place: it does not track a runner through a wall.
 - **New:** a CT learns where the planted bomb lies by a look at it, by the beep within 1000 units, or by standing in
   a site that has none. The reference bot reads the bomb's place from the world.
 - A T knows its team's bomb, as the radar shows it. Every player counts the bomb's seconds from the call.

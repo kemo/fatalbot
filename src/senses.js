@@ -38,6 +38,9 @@ const NOTICE_FAR = 0.4;
 // of the distance.
 const NOISE_KEEP = 1.5;
 const NOISE_ERROR = 0.08;
+// A run sounds a step each 0.3 s (pm_shared PM_UpdateStepSound): the bot learns a new place of a sound no more
+// often, each with its own error, and keeps the last place between two.
+const NOISE_EVERY = 0.3;
 // A shot further away than this is somebody else's fight: it brings the gun out, and no turn of the head.
 const NOISE_TURN_SHOT = 1200;
 // A hit whose shot the bot did not hear tells the side it came from, not the place (the HUD lights the sides of the
@@ -171,13 +174,17 @@ function hear(c, other, sound, distance) {
   const live = n && time - n.at < NOISE_KEEP;
   if (live && n.id !== other.id && n.distance < distance) return;
   const same = live && n.id === other.id;
+  if (same && time - n.heardAt < NOISE_EVERY) {
+    n.at = time;
+    return;
+  }
   // The further off, the likelier it goes past (the official bot's chance); a shot far off never turns the head.
   const attends = sound.kind === 'shot' ? distance < NOISE_TURN_SHOT : random() < 1.25 - distance / sound.radius;
   const spread = distance * NOISE_ERROR;
-  const off = same ? n.off : [random.gauss() * spread, random.gauss() * spread];
+  const off = [random.gauss() * spread, random.gauss() * spread];
   const o = other.origin;
   s.noise = {
-    id: other.id, at: time, distance, off, point: [o[0] + off[0], o[1] + off[1], o[2]], kind: sound.kind,
+    id: other.id, at: time, heardAt: time, distance, point: [o[0] + off[0], o[1] + off[1], o[2]], kind: sound.kind,
     reactAt: same ? n.reactAt : time + skill.reaction * random(0.7, 1.3),
     attends: same ? n.attends || attends : attends,
   };
@@ -239,7 +246,7 @@ export function look(c) {
     if (!isGrenade(brain.hits.get(me.id))) {
       const yaw = (toward(eye, hurt.origin).yaw + random.gauss() * HIT_SIDE_ERROR) * RAD;
       const point = [me.origin[0] + cos(yaw) * HIT_GUESS, me.origin[1] + sin(yaw) * HIT_GUESS, me.origin[2]];
-      s.noise = { id: hurt.id, at: time, distance: HIT_GUESS, off: [0, 0], point, kind: 'hit', reactAt: time + skill.reaction * 0.5, attends: true };
+      s.noise = { id: hurt.id, at: time, distance: HIT_GUESS, point, kind: 'hit', reactAt: time + skill.reaction * 0.5, attends: true };
     }
   }
   if (me.team === 'CT') bombLook(c, eye, clear);

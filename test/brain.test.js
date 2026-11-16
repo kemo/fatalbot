@@ -415,3 +415,21 @@ test('G6: a hit whose shot the bot did not hear tells the side, not the place; a
   // An HE grenade: two places of the thrower, the same play.
   assert.deepEqual(hit([WALL_X + 400, -300, 36], 'hegrenade'), hit([WALL_X + 400, 300, 36], 'hegrenade'));
 });
+
+test('G6: a runner heard behind a wall is placed at each step with a new error, and not tracked between steps', () => {
+  const brain = fresh(9, { half: 5000 });
+  const at = (tick) => [WALL_X + 300, -400 + tick * 2.5, 36];
+  const heard = [];
+  run(brain, 1, 200, (tick) => {
+    const e = player(2, 'CT', at(tick));
+    e.velocity = [0, 250, 0];
+    const n = brain.bots.get(1).s.noise;
+    if (n && tick > 20) heard.push({ point: n.point, off: [n.point[0] - at(tick - 1)[0], n.point[1] - at(tick - 1)[1]] });
+    return [player(1, 'T', [0, 0, 36], { own: true, yaw: 180 }), e];
+  });
+  const places = new Set(heard.map((h) => h.point.join()));
+  // A step each 0.3 s: about 6 places in 1.8 s, each with its own error against the true place.
+  assert.ok(places.size >= 4 && places.size <= 8, `${places.size} places`);
+  const offs = new Set(heard.map((h) => h.off.map(Math.round).join()));
+  assert.ok(offs.size > places.size, 'the place stays while the runner moves on');
+});
