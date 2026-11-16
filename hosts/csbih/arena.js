@@ -65,7 +65,35 @@ const blank = () => ({
   gunKills: 0, gunHeads: 0,
   // The rounds that the kind played as the Ts, and those with a plant (summarize).
   roundsT: 0, plantsT: 0,
+  // The commands by their time (timeCommand), and those over SLOW_COMMAND.
+  msBins: new Array(MS_BINS).fill(0), msSlow: 0,
 });
+// The bins of the time of a command: MS_PER_OCTAVE in each doubling from MS_FIRST, so that two runs add up.
+const MS_FIRST = 0.001;
+const MS_PER_OCTAVE = 16;
+const MS_BINS = MS_PER_OCTAVE * 18;
+// A command over this takes a fifth of a tick of 10 ms on its own (milliseconds).
+const SLOW_COMMAND = 2;
+
+/** Counts one command of `ms` milliseconds into the measures `m` of a kind. */
+export function timeCommand(m, ms) {
+  m.ms += ms;
+  if (ms > m.msMax) m.msMax = ms;
+  m.commands++;
+  if (ms > SLOW_COMMAND) m.msSlow++;
+  const bin = ms <= MS_FIRST ? 0 : Math.floor(Math.log2(ms / MS_FIRST) * MS_PER_OCTAVE);
+  m.msBins[Math.min(MS_BINS - 1, bin)]++;
+}
+
+/** The time under which part `p` of the commands of `m` took (the top of its bin), in milliseconds. */
+export function commandPart(m, p) {
+  let n = 0;
+  for (let i = 0; i < m.msBins.length; i++) {
+    n += m.msBins[i];
+    if (n >= p * m.commands) return MS_FIRST * 2 ** ((i + 1) / MS_PER_OCTAVE);
+  }
+  return NaN;
+}
 // A landing this much higher or lower than the take-off is a jump onto or off a ledge (units).
 const LEDGE = 16;
 const EARLY = 15;
@@ -130,11 +158,7 @@ export function gauge(core, world, kindOf, names, aimStats = null) {
       c.command = (w, me) => {
         const t = now();
         const cmd = command(w, me);
-        const took = now() - t;
-        m.ms += took;
-        // The longest single command: a search or a plan that one tick pays for.
-        if (took > m.msMax) m.msMax = took;
-        m.commands++;
+        timeCommand(m, now() - t);
         return cmd;
       };
     },
@@ -481,7 +505,10 @@ export function summarize(matches) {
 export function addMeasures(sum, measure) {
   for (const [kind, v] of Object.entries(measure)) {
     const s = (sum[kind] ??= blank());
-    for (const k of Object.keys(s)) s[k] = k === 'msMax' ? Math.max(s[k], v[k] ?? 0) : s[k] + (v[k] ?? 0);
+    for (const k of Object.keys(s)) {
+      if (Array.isArray(s[k])) s[k].forEach((n, i) => (s[k][i] = n + (v[k]?.[i] ?? 0)));
+      else s[k] = k === 'msMax' ? Math.max(s[k], v[k] ?? 0) : s[k] + (v[k] ?? 0);
+    }
   }
   return sum;
 }
@@ -499,7 +526,7 @@ export function ordersOf(a, b, both = true) {
 /** One line of the measures of a kind, for a tool's report. */
 export function measureLine(kind, m) {
   const minutes = Math.max(1, m.alive / 60);
-  return `${kind.padEnd(8)} G3 wall ${pct(m.wall, m.alive)}  stuck ${pct(m.stuck, m.alive)}  |  G5 ${((m.ms / Math.max(1, m.commands)) * 10).toFixed(3)} ms for ten bots a tick (the longest command of one bot ${m.msMax.toFixed(1)} ms)  |  kills ${m.kills} deaths ${m.deaths} headshots ${pct(m.gunHeads, m.gunKills)} of ${m.gunKills} gun kills  |  G4 plants as the Ts ${pct(m.plantsT, m.roundsT)} of ${m.roundsT} rounds  |  G7 jumps a minute ${(m.jumps / minutes).toFixed(1)} (in a chain ${(m.hops / minutes).toFixed(2)})  shots on the run ${pct(m.shotsMoving, m.shots)} (rifles ${pct(m.rifleShotsMoving, m.rifleShots)})  grenades a minute ${(m.throws / minutes).toFixed(2)} (enemies blinded ${m.blinded})`;
+  return `${kind.padEnd(8)} G3 wall ${pct(m.wall, m.alive)}  stuck ${pct(m.stuck, m.alive)}  |  G5 ${((m.ms / Math.max(1, m.commands)) * 10).toFixed(3)} ms for ten bots a tick (one command of one bot: p99 ${Number.isFinite(commandPart(m, 0.99)) ? commandPart(m, 0.99).toFixed(3) : '-'} ms, over ${SLOW_COMMAND} ms ${m.msSlow} of ${m.commands}, the longest ${m.msMax.toFixed(1)} ms)  |  kills ${m.kills} deaths ${m.deaths} headshots ${pct(m.gunHeads, m.gunKills)} of ${m.gunKills} gun kills  |  G4 plants as the Ts ${pct(m.plantsT, m.roundsT)} of ${m.roundsT} rounds  |  G7 jumps a minute ${(m.jumps / minutes).toFixed(1)} (in a chain ${(m.hops / minutes).toFixed(2)})  shots on the run ${pct(m.shotsMoving, m.shots)} (rifles ${pct(m.rifleShotsMoving, m.rifleShots)})  grenades a minute ${(m.throws / minutes).toFixed(2)} (enemies blinded ${m.blinded})`;
 }
 
 /** One line of the feet of a kind: its jumps a minute by what they were, and its rifle shots on the run by the range. */

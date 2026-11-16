@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { gauge, measureLine, ordersOf, summarize } from '../hosts/csbih/arena.js';
+import { addMeasures, commandPart, gauge, measureLine, ordersOf, summarize, timeCommand } from '../hosts/csbih/arena.js';
 
 test('two kinds play each side on a seed, and one kind against itself plays the seed once', () => {
   assert.deepEqual(ordersOf('fatal', 'ref'), [['fatal', 'ref'], ['ref', 'fatal']]);
@@ -28,4 +28,20 @@ test('the head share counts the kills with a gun only, and the plants of a kind 
   const s = summarize([match('fatal', 'ref', 2), match('ref', 'fatal', 0)]);
   assert.match(measureLine('fatal', s.measure.fatal), /G4 plants as the Ts 50\.0% of 4 rounds/);
   assert.match(measureLine('ref', s.measure.ref), /G4 plants as the Ts 0\.0% of 4 rounds/);
+});
+
+test('the cost of the commands gives the p99 and the count of the slow ones, and two runs add up', () => {
+  const core = { hull: { HULL_POINT: 0, newTrace: () => ({}), traceBox: () => {} } };
+  const blank = () => gauge(core, { players: new Map(), time: 0 }, () => 'fatal', ['fatal']).measure.fatal;
+  const [a, b] = [blank(), blank()];
+  for (let i = 0; i < 490; i++) [a, b].forEach((m) => timeCommand(m, 0.1));
+  for (let i = 0; i < 10; i++) [a, b].forEach((m) => timeCommand(m, 3));
+  // 980 commands of 0.1 ms and 20 of 3 ms: the p99 lies in the bin of 3 ms (bins of 4.4%).
+  const sum = addMeasures({}, { fatal: a });
+  addMeasures(sum, { fatal: b });
+  const m = sum.fatal;
+  assert.equal(m.commands, 1000);
+  assert.ok(commandPart(m, 0.99) >= 3 && commandPart(m, 0.99) < 3 * 1.05, `p99 ${commandPart(m, 0.99)}`);
+  assert.ok(commandPart(m, 0.5) >= 0.1 && commandPart(m, 0.5) < 0.1 * 1.05);
+  assert.match(measureLine('fatal', m), /p99 3\.\d+ ms, over 2 ms 20 of 1000, the longest 3\.0 ms/);
 });
