@@ -200,14 +200,16 @@ test('the floors with a way to a point, from one search, are those that each rea
 
 test('a bot on an island finds a floor further off that a straight walk reaches, when the nearest ones lie behind a wall', () => {
   // Everything east of the wall (x = 320, y from -200 to 200) is an island. The 32 nearest joined floors lie behind
-  // the wall; a straight walk passes the wall's end to (288, 384) or (288, -384).
+  // the wall; a straight walk passes the wall's end to a floor further off.
   const sites = [{ mins: [-350, -50, 0], maxs: [-250, 50, 72] }];
   const map = withIsland((x) => x >= 320, { sites, size: 56 });
-  const brain = createBrain({ map, ports: flatPorts(), seed: 7 });
+  const ports = flatPorts();
+  const brain = createBrain({ map, ports, seed: 7 });
   brain.join(1);
   run(brain, 1, 30, () => [player(1, 'T', [360, 0, 36], { own: true }), player(2, 'CT', [-600, 0, 36])]);
   const out = brain.debug(1).escape;
-  assert.ok(out && out[0] === 288 && Math.abs(out[1]) === 384, `past the wall's end (${out})`);
+  assert.ok(out && out[0] < 320 && Math.abs(out[1]) > 300, `past the wall's end (${out})`);
+  assert.equal(ports.traceHull([360, 0, 36], out, false), 1, 'a straight walk reaches it');
 });
 
 test('a bot on an island with no way out from its place walks inside the island to the floor that has one', () => {
@@ -371,4 +373,27 @@ test('a bot fetches the dropped C4 while a teammate that the brain does not driv
   };
   assert.deepEqual(fetchers(false), [1]);
   assert.deepEqual(fetchers(true), [1]);
+});
+
+test('the exit of an island is the same for a bot alone and for a bot after others on the level, and a straight walk reaches it', () => {
+  // The island of the test before. Bots A and B have the same nearest floor; B's own straight walk to A's exit meets
+  // the wall, and the graph of a level (nav.js navOf) is shared by every brain on it.
+  const sites = [{ mins: [-350, -50, 0], maxs: [-250, 50, 72] }];
+  const mapOf = () => withIsland((x) => x >= 320, { sites, size: 56 });
+  const [A, B] = [[366, -14, 36], [338, 10, 36]];
+  const ports = flatPorts();
+  const play = (brain, id, at) => ({ commands: run(brain, id, 30, () => [player(id, 'T', at, { own: true }), player(9, 'CT', [-600, 0, 36])]), escape: brain.debug(id).escape });
+  const brainOf = (map, ...ids) => {
+    const brain = createBrain({ map, ports, seed: 7 });
+    for (const id of ids) brain.join(id);
+    return brain;
+  };
+  const alone = play(brainOf(mapOf(), 2), 2, B);
+  const map = mapOf();
+  const first = play(brainOf(map, 1), 1, A);
+  assert.deepEqual(play(brainOf(map, 2), 2, B), alone, 'a later brain on the level');
+  const one = brainOf(mapOf(), 1, 2);
+  play(one, 1, A);
+  assert.deepEqual(play(one, 2, B), alone, 'a later bot of one brain');
+  for (const [at, { escape }] of [[A, first], [B, alone]]) assert.equal(ports.traceHull(at, escape, false), 1, `a straight walk from ${at} to ${escape}`);
 });
