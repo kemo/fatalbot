@@ -345,9 +345,8 @@ The arenas need three things of csbih-player:
 | The timelines | `out/<id>.json.br` | built from the archived demos: `tools/import-demos.js <folder>` |
 | The profiles | `out/profiles/` | `tools/build-profiles.js` |
 
-The fast way: the built data is on the server of player.gamerz.ba, in `/var/gamerz-player/out` and
-`/var/gamerz-player/assets` (csbih-player README, "Deploy"). One copy of those two folders gives all three. No
-demo file is necessary for it.
+The fast way: a copy of the built `out/` and `assets/` folders of csbih-player gives all three. No demo file is
+necessary for it.
 
 `tools/arena.js` against the reference bots needs the levels only. The demo arena and all mining need the
 timelines.
