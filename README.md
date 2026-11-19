@@ -96,7 +96,7 @@ A claim that a bot is better needs a number. Spec 01 holds the gates. In short:
    a test server with the game files. It also needs a choice of how the plugin runs the brain: an embedded
    JavaScript engine inside the plugin, or a Node process beside the server. `hosts/goldsrc/README.md` compares
    them. Nothing of this is fetched or built yet.
-2. **The licence** of this repository. None is set.
+2. **The licence**: MIT (`LICENSE`), as for cs16-pov-hltv-fill.
 3. **How csbih-player takes the brain**: a copy at a pinned commit, a git submodule, or a path. The owner decided on
    2026-11-11: fatalbot plays the bots of csbih-player at once, from a copy of the brain that a script makes. The
    owner made the switch on 2026-11-11 (csbih-player commit `af5d038`, live on player.gamerz.ba); `?bot=bot.js` on

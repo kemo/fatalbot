@@ -2,6 +2,7 @@
   "name": "fatalbot",
   "version": "0.0.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "description": "A bot for Counter-Strike 1.6: one brain for a real server and for the game core of csbih-player.",
   "exports": {
